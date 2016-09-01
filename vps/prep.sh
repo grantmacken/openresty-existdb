@@ -34,9 +34,10 @@ else
 fi
 }
 
-aptList=(cowsay curl expect stow net-tools ncurses-term )
+aptList=( perl cowsay curl expect stow net-tools ncurses-term \
+ libreadline-dev libncurses5-dev libpcre3-dev libssl-dev )
 
-aptList2=( build-essential software-properties-common \
+aptList2=( make build-essential software-properties-common \
 python-dev python-pip python3-dev python3-pip \
 zlib1g-dev \
 git tmux)

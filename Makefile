@@ -16,16 +16,17 @@ assert-is-systemd = $(if $(shell ps -p1 | grep systemd),\
  $(info OK! systemd is init system),\
  $(error  init system is not systemd))
 
-cat = $(shell if [ -e $(1) ] ;then echo "$$(<$(1))" ;fi )
+cat = $(shell if [ -e $(1) ] ;then echo "$$(<$(1))";fi )
 
 colon := :
 $(colon) := :
 
-REPO  := $(shell  echo '$(DEPLOY)' | cut -d/ -f2 )
-OWNER := $(shell echo $(DEPLOY) |cut -d/ -f1 )
-WEBSITE := $(addprefix http://,$(REPO))
+
+# REPO  := $(shell  echo '$(DEPLOY)' | cut -d/ -f2 )
+# OWNER := $(shell echo $(DEPLOY) |cut -d/ -f1 )
+# WEBSITE := $(addprefix http://,$(REPO))
 # MAKE_VERSION := $(shell make --version | head -1)
-SYSTEMD := $(shell ps -p1 | grep systemd )
+# SYSTEMD := $(shell ps -p1 | grep systemd )
 # $(info who am i - $(WHOAMI))
 # $(info SUDO USER - $(SUDO_USER))
 # $(info make version - $(MAKE_VERSION))
@@ -44,46 +45,60 @@ SYSTEMD := $(shell ps -p1 | grep systemd )
 # so if running as sudo on desktop we can change permissions back to $SUDO_USER
 #$(if $(SUDO_USER),$(info do something),$(info do not do anything))
 SUDO_USER := $(shell echo "$${SUDO_USER}")
-WHOAMI := $(shell whoami)
+WHOAMI    := $(shell whoami)
 INSTALLER := $(if $(SUDO_USER),$(SUDO_USER),$(WHOAMI))
+# $(info who am i - $(WHOAMI))
+# $(info SUDO USER - $(SUDO_USER))
+
+chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 #this will evaluate when running on travis
-ifeq ($(INSTALLER),travis)
- TRAVIS := $(INSTALLER)
-else
- TRAVIS =
-endif
+# ifeq ($(INSTALLER),travis)
+#  TRAVIS := $(INSTALLER)
+# else
+#  TRAVIS =
+# endif
 #this will evaluate if we have a access token
-ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
+# ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
 # if we have a github access token use that as admin pass
 # $(if $(ACCESS_TOKEN),\
 #  $(info using found 'access token' for password),\
 #  $(info using 'admin' for password ))
-P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
-GIT_USER := $(shell git config --get user.name)
+# P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
+# GIT_USER := $(shell git config --get user.name)
 ## SETUP ###
-chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
-$(if $(wildcard $(T)/),,$(shell mkdir $(T)))
-$(call chownToUser,$(T))
+# chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
+# $(if $(wildcard $(T)/),,$(shell mkdir $(T)))
+# $(call chownToUser,$(T))
+# # $(info website - $(REPO))
+# dnsByPass := $(shell echo "$$( cat /etc/hosts | grep $(REPO))")
+# $(info dns by pass - $(dnsByPass))
 
-$(info website - $(REPO))
-dnsByPass := $(shell echo "$$( cat /etc/hosts | grep $(REPO))")
-$(info dns by pass - $(dnsByPass))
+# $(if $(dnsByPass),\
+#  $(info dns bypass for $(REPO) has been setup),\
+#  $(shell echo "127.0.0.1  $(REPO)" >> /etc/hosts))
 
-$(if $(dnsByPass),\
- $(info dns bypass for $(REPO) has been setup),\
- $(shell echo "127.0.0.1  $(REPO)" >> /etc/hosts))
-
-PROVE := $(shell which prove)
+# PROVE := $(shell which prove)
 
 default: help
 
-include includes/*
+# include includes/*
+include includes/nginx-conf.mk
 
-.PHONY: help test clean
+.PHONY: help stow ngClean ngDH ngBase
 
-clean: 
-	@rm $(EXIST_VERSION)
 
 help:
 	@cat README.md
 
+stow:
+	@echo 'use stow to create symlinks tree'
+	@stow -v -t $(OPENRESTY_HOME) openresty
+
+# alias 
+# create diffe
+ngDH: openresty/nginx/ssl/dh-param.pem
+
+ngBase: 
+	@rm openresty/nginx/conf/base.conf
+	@$(MAKE) openresty/nginx/conf/base.conf
+	@$(MAKE) stow

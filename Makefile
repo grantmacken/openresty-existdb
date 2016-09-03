@@ -83,7 +83,7 @@ default: help
 
 include includes/*
 
-.PHONY: help stow ngClean ngDH ngBase rsLive \
+.PHONY: help stow ngCfg ngClean ngDH ngBase rsLive \
  downloadSiege
 
 help:
@@ -125,7 +125,7 @@ check:
 
 check2:
 	@openssl s_client -connect $(DOMAIN):443 -status
-	@cat $(NGINX_HOME)/logs/access.log | awk '{print $4}' 
+# @cat $(NGINX_HOME)/logs/access.log | awk '{print $4}' 
 # | awk -F : '{print $2 ":" $3}' | uniq -c
 
 monitor:

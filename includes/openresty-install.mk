@@ -159,6 +159,13 @@ downloadRedis:
 	cd $(T)/redis-stable; $(MAKE) && $(MAKE) test && $(MAKE) install
 	@echo '------------------------------------------------'
 
+downloadSiege:
+	@echo 'download the latest siege version'
+	@curl http://download.joedog.org/siege/siege-latest.tar.gz | \
+ tar xz --directory $(T)
+	@echo '------------------------------------------------'
+# cd $(T)/redis-stable; $(MAKE) && $(MAKE) test && $(MAKE) install
+
 ##################################
 #
 # Set up openresty as a service

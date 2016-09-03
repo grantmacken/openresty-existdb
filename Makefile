@@ -67,7 +67,7 @@ chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 # GIT_USER := $(shell git config --get user.name)
 ## SETUP ###
 # chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
-# $(if $(wildcard $(T)/),,$(shell mkdir $(T)))
+$(if $(wildcard $(T)/),,$(shell mkdir $(T)))
 # $(call chownToUser,$(T))
 # # $(info website - $(REPO))
 # dnsByPass := $(shell echo "$$( cat /etc/hosts | grep $(REPO))")
@@ -81,11 +81,10 @@ chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 
 default: help
 
-# include includes/*
-include includes/nginx-conf.mk
+include includes/*
 
-.PHONY: help stow ngClean ngDH ngBase
-
+.PHONY: help stow ngClean ngDH ngBase rsLive \
+ downloadSiege
 
 help:
 	@cat README.md
@@ -94,11 +93,45 @@ stow:
 	@echo 'use stow to create symlinks tree'
 	@stow -v -t $(OPENRESTY_HOME) openresty
 
-# alias 
-# create diffe
+# shortcut aliases
+# create diffie
 ngDH: openresty/nginx/ssl/dh-param.pem
 
-ngBase: 
-	@rm openresty/nginx/conf/base.conf
-	@$(MAKE) openresty/nginx/conf/base.conf
+# port 80 only
+ngBase80: 
+	@[ -e openresty/nginx/conf/base80.conf ] && rm openresty/nginx/conf/base80.conf || echo 'first run' 
+	@$(MAKE) openresty/nginx/conf/base80.conf
 	@$(MAKE) stow
+	@sudo systemctl stop nginx.service
+	@sudo rm $(NGINX_HOME)/logs/access.log
+	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/base80.conf
+	@sudo systemctl start nginx.service
+	@curl http://$(DOMAIN)
+
+# port 443
+ngCfg:
+	@[ -e openresty/nginx/conf/base443.conf ] && rm openresty/nginx/conf/base443.conf || echo 'first run' 
+	@$(MAKE) openresty/nginx/conf/base443.conf
+	@$(MAKE) stow
+	@sudo systemctl stop nginx.service
+	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/base443.conf
+	@sudo systemctl start nginx.service
+
+check:
+	@curl -L http://$(DOMAIN)
+	@curl -I https://$(DOMAIN)
+	@siege -c 15 -r 10 https://$(DOMAIN)
+
+
+check2:
+	@openssl s_client -connect $(DOMAIN):443 -status
+	@cat $(NGINX_HOME)/logs/access.log | awk '{print $4}' 
+# | awk -F : '{print $2 ":" $3}' | uniq -c
+
+monitor:
+	@echo '$(NGINX_HOME)/logs/access.log'
+	@ngxtop -v  -l $(NGINX_HOME)/logs/access.log -f combined
+
+rsLive:
+	@echo 'copy certs from remote'
+	@scp -r featon:/etc/letsencrypt/live /etc/letsencrypt

@@ -1,6 +1,7 @@
 include config
 SHELL=/bin/bash
-T=.temp
+export PATH := $(abspath bin):$(PATH)
+T := .temp
 # Make sure we have the following apps installed:
 APP_LIST := wget git curl expect stow
 assert-command-present = $(if $(shell which $1),,$(error '$1' missing and needed for this build))
@@ -116,8 +117,23 @@ ngCfg:
 	@sudo systemctl stop nginx.service
 	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/base443.conf
 	@sudo systemctl start nginx.service
+	@sudo systemctl status nginx.service
 
-check:
+ngDev:
+	@[ -e openresty/nginx/conf/dev.conf ] && rm openresty/nginx/conf/dev.conf || echo 'first run' 
+	@$(MAKE) openresty/nginx/conf/dev.conf
+	@$(MAKE) stow
+	@sudo systemctl stop nginx.service
+	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/dev.conf
+	@sudo systemctl start nginx.service
+
+
+
+crl:
+	w3m http://$(DOMAIN)
+
+
+seige:
 	@curl -L http://$(DOMAIN)
 	@curl -I https://$(DOMAIN)
 	@siege -c 15 -r 10 https://$(DOMAIN)

@@ -40,6 +40,7 @@ aptList=( perl cowsay curl expect stow net-tools ncurses-term \
 aptList2=( make build-essential software-properties-common \
 python-dev python-pip python3-dev python3-pip \
 zlib1g-dev \
+libaio1 libatomic-ops libatomic-ops-dev \
 git tmux)
 
 echo '#UTILITY TOOLS#'

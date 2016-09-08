@@ -1,8 +1,16 @@
 # openresty-existdb
 
-TLS setup for openresty/nginx as reverse proxy for eXistdb
+ A TLS setup for openresty/nginx as reverse proxy for eXistdb
+
+This repo is based on a previous one grantmacken/nginx-exist
+
+I wanted to 
+ - enable HTTPS by default
+ - explore openresty/lua middleware capability
 
 ### Make:
+
+`make ngDH`
 
 `make ngCnf`
  - the main nginx.conf is generated 

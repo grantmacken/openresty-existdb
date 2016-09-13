@@ -4,7 +4,7 @@
 #
 #################################
 
-define cnfBase80
+define cnfPort80
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 error_log logs/error.log;
 pid       logs/nginx.pid;
@@ -23,15 +23,9 @@ http {
 }
 endef
 
-openresty/nginx/conf/base80.conf: export cnfBase80:=$(cnfBase80)
-openresty/nginx/conf/base80.conf:
-	@echo 'create base 80'
-	@echo "$${cnfBase80}" > $@
-	@echo "$${cnfBase80}" > openresty/nginx/conf/nginx.conf
-
 ################################################################
 
-define cnfBase443
+define cnfProd
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 error_log logs/error.log;
 pid       logs/nginx.pid;
@@ -79,32 +73,34 @@ http {
 }
 endef
 
-openresty/nginx/conf/base443.conf: export cnfBase443:=$(cnfBase443)
-openresty/nginx/conf/base443.conf:
-	@echo 'create base'
-	@echo "$${cnfBase443}" > $@
-	@echo "$${cnfBase443}" > openresty/nginx/conf/nginx.conf
+################################################################
 
 define cnfDev
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 pid       logs/nginx.pid;
-error_log syslog:server=unix:/dev/log;
+error_log logs/error.log;
+
+# error_log syslog:server=unix:/dev/log;
 
 include events.conf;
 
 http {
+  lua_code_cache off; #only during development
+  init_by_lua 'cjson = require("cjson")';
+
   include mime.types;
+  include accessLog.conf;
 
-
+  # access_log syslog:server=unix:/dev/log;
   # HTTPS server 
   server {
     listen 443      ssl http2 default_server;
     listen [::]:443 ssl http2 default_server;
+    server_name $(DOMAIN);
 
-    server_name ~^(www\.)?(?<domain>.+)$$;
-
-    # access_log syslog:server=unix:/dev/log;
- 
+    ssl_certificate_by_lua_block {
+      print("ssl cert by lua is running!")
+    }
     # certificates from letsencrypt
     ssl_certificate         /etc/letsencrypt/live/$(DOMAIN)/fullchain.pem;
     # Path to private key used to create certificate.
@@ -113,21 +109,39 @@ http {
     include tls.conf;
 
     # disable  Enable OCSP Stapling 
-    #include ocspStapling.conf;
+    include ocspStapling.conf;
     # verify chain of trust of OCSP response using Root CA and Intermediate certs
-    #ssl_trusted_certificate /etc/letsencrypt/live/$(DOMAIN)/chain.pem;
-
+    ssl_trusted_certificate /etc/letsencrypt/live/$(DOMAIN)/chain.pem;
 
     # PHASES - rewrite, access, content, log
     # rewrite phase
     #include rewrites.conf;
-    #include locations.conf;
 
+
+    server_tokens off;
+    resolver '8.8.8.8' ipv6=off;
+
+    location = /luarocks {
+      content_by_lua '
+      local foo = require("foo")
+      foo.say("hello, luarocks!")
+      ';
+     }
+
+    location = /t {
+      content_by_lua '
+      local test = require("test")
+      test.get("sni.velox.ch")
+      ';
+     }
     location / {
       default_type text/html;
       content_by_lua '
-      ngx.say("<p>hello, world</p>")
-      ngx.log(ngx.STDERR, "this is a error log string from lua")
+      ngx.say(package.path)
+      ngx.say("package.path") 
+      ngx.say(package.path) -- where .lua files are searched for
+      ngx.say("package.cpath") 
+      ngx.say(package.cpath) -- where native modules are searched for 
       ';
      }
   }
@@ -138,11 +152,29 @@ http {
 }
 endef
 
-openresty/nginx/conf/dev.conf: export cnfDev:=$(cnfDev)
-openresty/nginx/conf/dev.conf:
-	@echo 'create base'
-	@echo "$${cnfDev}" > $@
+################################################################
+
+orBasic: export cnfPort80:=$(cnfPort80)
+orBasic:
+	@echo 'create basic nginx config'
+	@echo "$${cnfPort80}" > $@
+	@echo "$${cnfPort80}" > openresty/nginx/conf/nginx.conf
+	@$(MAKE) orReload
+
+orProd: export cnfProd:=$(cnfProd)
+orProd:
+	@echo 'create nginx production conf'
+	@echo "$${cnfProd}" > openresty/nginx/conf/nginx.conf
+	@$(MAKE) orReload
+
+orDev: export cnfDev:=$(cnfDev)
+orDev:
+	@echo 'create nginx dev conf'
 	@echo "$${cnfDev}" > openresty/nginx/conf/nginx.conf
+	@$(call chownToUser,openresty/nginx/conf/nginx.conf)
+	@$(MAKE) stow
+	@$(MAKE) orReload
+	@echo '---------------------------------------------'
 
 orReload:
 	@$(OPENRESTY_HOME)/bin/openresty -t

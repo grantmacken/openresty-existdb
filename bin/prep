@@ -1,11 +1,11 @@
-#!/bin/bash +x
+#!/usr/bin/env bash
 
 ############################################################
 #  Program: preperation openresty-nginx new ubuntu vps server
 #  Author : Grant MacKenzie
 #  gmack.nz
 #  grantmacken@gmail.com
-# chmod +x vps/prep.sh
+# chmod +x bin/prep
 #  run as sudo
 ############################################################
 
@@ -31,17 +31,17 @@ else
         echo "upgrade ${aptName}"
         apt-get --assume-yes --only-upgrade install ${aptName}
     fi
-fi
+  fi
 }
 
 aptList=( perl cowsay curl expect stow net-tools ncurses-term \
- libreadline-dev libncurses5-dev libpcre3-dev libssl-dev )
+apache2-utils libreadline-dev libncurses5-dev libpcre3-dev libssl-dev )
 
 aptList2=( make build-essential software-properties-common \
 python-dev python-pip python3-dev python3-pip \
 zlib1g-dev \
-libaio1 libatomic-ops libatomic-ops-dev \
-git tmux)
+libev4 libev-dev libaio1 libatomic-ops-dev \
+ca-certificates git tmux)
 
 echo '#UTILITY TOOLS#'
 echo "TASK! Use apt-get to install some utility apps"

@@ -55,7 +55,7 @@ chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 #this will evaluate when running on travis
 # ifeq ($(INSTALLER),travis)
 #  TRAVIS := $(INSTALLER)
-# else
+# elsr
 #  TRAVIS =
 # endif
 #this will evaluate if we have a access token
@@ -84,11 +84,16 @@ default: help
 
 include includes/*
 
-.PHONY: help stow ngCfg ngClean ngDH ngBase rsLive \
- downloadSiege
+.PHONY: help prep stow 
 
 help:
 	@cat README.md
+
+prep:
+	@echo 'use the prep script to install dependencies'
+	@$(call assert-is-root)
+	@[ -x  bin/prep ] || chmod +x bin/prep
+	@prep
 
 stow:
 	@echo 'use stow to create symlinks tree'
@@ -97,35 +102,14 @@ stow:
 # shortcut aliases
 # create diffie
 ngDH: openresty/nginx/ssl/dh-param.pem
-
 # port 80 only
-ngBase80: 
-	@[ -e openresty/nginx/conf/base80.conf ] && rm openresty/nginx/conf/base80.conf || echo 'first run' 
-	@$(MAKE) openresty/nginx/conf/base80.conf
-	@$(MAKE) stow
-	@sudo systemctl stop nginx.service
-	@sudo rm $(NGINX_HOME)/logs/access.log
-	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/base80.conf
-	@sudo systemctl start nginx.service
-	@curl http://$(DOMAIN)
-
-# port 443
-ngCfg:
-	@[ -e openresty/nginx/conf/base443.conf ] && rm openresty/nginx/conf/base443.conf || echo 'first run' 
-	@$(MAKE) openresty/nginx/conf/base443.conf
-	@$(MAKE) stow
-	@sudo systemctl stop nginx.service
-	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/base443.conf
-	@sudo systemctl start nginx.service
-	@sudo systemctl status nginx.service
-
-ngDev:
-	@[ -e openresty/nginx/conf/dev.conf ] && rm openresty/nginx/conf/dev.conf || echo 'first run' 
-	@$(MAKE) openresty/nginx/conf/dev.conf
-	@$(MAKE) stow
-	@sudo systemctl stop nginx.service
-	@sudo $(NGINX_HOME)/sbin/nginx -t -c conf/dev.conf
-	@sudo systemctl start nginx.service
+# @sudo rm $(NGINX_HOME)/logs/access.log
+# @[ -e openresty/nginx/conf/dev.conf ] && rm openresty/nginx/conf/dev.conf || echo 'first run' 
+# @$(MAKE) openresty/nginx/conf/dev.conf
+# @$(MAKE) stow
+# @sudo systemctl stop nginx.service
+# @sudo $(NGINX_HOME)/sbin/nginx -t -c conf/dev.conf
+# @sudo systemctl start nginx.service
 
 
 

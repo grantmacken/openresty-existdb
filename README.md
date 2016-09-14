@@ -10,12 +10,16 @@ I wanted to
 
 ### Make Targets
 
+`make orDev`
+ - the develpment  nginx.conf is generated 
+   this will add the directive ' lua_code_cache off;' 
+   with this off any changes to lua scripts will not require a nginx reload.
+   - the conf is tested and reloaded
+ - src files and folders are symlinked to '/usr/local/openresty'  using `stow`
+
 `make ngDH`
  - creates the 1024 bit Diffie-Hellman Parameter 
 
-`make ngCnf`
- - the main nginx.conf is generated 
- - src files and folders are symlinked to '/usr/local/openresty'  using `stow`
 
 ## src dirs/files in this repo
 
@@ -27,7 +31,7 @@ I wanted to
     - ssl:  the dh-param.pem file generated via `make ngDH`
   - site
     - lualib: user created lua files
-              Placing lua files here places in lau scripts in 'package.path'
+              Placing lua files here, the lau scripts will be in 'package.path'
               foo.lua + and bar.lua from https://openresty.org/en/using-luarocks.html 
               are here to check if luarocks is working ok
 ---

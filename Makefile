@@ -59,13 +59,14 @@ chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 #  TRAVIS =
 # endif
 #this will evaluate if we have a access token
-# ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
+ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
 # if we have a github access token use that as admin pass
 # $(if $(ACCESS_TOKEN),\
 #  $(info using found 'access token' for password),\
 #  $(info using 'admin' for password ))
+GIT_USER := $(shell git config --get user.name)
 # P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
-# GIT_USER := $(shell git config --get user.name)
+#AUTH_BASIC := $(shell  echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )
 ## SETUP ###
 # chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 $(if $(wildcard $(T)/),,$(shell mkdir $(T)))
@@ -88,6 +89,10 @@ include includes/*
 
 help:
 	@cat README.md
+
+info:
+	@echo "$(GIT_USER)"
+	@echo "$(AUTH_BASIC)"
 
 prep:
 	@echo 'use the prep script to install dependencies'

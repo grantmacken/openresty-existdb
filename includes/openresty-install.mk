@@ -203,69 +203,12 @@ luarocksInstall:
 	@cd $(OPENRESTY_HOME)/luajit/bin; ln -s luajit lua
 	@echo '--------------------------------------------'
 
-
-
 downloadSiege:
 	@echo 'download the latest siege version'
 	@curl http://download.joedog.org/siege/siege-latest.tar.gz | \
  tar xz --directory $(T)
 	@echo '------------------------------------------------'
 # cd $(T)/redis-stable; $(MAKE) && $(MAKE) test && $(MAKE) install
-
-##################################
-#
-# Set up openresty as a service
-# 
-#  openresty now symlinked to usr/local/openresty/bin
-#
-##################################
-
-define openrestyService
-[Unit]
-Description=OpenResty stack for Nginx HTTP server
-After=syslog.target network.target remote-fs.target nss-lookup.target
-
-[Service]
-Type=forking
-Environment="OPENRESTY_HOME=$(OPENRESTY_HOME)"
-WorkingDirectory=$(OPENRESTY_HOME)
-PIDFile=$(NGINX_HOME)/logs/nginx.pid
-ExecStartPre=$(OPENRESTY_HOME)/bin/openresty -t
-ExecStart=$(OPENRESTY_HOME)/bin/openresty
-ExecReload=/bin/kill -s HUP $$MAINPID
-ExecStop=/bin/kill -s QUIT $$MAINPID
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
-endef
-
-orService: export openrestyService:=$(openrestyService)
-orService:
-	@echo "setup openresty as nginx.service under systemd"
-	@$(call assert-is-root)
-	@$(call assert-is-systemd)
-	@echo ""
-	@echo 'Check if service is enabled'
-	@echo "$(systemctl is-enabled nginx.service)"
-	@echo 'Check if service is active'
-	@systemctl is-active nginx.service && systemctl stop  nginx.service || echo 'inactive'
-	@echo 'Check if service is failed'
-	@systemctl is-failed nginx.service || systemctl stop nginx.service && echo 'inactive'
-	@echo "$${openrestyService}"
-	@echo "$${openrestyService}" > /lib/systemd/system/nginx.service
-	@systemd-analyze verify nginx.service
-	@systemctl is-enabled nginx.service || systemctl enable nginx.service
-	@systemctl start nginx.service
-	@echo 'Check if service is enabled'
-	@systemctl is-enabled nginx.service
-	@echo 'Check if service is active'
-	@systemctl is-active nginx.service
-	@echo 'Check if service is failed'
-	@systemctl is-failed nginx.service || echo 'OK!'
-	@journalctl -f -u nginx.service -o cat
-	@echo '--------------------------------------------------------------'
-
 # REDIS
 ########################################################################
 
@@ -281,7 +224,6 @@ downloadRedis:
 # daemonize no > daemonize yes 
 # supervised no > supervised systemd
 # dir ./ > /var/lib/redis
-
 
 initRedis:
 	@$(call assert-is-root)

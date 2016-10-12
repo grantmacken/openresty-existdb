@@ -1,6 +1,32 @@
 #################################
 #
-# simple setup prior to letsencrypt
+#  generate nginx conf file on the fly  then reload server
+#  
+# 1.  `make orDev`  development conguration 
+#   -  everything on HTTPS
+#   -  lua_code_cache off;
+#   flow: 
+#      - remake main nginx.conf and place in $(NGINX_HOME)/conf
+#      - stow any new includes
+#      - reload conf
+# 
+# 2.   `make orProd` production conguration
+#   -  everything on HTTPS
+#   -  lua_code_cache on;
+#
+# 3.  `make orBasic` basic conguration
+#   -  HTTP port 80 only
+#
+#  1. basic port80
+#  2. production  `make orProd`
+#  3. development `make orDev`
+#
+#  conf includes outline
+#   location level directives
+#    routes
+#      app-routes    [ for application routes ]
+#      static-routes [ serving static files   ]
+#      proxy-routes  [ configuring proxy locations ]
 #
 #################################
 
@@ -76,9 +102,11 @@ endef
 ################################################################
 
 define cnfDev
+env EXIST_AUTH;
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 pid       logs/nginx.pid;
 error_log logs/error.log;
+
 
 # error_log syslog:server=unix:/dev/log;
 
@@ -87,6 +115,8 @@ include events.conf;
 http {
   lua_code_cache off; #only during development
   init_by_lua 'cjson = require("cjson")';
+  #  SHARED DICT stays lifetime of nginx proccess
+  lua_shared_dict slugDict 1m;
 
   include mime.types;
   include accessLog.conf;
@@ -117,33 +147,10 @@ http {
     # rewrite phase
     #include rewrites.conf;
 
-
     server_tokens off;
     resolver '8.8.8.8' ipv6=off;
 
-    location = /luarocks {
-      content_by_lua '
-      local foo = require("foo")
-      foo.say("hello, luarocks!")
-      ';
-     }
-
-    location = /t {
-      content_by_lua '
-      local test = require("test")
-      test.get("sni.velox.ch")
-      ';
-     }
-    location / {
-      default_type text/html;
-      content_by_lua '
-      ngx.say(package.path)
-      ngx.say("package.path") 
-      ngx.say(package.path) -- where .lua files are searched for
-      ngx.say("package.cpath") 
-      ngx.say(package.cpath) -- where native modules are searched for 
-      ';
-     }
+    include routes/*;
   }
 
   # HTTP server on port 80
@@ -158,20 +165,22 @@ orBasic: export cnfPort80:=$(cnfPort80)
 orBasic:
 	@echo 'create basic nginx config'
 	@echo "$${cnfPort80}" > $@
-	@echo "$${cnfPort80}" > openresty/nginx/conf/nginx.conf
+	@echo "$${cnfPort80}" > $(NGINX_HOME)/conf/nginx.conf
 	@$(MAKE) orReload
 
 orProd: export cnfProd:=$(cnfProd)
 orProd:
 	@echo 'create nginx production conf'
-	@echo "$${cnfProd}" > openresty/nginx/conf/nginx.conf
+	@echo "$${cnfProd}" >  $(NGINX_HOME)/conf/nginx.conf
 	@$(MAKE) orReload
 
 orDev: export cnfDev:=$(cnfDev)
 orDev:
 	@echo 'create nginx dev conf'
-	@echo "$${cnfDev}" > openresty/nginx/conf/nginx.conf
-	@$(call chownToUser,openresty/nginx/conf/nginx.conf)
+	@echo "$(NGINX_HOME)/conf/nginx.conf"
+	@echo "$${cnfDev}"
+	@echo "$${cnfDev}" > $(NGINX_HOME)/conf/nginx.conf
+	@$(call chownToUser,$(NGINX_HOME)/conf/nginx.conf)
 	@$(MAKE) stow
 	@$(MAKE) orReload
 	@echo '---------------------------------------------'

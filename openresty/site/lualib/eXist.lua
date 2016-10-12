@@ -408,23 +408,7 @@ function _M.exist()
       ngx.say(key, ": ", val)
     end
   end
---
--- conveniance queries
---  GET requests
---   path path to xml collection or a resource contained in apps/myApp dir
---       eg path=repo.xml
---       returns xml string
---   gq  simple function  _query to db 
---       returns a string
---   xq  execute a xquery script located apps/myApp/modules/xq dir 
---   TODO!
---
---   POST requests
---
---   pq  a post query
---
---
-
+  -- see intro
   if args['path'] then
     pathQuery( args['path'])
   elseif args['gq'] then

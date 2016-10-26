@@ -104,6 +104,8 @@ endef
 define cnfDev
 env EXIST_AUTH;
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
+pcre_jit on;
+
 pid       logs/nginx.pid;
 error_log logs/error.log;
 
@@ -143,14 +145,23 @@ http {
     # verify chain of trust of OCSP response using Root CA and Intermediate certs
     ssl_trusted_certificate /etc/letsencrypt/live/$(DOMAIN)/chain.pem;
 
-    # PHASES - rewrite, access, content, log
-    # rewrite phase
-    #include rewrites.conf;
-
     server_tokens off;
     resolver '8.8.8.8' ipv6=off;
 
-    include routes/*;
+    # GLOBAL VARIABLES
+
+    set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
+
+    # PHASES 
+    # before locations insert server-rewrite phase
+
+    include serverRewrite.conf;
+    # gf:  openresty/nginx/conf/serverRewrite.conf
+
+    include locationBlocks.conf;
+    # gf:  openresty/nginx/conf/locationBlocks.conf
+
+    #include routes/*;
   }
 
   # HTTP server on port 80

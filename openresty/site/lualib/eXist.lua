@@ -215,21 +215,160 @@ return (
     ngx.say(body)
 end
 
-function _M.PutXML( data )
+function _M.createXML( data )
   local xml = require 'xml'
   local http = require "resty.http"
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
   local contentType = 'application/xml'
   local domain   = ngx.var.http_Host
-  local appPath  = "/exist/rest/db/apps/" .. domain
-  local colPath  = "docs/posts"
+  local resource = xml.find(data, 'id')[1]
+  local kindOfPost = xml.find(data, 'entry').type
+  local appPath  = "/exist/restxq/db/apps/" .. domain  
+  local endpoint  = "micropub"
+  local endpointPath  = appPath .. '/' .. colPath
+  local host = 'localhost'
+  local port = 8080
+
+  --  ngx.say(putPath)
+  --  ngx.say(xml.dump(data))
+
+  local httpc = http.new()
+  local ok, err = httpc:connect(host, port)
+  if not ok then
+    ngx.say("failed to connect to ",host ," ",  err)
+    return
+  end
+
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = endpointPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body =  xml.dump(data),
+      ssl_verify = false
+    })
+  if not res then
+    ngx.say("failed to request: ", err)
+    return
+  end
+ --  ngx.say("status: ", res.status)
+ --  ngx.say("reason: ", res.reason)
+ --  ngx.say("has body: ", res.has_body)
+
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+      ngx.say("failed to read body: ", err)
+      return
+    end
+  end
+  ngx.status = ngx.HTTP_CREATED
+  --ngx.header.content_type = 'text/plain'
+  ngx.header.location = 'http://' .. domain .. '/' .. resource 
+  
+end
+
+
+
+function _M.replaceContent( uri, content )
+  local url = require('net.url').parse(uri)
+  local id = string.gsub(url.path, "/", "")
+
+  local xml = require 'xml'
+  local http = require "resty.http"
+
+  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
+  local contentType = 'application/xml'
+  local domain   = ngx.var.http_Host
+  local host = 'localhost'
+  local port = 8080
+  local xmlContent  = { 
+    xml = 'content', 
+  type = 'text',content} 
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath  = 'docs/posts/' .. id 
+  ngx.say(xml.dump(xmlContent))
+ local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [[.xml"
+    let $document := doc($path)
+    let $content := ]] .. xml.dump(xmlContent) .. [[
+
+    return
+    if (exists( $document/entry/content )) then (
+     update replace $document/entry/content with $content
+    )
+    else (
+      update insert $content into $document/entry
+    )
+
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+
+ngx.say( txt )
+  local httpc = http.new()
+  local ok, err = httpc:connect(host, port)
+  if not ok then
+    ngx.say("failed to connect to ",host ," ",  err)
+    return
+  end
+
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = restPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body =  txt,
+      ssl_verify = false
+    })
+  if not res then
+    ngx.say("failed to request: ", err)
+    return
+  end
+  ngx.say("status: ", res.status)
+  ngx.say("reason: ", res.reason)
+  ngx.say("has body: ", res.has_body)
+
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+      ngx.say("failed to read body: ", err)
+      return
+    end
+  end
+
+  ngx.say(type(body))
+  ngx.say(body)
+end
+
+function _M.putXML( data )
+  local xml = require 'xml'
+  local http = require "resty.http"
+  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
+  local contentType = 'application/xml'
+  local domain   = ngx.var.http_Host
+  local resource = xml.find(data, 'id')[1]
+  local kindOfPost = xml.find(data, 'entry').type
+  local appPath  = "/exist/rest/db/apps/" .. domain  
+  local colPath  = "docs/posts/"
   local resource = xml.find(data, 'id')[1]
   local putPath  = appPath .. '/' .. colPath .. '/' .. resource .. '.xml'
   local host = 'localhost'
   local port = 8080
 
-   ngx.say(putPath)
-   ngx.say(xml.dump(data))
+  --  ngx.say(putPath)
+  --  ngx.say(xml.dump(data))
 
   local httpc = http.new()
   local ok, err = httpc:connect(host, port)
@@ -253,9 +392,9 @@ function _M.PutXML( data )
     ngx.say("failed to request: ", err)
     return
   end
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-  ngx.say("has body: ", res.has_body)
+ --  ngx.say("status: ", res.status)
+ --  ngx.say("reason: ", res.reason)
+ --  ngx.say("has body: ", res.has_body)
 
   if res.has_body then
     body, err = res:read_body()
@@ -264,6 +403,10 @@ function _M.PutXML( data )
       return
     end
   end
+  ngx.status = ngx.HTTP_CREATED
+  --ngx.header.content_type = 'text/plain'
+  ngx.header.location = 'http://' .. domain .. '/' .. resource 
+  
 end
 
 function deleteRequest( path )

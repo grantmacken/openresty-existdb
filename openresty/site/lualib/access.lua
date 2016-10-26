@@ -32,17 +32,20 @@ delegation of endpoints for authentication
  - verifyToken
 
 
+lua modules used
 
+@see https://github.com/pintsized/lua-resty-http
+@see http://doc.lubyk.org/xml.html
 
- https://github.com/pintsized/lua-resty-http
  https://github.com/openresty/lua-nginx-module#tcpsocksslhandshake
  https://github.com/openresty/lua-nginx-module#ssl_certificate_by_lua_block
  https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/ssl.md#readme
  https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/ocsp.md#readme
  http://lua-users.org/lists/lua-l/2016-01/msg00129.html
  https://github.com/aptise/peter_sslers
- https://indieweb.org/token-endpoint
- https://www.w3.org/TR/micropub/
+
+@see  https://indieweb.org/token-endpoint
+@see  https://www.w3.org/TR/micropub/
  
  - MUST support both header and form parameter methods of authentication
  - MUST support creating posts with the [h-entry] vocabulary
@@ -64,6 +67,33 @@ curl -L  https://gmack.nz/_token -d "access_token=$(<../.me-access-token)"
 
  curl -H "Content-Type: application/json"  -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub -d '{"type": ["h-entry"],"properties":{"content": ["hello world"]}}'
 
+
+ id unique to the db
+   [a-z]{1}  shortKindOfPost n = note
+   O
+   [\w]{3}   short date base60 encoded 
+   [\w]{1}   the base60 encoded incremented number of entries for the day
+   total of 5 chars 
+  the short URL http://{domain}/{uid)  - no extension
+  expanded  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/{KIND}/{CHAR}
+  where kind = kind of post e.g. note
+  where char = the incremented entry number for the day
+  5 chars limited to less than 60 entries for the day
+  6 chars  limited to less than 360 entries for the day
+
+  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/notes
+  list notes for day
+
+  URL http://{domain}/{YEAR}/{MONTH}/{DAY}
+  list any archived posts for day
+
+  URL http://{domain}/{YEAR}/{MONTH}
+  list archived posts for month 
+
+  URL http://{domain}/{YEAR}/{MONTH}/notes
+  list notes for month
+  
+  etc
 
 --]]
 
@@ -133,7 +163,6 @@ function extractToken()
  return  requestError(ngx.HTTP_UNAUTHORIZED,'invalid_request', 'no access token sent') 
 end
 
-
 function _M.verifyToken()
   local ssl = require "ngx.ssl"
   local jwt = require "resty.jwt"
@@ -202,7 +231,7 @@ function _M.verifyToken()
 -- I accept tokens no older than 
 -- -- TODO!
 
-return 'token verifed'
+ return 'token verifed'
 
 -- return ngx.encode_args(jwtObj.payload)
 -- return cjson.encode(jwtObj.payload)
@@ -210,7 +239,7 @@ return 'token verifed'
   -- ngx.status =  ngx.status = ngx.HTTP_OK
   -- ngx.header.content_type = 'application/json'
   -- local json = cjson.encode(jwtObj.payload)
-  -- ngx.print(json)
+  -- ngx.say(json)
   -- ngx.exit(ngx.HTTP_OK)
 end
 
@@ -242,50 +271,50 @@ function discoverPostType(props)
   -- p['like-of'] = true
   -- p['video'] = true
   -- p['photo'] = true
-  local postType = nil
+  local kindOfPost = nil
   for key, val in pairs(props) do
     if key == "rsvp" then
       --TODO check valid value
-      postType = 'RSVP'
-      return postType
+      kindOfPost = 'RSVP'
+      return kindOfPost
     elseif key == "in-reply-to" then
       --TODO check valid value
-      postType = 'reply'
-      return postType
+      kindOfPost = 'reply'
+      return kindOfPost
     elseif key == "repost-of" then
       --TODO check valid value
-      postType = 'share'
-      return postType
+      kindOfPost = 'share'
+      return kindOfPost
     elseif key == "like-of" then
       --TODO check valid value
-      postType = 'like'
-      return postType
+      kindOfPost = 'like'
+      return kindOfPost
     elseif key == "video" then
       --TODO check valid value
-      postType = 'video'
-      return postType
+      kindOfPost = 'video'
+      return kindOfPost
     elseif key == "photo" then
       --TODO check valid value
-      postType = 'photo'
-      return postType
+      kindOfPost = 'photo'
+      return kindOfPost
     elseif key == "name" then
       --TODO check valid value
-      postType = 'article'
-      return postType
+      kindOfPost = 'article'
+      return kindOfPost
     else
-      postType = 'note'
-      return postType
+      kindOfPost = 'note'
+      return kindOfPost
     end
   end
   
   -- if  == 'rsvp' then
   --  return 'RSVP'
   -- end
- return postType
+ return kindOfPost
 end
 
 
-function getID()
+function getID(k)
   local slugDict = ngx.shared.slugDict
   local count = slugDict:get("count") or 0
   -- setup count and today
@@ -308,7 +337,7 @@ function getID()
   --slugDict:replace("count", 1)
 -- ngx.say(slugDict:get("count"))
 -- ngx.say(slugDict:get("today"))
- return  slugDict:get("today") .. b60Encode(slugDict:get("count"))
+ return k .. slugDict:get("today") .. b60Encode(slugDict:get("count"))
 end
 
 function redisStore(tbl)
@@ -377,114 +406,11 @@ function redisStore(tbl)
     ngx.say("res: ", cjson.encode(res))
 end
 
-function getToday()
-  return os.date("%Y-%m-%d")
-end
 
-function processFormArgs2()
-  local msg = ''
-  local host = ngx.req.get_headers()["Host"]
-  ngx.req.read_body()
-  local args, err = ngx.req.get_post_args()
-  if not args then
-    ngx.say("failed to get post args: ", err)
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      'failed to get post args')
-  end
-  
--- Post Objects
--- https://www.w3.org/TR/jf2/#post-objects
--- http://microformats.org/wiki/microformats-2#v2_vocabularies
---
---
-  
-  local hType = args.h
-  ngx.say(hType)
-  if hType == nil then
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      'no type of post defined')
-  end
-  --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
-
-  local hTypes = {}
-  hTypes['entry'] = true
-  hTypes['card'] = false
-  hTypes['event'] = false
-  hTypes['cite'] = false
-
-  msg = 'can not handle microformat "Post Object type": ' .. hType
-  if not hTypes[hType] then
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      msg )
-  end
-
-  -- Post Properties
-  -- https://www.w3.org/TR/jf2/#post-properties
-
-  local properties = {}
-  -- TODO expand entry properties and place in data module
-  p = {}
-  p['name'] = true
-  p['summary'] = true
-  p['rsvp'] = true
-  p['in-reply-to'] = true
-  p['repost-of'] = true
-  p['like-of'] = true
-  p['video'] = true
-  p['photo'] = true
-  p['content'] = true
-  p['published'] = false
-  p['updated'] = false
-
-  for key, val in pairs(args) do
-    if type(val) == "table" then
-      ngx.say(type(val))
-      ngx.say(key, ": ", table.concat(val, ", "))
-    else    
-     -- ngx.say(type(val))
-     -- ngx.say(key, ": ", val)
-      if p[key] ~=  nil then
-        properties[key] = val
-      end
-    end
-  end
-
-  -- ' we have a the properties of an entry'
-  -- 'discovery the post type' 
-  local postType = discoverPostType( properties)
-  ngx.say(postType)
- -- getID()
-  ngx.say('--------------------------------------------------------')
-
-  -- slugDict:replace("today",'4X8')
-  -- slugDict:delete("today")
-  -- slugDict:delete("count")
-  -- ngx.say( b60Encode(slugDict:get("count")))
-  -- ngx.say( b60Encode(80))
-  -- properties['yDay'] = type(os.date("*t").yday)
-  -- properties['year'] = os.date("%y") .. os.date("*t").yday
-  properties['published'] = getToday()
-  properties['id'] = 'tag:' .. host .. ',' ..  getToday() .. ':' .. postType .. ':'  ..  getID()
-  --  properties['id'] = 'tag:' .. host .. ',' ..  os.date("%Y-%m-%d") .. ':note:' ..  slugDict:get("today") .. b60Encode(slugDict:get("count"))
- --  properties['id'] = 'n' ..  slugDict:get("today") .. b60Encode(slugDict:get("count"))
- --  local url = ndk.set_var.set_escape_uri( 'https://' .. host .. '/n')
- --  properties['url'] = ndk.set_var.set_unescape_uri(url)
- local tbl = {}
- tbl['type'] = 'h-' .. hType
- tbl['properties'] = properties
- return tbl
-end
 
 function processFormArgs()
   local data = {} -- the xml based table to return
   local msg = ''
-  local host = ngx.req.get_headers()["Host"]
   ngx.req.read_body()
   local args, err = ngx.req.get_post_args()
   if not args then
@@ -498,11 +424,9 @@ function processFormArgs()
 -- Post Objects
 -- https://www.w3.org/TR/jf2/#post-objects
 -- http://microformats.org/wiki/microformats-2#v2_vocabularies
---
---
   
   local hType = args.h
-  ngx.say(hType)
+  --ngx.say(hType)
   if hType == nil then
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
@@ -550,8 +474,8 @@ function processFormArgs()
       ngx.say(type(val))
       ngx.say(key, ": ", table.concat(val, ", "))
     else    
-      ngx.say(type(val))
-      ngx.say(key, ": ", val)
+      -- ngx.say(type(val))
+      -- ngx.say(key, ": ", val)
       if p[key] ~=  nil then
         properties[key] = val
       end
@@ -560,236 +484,94 @@ function processFormArgs()
 
   -- ' we have a the properties of an entry'
   -- 'discovery the post type' 
-  local postType = discoverPostType( properties)
+  local kindOfPost = discoverPostType( properties )
    -- top level entry
    data = { 
      xml = hType, 
-     type = postType
+     type = kindOfPost
    } 
-  --data['xml'] =  table.insert(data,0,{'class',discoverPostType( properties)})
-  ngx.say(postType)
+
+ -- ngx.say(kindOfPost)
  -- getID()
-  ngx.say('--------------------------------------------------------')
+ -- ngx.say('--------------------------------------------------------')
 
-  -- slugDict:replace("today",'4X8')
-  -- slugDict:delete("today")
-  -- slugDict:delete("count")
-  -- ngx.say( b60Encode(slugDict:get("count")))
-  -- ngx.say( b60Encode(80))
-  -- properties['yDay'] = type(os.date("*t").yday)
-  -- properties['year'] = os.date("%y") .. os.date("*t").yday
   properties['published'] = getToday()
- --  properties['id'] = 'tag:' .. host .. ',' ..  getToday() .. ':' .. postType .. ':'  ..  getID()
-  properties['id'] =  getID()
- -- properties['os'] =  os.getenv("EXIST_AUTH") 
+ --  properties['id'] = 'tag:' .. host .. ',' ..  getToday() .. ':' .. kindOfPost .. ':'  ..  getID()
 
+  properties['id'] =  getID(require('mydata').getShortKindOfPost(kindOfPost))
   for key, val in pairs(properties) do
     -- ngx.say(type(val))
     -- ngx.say(key, ": ", val)
     table.insert(data,1,{ xml = key, val })
   end
-
-  --table.sort(data)
-
-
-
-
-  --  properties['id'] = 'tag:' .. host .. ',' ..  os.date("%Y-%m-%d") .. ':note:' ..  slugDict:get("today") .. b60Encode(slugDict:get("count"))
- --  properties['id'] = 'n' ..  slugDict:get("today") .. b60Encode(slugDict:get("count"))
- --  local url = ndk.set_var.set_escape_uri( 'https://' .. host .. '/n')
- --  properties['url'] = ndk.set_var.set_unescape_uri(url)
- -- local data = {}
---  local props = {}
-
--- table.insert(data,1,prop)
- -- tbl['properties'] = properties
- -- {xml = 'a', 'This is a'}
  return data
 end
 
-function _M.validateRequestParameters()
-  -- https://github.com/LuaDist/luaxml
+function acceptMethods(methods)
   --  the methods this endpoint can handle
   local method = ngx.req.get_method()
-  if not contains( { "POST", "GET"}, method )  then
+  if not contains( methods, method )  then
     return requestError(
       ngx.HTTP_METHOD_NOT_IMPLEMENTED,
-      method .. ' method  not implemented',
+      method .. ' method not implemented',
       'endpoint only implements POST and GET methods') 
   end
-  -- ngx.say( type(method))
-  -- MUST support creating posts using the x-www-form-urlencoded syntax
+ return method  
+end
 
+function acceptContentTypes(contentTypes)
   --  the content-types this endpoint can handle
   local contentType = ngx.req.get_headers()["Content-Type"]
-  local contentTypes = {'application/json','application/x-www-form-urlencoded'}
   if not contains(contentTypes,contentType)  then
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
       'endpoint only accepts json or x-www-form-urlencoded content-type')
   end
+  return contentType
+end
 
-  --  creating objects
-  local json = nil
-  local tble = nil
-  local hType = nil
-  local postType = nil
+function _M.validateRequestParameters()
+  local host = ngx.req.get_headers()["Host"]
+  --  the methods this endpoint can handle
+  local method =  acceptMethods({"POST","GET"})
+  -- ngx.say( method )
+  -- the content-types this endpoint can handle
+  local contentType = acceptContentTypes({'application/json','application/x-www-form-urlencoded'})
+  -- ngx.say( contentType )
+  -- MUST support creating posts using the x-www-form-urlencoded syntax
 
   -- MUST support creating posts with the [h-entry] vocabulary
   --  the microformat objects this endpoint can handle at the mo
-
+  local data = {}
   ngx.req.read_body()
   if contentType  == 'application/x-www-form-urlencoded' then
-    -- hType = processFormArgs()
-    dataTable = processFormArgs()
-
+    -- ngx.say(contentType)
+     data  = processFormArgs()
   elseif contentType  == 'application/json' then
-    postData = cjson.decode(ngx.req.get_body_data())
-    hType = postData['type']
-  end
+   -- postData = cjson.decode(ngx.req.get_body_data())
+   --  hType = postData['type']
+ end
 
-  local xml = require 'xml'
-  local ex =  require 'eXist'
-  ngx.say(xml.dump(dataTable))
-  local idStr = xml.find(dataTable, 'content')[1]
-  ngx.say(idStr)
+ require('eXist').putXML(data)
 
-  --require('eXist').PutXML( 'data/posts' ,idStr, dataTable )
-  ex.PutXML(dataTable) 
+ -- local xml = require 'xml'
+  -- local lub = require 'lub'
+  -- ngx.say(require('xml').dump(data))
 
+   -- local resource = xml.find(data, 'id')[1]
+   -- ngx.say(resource)
+   --local  = xml.find(data, 'type' )
+-- local x = lub.join({'foo', 'bar', 'baz'}, '.')
+   -- ngx.say(type(data))
+   -- local kind = xml.find(data,'entry')['type'] 
+   -- ngx.say(kind)
+   --  ngx.say(require('mydata').getShortKindOfPost(kind))
 
-  --local eXist = require 'eXist'
---   json = cjson.encode(tble)
---   ngx.say(json)
-  
-
-
-
---   local  xml = require 'xml'
---   local TEST_XML = [[
--- <document>
---   <nodes>
---     <a>This is a</a>
---     <b rock='Rock&apos;n Roll'>This is Bob</b>
---     <c/>
---   </nodes>
---   <p>Dear <b>Pedro</b>, how are you ?</p>
--- </document>]]
-
---   local TEST_RES = {
---     xml = 'document',
---     {xml = 'nodes',
---       {xml = 'a', 'This is a'},
---       {xml = 'b', rock = 'Rock\'n Roll', 'This is Bob'},
---       {xml = 'c'},
---     },
---     {xml = 'p',
---       'Dear ',
---       {xml = 'b', 'Pedro'},
---       ', how are you ?',
---     },
---   }
---   local data = xml.load(TEST_XML)
---   local doc  = data.xml
-
---   ngx.say(doc)
---   ngx.say(xml.dump(TEST_RES))
-  
-
-
-  -- redisStore(tble)
-
-  --red:hmset(myhash, { field1 = value1, field2 = value2, ... })
-  
- --  json = cjson.encode(postData)
- --  ngx.say(json)
-
-  -- if hType == nil then
-  --   return requestError(
-  --     ngx.HTTP_NOT_ACCEPTABLE,
-  --     'not acceptable',
-  --     'no microformat h- type sent')
-  -- elseif type(hType) == 'table' then
-  --   hType = hType[1]
-  -- end
-  -- ngx.say(type(hType))
-  -- note! 
-  --  hType is a lua table type
-  --  so hType[1] is the first item - a string type
-  --  a list of hTpes we can handle
-  -- local hTypes = {}
-  -- hTypes['h-entry'] = true
-  -- hTypes['h-card'] = false
-  -- hTypes['h-event'] = false
-  -- hTypes['h-cite'] = false
-  -- local msg = 'can not handle microformat: ' .. hType
-  -- if not hTypes[hType] then
-  --   return requestError(
-  --     ngx.HTTP_NOT_ACCEPTABLE,
-  --     'not accepted',
-  --     msg )
-  -- end
-
-  -- if contentType  == 'application/x-www-form-urlencoded' then
-  --   postData= {
-  --     ['type'] = { hType } ,
-  --     ['properties'] = {
-  --       ['content'] = {postData.content}
-  --     }
-  --   } 
-  -- end
-
- -- local  properties = {}
-
- --  json = cjson.encode(postData)
- --  ngx.say(json)
-  --   ngx.say("Host: ", ngx.req.get_headers()["Host"])
-  --   local contentType = ngx.req.get_headers()["Content-Type"]
-  --   ngx.say("content_type: ", contentType)
-
-  --   local postData  = nil
-  --   local postType = nil
-  --   local postProperties = nil
-  --   local postContent = nil
-  --   if contentType  == 'application/x-www-form-urlencoded' then
-  --     ngx.req.read_body()
-  --     postData = ngx.req.get_post_args() 
-  --     postType = postData.h
-  --     postContent = postData.content 
-  --     ngx.say(postType)
-  --     ngx.say(postContent)
-  --     local data = {
-  --       ['type'] = { postType } ,
-  --       ['properties'] = {
-  --       ['content'] = {postContent}
-  --       }
-  --     } 
-  --     json = cjson.encode(data)
-  --     ngx.say(json)
-  --   elseif contentType  == 'application/json' then
-  --     ngx.req.read_body()
-  --     postData = cjson.decode(ngx.req.get_body_data())
-  --     postType = postData['type']
-  --     postProperties = postData.properties
-  --     ngx.say(type(postType))
-  --     ngx.say(type(postProperties.content))
-  --     local data = {
-  --       ['type'] = postType ,
-  --       ['properties'] = {
-  --         ['content'] = postProperties.content
-  --       }
-  --     } 
-  --     json = cjson.encode(data)
-  --     ngx.say(json)
-  --   end
-
-  --   if postData == 'entry' then
-
-
-
-
-
+  -- note data is a lua table 
+  -- could send xml as param instead 
+  -- on success return
+  -- https://www.w3.org/TR/micropub/#response
 end
 
 return _M

@@ -137,6 +137,3 @@ monitor:
 	@echo '$(NGINX_HOME)/logs/access.log'
 	@ngxtop -v  -l $(NGINX_HOME)/logs/access.log -f combined
 
-rsLive:
-	@echo 'copy certs from remote'
-	@scp -r featon:/etc/letsencrypt/live /etc/letsencrypt

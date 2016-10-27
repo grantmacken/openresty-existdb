@@ -58,4 +58,22 @@ certbotConf:
 	@chmod +x $(T)/certbot/certbot-auto
 	@$(T)/certbot/certbot-auto --help
 
+# NOTE: SERVER is named in config file
+#       It is the VPS server host that can be connected to via ssh
+#       and will be a Host {name} defined in
+#       gf: ~/.ssh/config
+#       
+#       A distro upgrade will destroy /etc/letsencrypt
+#       on local dev use sudo to remake and set permissions for dir
+#       then secure copy certs from remote
 
+syncCerts:
+	@echo 'copy certs from remote'
+	@scp -r $(SERVER):/etc/letsencrypt/live /etc/letsencrypt
+
+syncCertsPerm:
+	@echo 'copy certs from remote'
+	@$(call assert-is-root)
+	@[ -d /etc/letsencrypt ] || mkdir /etc/letsencrypt
+	@$(call chownToUser, /etc/letsencrypt )
+	@ls -al /etc/letsencrypt 

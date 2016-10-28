@@ -233,7 +233,7 @@ rocksList = xml net-url
 
 rocks:
 	@$(foreach rock,\
- xml ,\
+ xml net-url ,\
  luarocks list '$(rock)' | grep $(rock) && luarocks show '$(rock)'  || luarocks install '$(rock)' )
 
 downloadSiege:

@@ -238,7 +238,6 @@ rocks:
 	@luarocks list 'lua-resty-jwt' | grep 'lua-resty-jwt' && luarocks show 'lua-resty-jwt' || luarocks install 'lua-resty-jwt' 
 	@luarocks list 
 
-
 downloadSiege:
 	@echo 'download the latest siege version'
 	@curl http://download.joedog.org/siege/siege-latest.tar.gz | \

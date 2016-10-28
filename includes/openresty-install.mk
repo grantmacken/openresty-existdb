@@ -234,7 +234,7 @@ rocksList = xml net-url lua-resty-http lua-resty-jwt
 rocks:
 	@$(foreach rock,\
  xml net-url lua-resty-http lua-resty-jwt,\
- luarocks show '$(rock)' )
+ luarocks show '$(rock)' &  wait %1 )
 
 
 downloadSiege:

@@ -70,3 +70,6 @@ orService:
 	@journalctl -f -u nginx.service -o cat
 	@echo '--------------------------------------------------------------'
 
+scpAccessToken:
+	@echo 'copy current access token over to remote'
+	@scp $(ACCESS_TOKEN) $(SERVER):~/$(GIT_USER)

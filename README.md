@@ -46,9 +46,15 @@ Note: system environment variables
  The env var must be set as a directive in nginx.conf
  env EXIST_AUTH;
 
- Once set the enviroment var can be accessed use in lua modules
+ Once set the enviroment var can be accessed use in lua modules to interact with eXist
 
 `local existAuth = os.getenv("EXIST_AUTH")`
+
+Basic Authorization with eXist is user:password base64 combined.
+I have setup eXist to use my configured git account user.name
+with the password as my current GitHub access token. The pathway to the token is set in the config file in the projects root. 
+
+
 
 ## Openresty Package Management
 

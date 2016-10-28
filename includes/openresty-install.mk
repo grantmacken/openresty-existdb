@@ -11,6 +11,7 @@ endif
 ifeq ($(wildcard $(T)/zlib-latest.version ),)
 $(shell echo '0.0.0' > $(T)/zlib-latest.version)
 endif
+
 ifeq ($(wildcard $(T)/luarocks-latest.version),)
 $(shell echo '0.0.0' > $(T)/luarocks-latest.version )
 endif
@@ -200,12 +201,19 @@ $(T)/luarocks-latest.version: $(T)/luarocks-previous.version
 	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadLuarocks
 	@touch  $(<)
 
+
 downloadLuarocks: $(T)/luarocks-latest.version
 	@echo 'download the latest  version'
 	@echo  "$$(<$(<))" 
 	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | \
  tar xz --directory $(T)
 	@echo '------------------------------------------------'
+
+preLuarocks: 
+	@echo 'pre luarocks'
+	@export PATH=$(OPENRESTY_HOME)/luajit/bin:$$PATH
+	@cd $(OPENRESTY_HOME)/luajit/bin; ln -s luajit lua
+
 
 luaJitVer =  $(shell echo "$$(luajit -v | grep -oP 'LuaJIT\s\K(\S+)')")
 
@@ -218,8 +226,6 @@ luarocksInstall:
  --with-lua=$(OPENRESTY_HOME)/luajit \
  --lua-suffix=jit-2.1.0-beta2 \
  --with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
-	@export PATH=$(OPENRESTY_HOME)/luajit/bin:$$PATH
-	@cd $(OPENRESTY_HOME)/luajit/bin; ln -s luajit lua
 	@echo '--------------------------------------------'
 
 downloadSiege:

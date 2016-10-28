@@ -101,9 +101,13 @@ endef
 ################################################################
 
 define cnfProd
+
+env EXIST_AUTH;
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
-error_log logs/error.log;
+pcre_jit on;
+
 pid       logs/nginx.pid;
+error_log logs/error.log;
 
 include events.conf;
 

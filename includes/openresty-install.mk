@@ -11,6 +11,12 @@ endif
 ifeq ($(wildcard $(T)/zlib-latest.version ),)
 $(shell echo '0.0.0' > $(T)/zlib-latest.version)
 endif
+ifeq ($(wildcard $(T)/luarocks-latest.version),)
+$(shell echo '0.0.0' > $(T)/luarocks-latest.version )
+endif
+
+
+
 ifeq ($(wildcard $(T)/openresty-previous.version),)
 $(shell echo '0.0.0' > $(T)/openresty-previous.version )
 endif
@@ -22,6 +28,9 @@ $(shell echo '0.0.0' > $(T)/pcre-previous.version)
 endif
 ifeq ($(wildcard $(T)/zlib-previous.version ),)
 $(shell echo '0.0.0' > $(T)/zlib-previous.version)
+endif
+ifeq ($(wildcard $(T)/luarocks-previous.version),)
+$(shell echo '0.0.0' > $(T)/luarocks-previous.version )
 endif
 
 orLatest: $(T)/openresty-latest.version
@@ -35,8 +44,11 @@ dl:
 	@$(MAKE) pcreLatest
 	@$(MAKE) zlibLatest
 
+dl-reset:
+	touch $(T)/luarocks-previous.version
 
 luarocksLatest: $(T)/luarocks-latest.version
+
 luaLatest: $(T)/lua-latest.version
 
 orVer != [ -e $(T)/openresty-latest.version ] && cat $(T)/openresty-latest.version || echo ''
@@ -178,17 +190,24 @@ orInstall: $(T)/openresty-latest.version
 
 
 
-$(T)/luarocks-latest.version: config
+$(T)/luarocks-latest.version: $(T)/luarocks-previous.version
 	@echo "{{{ $(notdir $@) "
 	@echo 'fetch the latest luarocks version'
+	@cp -f $@ $(<)
 	@echo $$( curl -s -L  http://keplerproject.github.io/luarocks/releases/ | tr -d '\n\r' |\
  grep -oP 'luarocks-\K([0-9\.]+)(?=\.tar\.gz)' |\
  head -1) > $(@)
-	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$@)").tar.gz | \
+	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadLuarocks
+	@touch  $(<)
+
+downloadLuarocks: $(T)/luarocks-latest.version
+	@echo 'download the latest  version'
+	@echo  "$$(<$(<))" 
+	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | \
  tar xz --directory $(T)
-	@$(call chownToUser,$(@))
-	@echo  "$$(<$@)" 
 	@echo '------------------------------------------------'
+
+luaJitVer =  $(shell echo "$$(luajit -v | grep -oP 'LuaJIT\s\K(\S+)')")
 
 luarocksInstall:
 	@echo 'install luarocks version'

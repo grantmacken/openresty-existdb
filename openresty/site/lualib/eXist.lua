@@ -34,6 +34,11 @@ function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
+function getPostsPath()
+  return '/db/data/' ..  ngx.var.http_Host .. '/docs/posts/'
+end
+
+
 function getRequest2( query )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
   local host = 'localhost'
@@ -276,20 +281,18 @@ end
 function _M.replaceContent( uri, content )
   local url = require('net.url').parse(uri)
   local id = string.gsub(url.path, "/", "")
-
   local xml = require 'xml'
   local http = require "resty.http"
-
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
   local contentType = 'application/xml'
   local domain   = ngx.var.http_Host
   local host = 'localhost'
   local port = 8080
-  local xmlContent  = { 
+  local xmlContent = { 
     xml = 'content', 
   type = 'text',content} 
   local restPath  = '/exist/rest/db/apps/' .. domain 
-  local docPath  = 'docs/posts/' .. id 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. id 
   ngx.say(xml.dump(xmlContent))
  local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -360,10 +363,10 @@ function _M.putXML( data )
   local domain   = ngx.var.http_Host
   local resource = xml.find(data, 'id')[1]
   local kindOfPost = xml.find(data, 'entry').type
-  local appPath  = "/exist/rest/db/apps/" .. domain  
+  local dataPath = "/exist/rest/db/data/" .. domain  
   local colPath  = "docs/posts/"
   local resource = xml.find(data, 'id')[1]
-  local putPath  = appPath .. '/' .. colPath .. '/' .. resource .. '.xml'
+  local putPath  = dataPath .. '/' .. colPath .. '/' .. resource .. '.xml'
   local host = 'localhost'
   local port = 8080
 

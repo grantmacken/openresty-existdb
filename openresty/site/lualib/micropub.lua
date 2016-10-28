@@ -19,10 +19,12 @@ luarocks install xml
 
 TEST: curl
 
-3. POST   x-www-form-urlencoded 
+1. a x-www-form-urlencoded POST request : emulate a HTML formx-www-form-urlencoded 
 
  curl -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub  -d 'h=entry' -d 'content=hello world'
+ 
  4. POST application/json
+
 
  curl -H "Content-Type: application/json"  -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub -d '{"type": ["h-entry"],"properties":{"content": ["hello world"]}}'
 
@@ -423,7 +425,7 @@ function processPost()
             end
             local newContent = table.concat(content, ", ")
             ngx.say(newContent)
-            require('eXist').replaceContent( url  , newContent )
+            require('eXist').replaceContent( url )
           end
         end
 

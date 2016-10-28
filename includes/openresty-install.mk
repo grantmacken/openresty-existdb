@@ -207,7 +207,7 @@ downloadLuarocks: $(T)/luarocks-latest.version
 	@echo 'download the latest  version'
 	@echo  "$$(<$(<))" 
 	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | \
- tar xz --directory $(T)
+	tar xz --directory $(T)
 	@echo '------------------------------------------------'
 
 preLuarocks: 
@@ -222,24 +222,25 @@ luarocksInstall:
 	@echo 'install luarocks version'
 	@echo $(luarocksVer)
 	@cd $(T)/luarocks-$(luarocksVer) && \
- ./configure \
- --prefix=$(OPENRESTY_HOME)/luajit \
- --with-lua=$(OPENRESTY_HOME)/luajit \
- --lua-suffix=jit-2.1.0-beta2 \
- --with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
+./configure \
+--prefix=$(OPENRESTY_HOME)/luajit \
+--with-lua=$(OPENRESTY_HOME)/luajit \
+--lua-suffix=jit-2.1.0-beta2 \
+--with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
 	@echo '--------------------------------------------'
 
 rocksList = xml net-url lua-resty-http
 
 rocks:
 	@$(foreach rock,\
- xml net-url lua-resty-http ,\
- luarocks list '$(rock)' | grep $(rock) && luarocks show '$(rock)'  || luarocks install '$(rock)' )
+ xml net-url lua-resty-http lua-resty-jwt,\
+ luarocks install '$(rock)' 1>&- 2>&- & )
+
 
 downloadSiege:
 	@echo 'download the latest siege version'
 	@curl http://download.joedog.org/siege/siege-latest.tar.gz | \
- tar xz --directory $(T)
+tar xz --directory $(T)
 	@echo '------------------------------------------------'
 # cd $(T)/redis-stable; $(MAKE) && $(MAKE) test && $(MAKE) install
 # REDIS
@@ -248,7 +249,7 @@ downloadSiege:
 downloadRedis:
 	@echo 'download the stable redis version'
 	curl http://download.redis.io/redis-stable.tar.gz | \
- tar xz --directory $(T)
+tar xz --directory $(T)
 	cd $(T)/redis-stable; $(MAKE) && $(MAKE) test && $(MAKE) install
 	@echo '------------------------------------------------'
 

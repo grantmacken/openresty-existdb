@@ -229,10 +229,11 @@ luarocksInstall:
  --with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
 	@echo '--------------------------------------------'
 
-rocksList = lua-resty-http lua-resty-jwt xml net-url
+rocksList = xml net-url
 
 rocks:
-	@$(foreach rock, $(rocksList),\
+	@$(foreach rock,\
+ xml ,\
  luarocks list '$(rock)' | grep $(rock) && luarocks show '$(rock)'  || luarocks install '$(rock)' )
 
 downloadSiege:

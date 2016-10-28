@@ -232,9 +232,10 @@ luarocksInstall:
 rocksList = xml net-url lua-resty-http lua-resty-jwt
 
 rocks:
-	@$(foreach rock,\
- xml net-url lua-resty-http lua-resty-jwt,\
- luarocks show '$(rock)' &  wait %1 )
+	@luarocks list 'xml' | grep 'xml' && luarocks show 'xml' || luarocks install 'xml' 
+	@luarocks list 'net-url' | grep 'net-url' && luarocks show 'net-url' || luarocks install 'net-url' 
+	@luarocks list 'lua-resty-http' | grep 'lua-resty-http' && luarocks show 'lua-resty-http' || luarocks install 'lua-resty-http' 
+	@luarocks list 'lua-resty-jwt' | grep 'lua-resty-jwt' && luarocks show 'lua-resty-jwt' || luarocks install 'lua-resty-jwt' 
 
 
 downloadSiege:

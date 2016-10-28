@@ -60,7 +60,8 @@ luarocksVer != [ -e $(T)/luarocks-latest.version ] && cat $(T)/luarocks-latest.v
 
 .PHONY:  orInstall luarocksInstall ngReload \
  dl downloadOpenresty downloadOpenssl downloadPcre downloadZlib downloadRedis\
- incLetsEncrypt orInitConf openrestyService  orConf orGenSelfSigned certbotConf
+ incLetsEncrypt orInitConf openrestyService  orConf orGenSelfSigned certbotConf \
+ rocks
 
 $(T)/openresty-latest.version: $(T)/openresty-previous.version 
 	@echo " $(notdir $@)"
@@ -227,6 +228,12 @@ luarocksInstall:
  --lua-suffix=jit-2.1.0-beta2 \
  --with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
 	@echo '--------------------------------------------'
+
+rocksList = lua-resty-http lua-resty-jwt xml net-url
+
+rocks:
+	@$(foreach rock, $(rocksList),\
+ luarocks list '$(rock)' | grep $(rock) && luarocks show '$(rock)'  || luarocks install '$(rock)' )
 
 downloadSiege:
 	@echo 'download the latest siege version'

@@ -116,17 +116,13 @@ ngDH: openresty/nginx/ssl/dh-param.pem
 # @sudo $(NGINX_HOME)/sbin/nginx -t -c conf/dev.conf
 # @sudo systemctl start nginx.service
 
-
-
 crl:
 	w3m http://$(DOMAIN)
-
 
 seige:
 	@curl -L http://$(DOMAIN)
 	@curl -I https://$(DOMAIN)
 	@siege -c 15 -r 10 https://$(DOMAIN)
-
 
 check2:
 	@openssl s_client -connect $(DOMAIN):443 -status
@@ -136,4 +132,3 @@ check2:
 monitor:
 	@echo '$(NGINX_HOME)/logs/access.log'
 	@ngxtop -v  -l $(NGINX_HOME)/logs/access.log -f combined
-

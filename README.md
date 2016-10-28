@@ -8,7 +8,48 @@ I wanted to
  - enable HTTPS by default
  - explore openresty/lua middleware capability
 
-### Make Targets
+## Openresty
+
+I want to automate the install of the latest openresty,
+with ssl enabled
+
+### `make dl`
+
+Check for latest versions of
+ -  openresty
+ -  pcre
+ -  openssl
+ -  zlib
+
+and download newest version
+
+### `make orInstall`
+
+with latest versions compile and install openresty
+
+check the configure directives first
+
+## Openresty Package Management
+
+The next version of openresty will use its own package manager,
+ in the meantime use luarocks
+
+note luajit version is hardwired
+
+`make luarocksLatest`
+
+`make luarocksInstall`
+
+TODO!
+
+
+## Setting Up Serving HTTPS by default
+
+TODO!
+
+## 
+ 
+### Development Make Targets
 
 `make orDev` Run this when 
 1. changes are made to src files in 'openresty/nginx/conf/' or

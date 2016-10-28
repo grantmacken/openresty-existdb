@@ -101,7 +101,6 @@ endef
 ################################################################
 
 define cnfProd
-
 env EXIST_AUTH;
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 pcre_jit on;

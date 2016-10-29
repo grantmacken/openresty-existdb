@@ -210,8 +210,9 @@ downloadLuarocks: $(T)/luarocks-latest.version
 	tar xz --directory $(T)
 	@echo '------------------------------------------------'
 
-preLuarocks: 
+orPaths: 
 	@echo 'pre luarocks'
+	@export PATH=$(OPENRESTY_HOME)/bin:$$PATH
 	@export PATH=$(OPENRESTY_HOME)/luajit/bin:$$PATH
 	@cd $(OPENRESTY_HOME)/luajit/bin; ln -s luajit lua
 

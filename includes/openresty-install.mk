@@ -157,21 +157,11 @@ orInstall: $(T)/openresty-latest.version
  --with-pcre-jit \
  --with-zlib="../zlib-$(zlibVer)" \
  --with-openssl="../openssl-OpenSSL_$(opensslVer)" \
- --with-http_ssl_module \
  --with-ipv6 \
- --with-http_v2_module \
  --with-file-aio \
- --with-http_realip_module \
- --with-http_sub_module \
- --with-http_gzip_static_module \
- --with-http_stub_status_module \
- --with-http_secure_link_module \
- --without-http_empty_gif_module \
- --without-http_ssi_module \
- --without-http_uwsgi_module \
- --without-http_fastcgi_module \
- --without-http_scgi_module \
- --without-lua_resty_mysql && make && make install
+ --with-http_v2_module \
+ --with-http_ssl_module \
+ && make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
 
  # --with-http_stub_status_module \
  # --with-http_secure_link_module 

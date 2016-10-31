@@ -45,6 +45,7 @@ PrivateTmp=true
 WantedBy=multi-user.target
 endef
 
+# Environment="LUA_CPATH='/usr/local/openresty/luajit/lib/lua/5.1/?.so;'"
 orService: export openrestyService:=$(openrestyService)
 orService:
 	@echo "setup openresty as nginx.service under systemd"

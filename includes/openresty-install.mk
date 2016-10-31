@@ -162,12 +162,13 @@ orInstall: $(T)/openresty-latest.version
  --with-http_v2_module \
  --with-http_ssl_module \
  && make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
+	$(MAKE) ngClean
 
  # --with-http_stub_status_module \
  # --with-http_secure_link_module 
  #  -with-libatomic=../libatomic_ops-7.2 \
 
-# https://github.com/openssl/openssl/archive/
+# https://github.com/openssl/openssl/archive
 # OpenSSL_1_0_2h.tar.gz
 
 

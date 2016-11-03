@@ -36,7 +36,7 @@ Environment="EXIST_AUTH=$(shell echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )
 WorkingDirectory=$(OPENRESTY_HOME)
 PIDFile=$(NGINX_HOME)/logs/nginx.pid
 ExecStartPre=$(OPENRESTY_HOME)/bin/openresty -t
-ExecStart=$(OPENRESTY_HOME)/bin/openresty
+ExecStart=$(OPENRESTY_HOME)/bin/openresty -p $(OPENRESTY_HOME)
 ExecReload=/bin/kill -s HUP $$MAINPID
 ExecStop=/bin/kill -s QUIT $$MAINPID
 PrivateTmp=true

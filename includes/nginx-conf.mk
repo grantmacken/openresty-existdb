@@ -207,7 +207,6 @@ orDev:
 	@echo "$${cnfDev}"
 	@echo "$${cnfDev}" > $(NGINX_HOME)/conf/nginx.conf
 	@$(call chownToUser,$(NGINX_HOME)/conf/nginx.conf)
-	@$(MAKE) stow
 	@$(MAKE) orReload
 	@echo '---------------------------------------------'
 

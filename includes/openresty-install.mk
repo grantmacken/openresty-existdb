@@ -181,6 +181,19 @@ orInstall: $(T)/openresty-latest.version
 # @curl https://github.com/openssl/openssl/archive/openssl_$(opensslver).tar.gz | \
 #  tar xz --directory $(t)
 
+#TODO! rm when opm is part of openresty
+.PHONY: opmInstall opmGet
+
+opmInstall:
+	@cp ~/projects/openresty/opm/bin/opm $(OPENRESTY_HOME)/bin
+	@cd $(OPENRESTY_HOME) &&  mkdir -p site/lualib site/manifest site/pod
+	@scp $(OPENRESTY_HOME)/bin/opm featon:$(OPENRESTY_HOME)/bin/opm
+
+opmGet:
+	@echo "install opm packages"
+	@opm get pintsized/lua-resty-http
+
+
 
 
 $(T)/luarocks-latest.version: $(T)/luarocks-previous.version

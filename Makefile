@@ -100,10 +100,6 @@ prep:
 	@[ -x  bin/prep ] || chmod +x bin/prep
 	@prep
 
-stow:
-	@echo 'use stow to create symlinks tree'
-	@stow -v -t $(OPENRESTY_HOME) openresty
-
 # shortcut aliases
 # create diffie
 ngDH: openresty/nginx/ssl/dh-param.pem

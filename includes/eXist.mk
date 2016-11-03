@@ -33,15 +33,15 @@ EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases
 EXIST_VERSION_SOURCE=https://bintray.com/existdb/releases/exist/_latestVersion
 
 $(EXIST_VERSION):
-	@echo "{{{## $(notdir $@) ##"
+	@echo "## $(notdir $@) ##"
 	@echo 'fetch the latest eXist version'
 	@curl -s -L  $(EXIST_VERSION_SOURCE) | grep -oP '>\KeXist-db-setup[-\w\.]+' > $@
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@cat $@
-	@echo '}}}'
+	@echo '--------------------------------------'
 
 $(T)/wget-eXist.log:  $(T)/eXist-latest.version
-	@echo "{{{## $(notdir $@) ##"
+	@echo "## $(notdir $@) ##"
 	@$(if $(call EXIST_JAR),,$(error oh no! this is bad))
 	@echo "EXIST_JAR: $(call EXIST_JAR)"
 	@echo "EXIST_JAR_PATH: $(call EXIST_JAR_PATH)"
@@ -54,11 +54,11 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	echo '# because we use wget with no clobber, if we have source then just touch log'
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@cat $@
-	@echo '}}}'
+	@echo '--------------------------------------'
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@exho 'Create data dir'
+	@echo 'Create data dir'
 	@mkdir -p $(EXIST_DATA_DIR)
 	@echo 'we have $(call EXIST_JAR)'
 	@echo 'creating expect file'

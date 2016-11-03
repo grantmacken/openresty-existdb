@@ -30,6 +30,25 @@
 #
 #################################
 
+SRC_CONF := $(shell find nginx-config -name '*.conf' )
+NGX_CONF  := $(patsubst nginx-config/%.conf,$(NGINX_HOME)/conf/%.conf,$(SRC_CONF))
+
+nginx-config: $(NGX_CONF)
+
+watch-nginx-conf:
+	@watch -q $(MAKE) nginx-config
+
+.PHONY:  watch-ngix-config
+
+
+$(NGINX_HOME)/conf/%.conf: nginx-config/%.conf
+	@echo "## $@ ##"
+	@mkdir -p $(@D)
+	@echo "SRC: $<" >/dev/null
+	@echo 'copied files into openresty  directory' >/dev/null
+	@cp $< $@
+	@echo '-----------------------------------------------------------------'
+
 define cnfDev
 env EXIST_AUTH;
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
@@ -197,7 +216,6 @@ orProd: export cnfProd:=$(cnfProd)
 orProd:
 	@echo 'create nginx production conf'
 	@echo "$${cnfProd}" >  $(NGINX_HOME)/conf/nginx.conf
-	@$(MAKE) stow
 	@$(MAKE) orReload
 
 orDev: export cnfDev:=$(cnfDev)
@@ -216,14 +234,9 @@ orReload:
 
 ngClean:
 	@echo 'clean out nginx conf dir but leave mimetypes'
-	@find $(NGINX_HOME)/conf -type f -name 'fast*' -delete
-	@find $(NGINX_HOME)/conf -type f -name 'scgi*' -delete
-	@find $(NGINX_HOME)/conf -type f -name 'uwsgi*' -delete
 	@find $(NGINX_HOME)/conf -type f -name '*.default' -delete
 	@find $(NGINX_HOME)/logs -type f -name 'error.log' -delete
-	@find $(NGINX_HOME)/conf -type f -name 'koi-*' -delete
-	@find $(NGINX_HOME)/conf -type f -name 'win-*' -delete
-	@find $(NGINX_HOME)/conf -type f -name 'nginx.conf' -delete
+	@find $(NGINX_HOME)/conf -type f -name '*.conf' -delete
 
 openresty/nginx/ssl/dh-param.pem: 
 	@mkdir -p $(dir $@)

@@ -31,9 +31,10 @@
 #################################
 
 SRC_CONF := $(shell find nginx-config -name '*.conf' )
-NGX_CONF  := $(patsubst nginx-config/%.conf,$(NGINX_HOME)/conf/%.conf,$(SRC_CONF))
+SRC_TYPES := $(shell find nginx-config -name '*.types' )
+NGX  := $(patsubst nginx-config/%,$(NGINX_HOME)/conf/%,$(SRC_CONF) $(SRC_TYPES))
 
-nginx-config: $(NGX_CONF)
+nginx-config: $(NGX)
 
 watch-nginx-conf:
 	@watch -q $(MAKE) nginx-config
@@ -42,6 +43,14 @@ watch-nginx-conf:
 
 
 $(NGINX_HOME)/conf/%.conf: nginx-config/%.conf
+	@echo "## $@ ##"
+	@mkdir -p $(@D)
+	@echo "SRC: $<" >/dev/null
+	@echo 'copied files into openresty  directory' >/dev/null
+	@cp $< $@
+	@echo '-----------------------------------------------------------------'
+
+$(NGINX_HOME)/conf/%.types: nginx-config/%.types
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
 	@echo "SRC: $<" >/dev/null

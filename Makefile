@@ -85,7 +85,7 @@ default: help
 
 include includes/*
 
-.PHONY: help prep stow 
+.PHONY: help prep 
 
 help:
 	@cat README.md
@@ -99,6 +99,8 @@ prep:
 	@$(call assert-is-root)
 	@[ -x  bin/prep ] || chmod +x bin/prep
 	@prep
+
+eXist: $(T)/eXist-run.sh
 
 # shortcut aliases
 # create diffie

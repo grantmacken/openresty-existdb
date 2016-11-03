@@ -57,7 +57,9 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo '}}}'
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
-	@echo "{{{## $(notdir $@) ##"
+	@echo "## $(notdir $@) ##"
+	@exho 'Create data dir'
+	@mkdir -p $(EXIST_DATA_DIR)
 	@echo 'we have $(call EXIST_JAR)'
 	@echo 'creating expect file'
 	@echo '#!$(EXPECT) -f' > $(@)

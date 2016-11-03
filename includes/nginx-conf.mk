@@ -39,7 +39,7 @@ nginx-config: $(NGX)
 watch-nginx-conf:
 	@watch -q $(MAKE) nginx-config
 
-.PHONY:  watch-ngix-config
+.PHONY:  watch-nginx-config
 
 
 $(NGINX_HOME)/conf/%.conf: nginx-config/%.conf

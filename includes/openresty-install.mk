@@ -211,7 +211,7 @@ downloadLuarocks: $(T)/luarocks-latest.version
 	@echo 'download the latest  version'
 	@echo  "$$(<$(<))" 
 	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | \
-	tar xz --directory $(T)
+ tar xz --directory $(T)
 	@echo '------------------------------------------------'
 
 orPaths: 

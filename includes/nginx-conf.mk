@@ -106,7 +106,7 @@ http {
 
     # GLOBAL VARIABLES
 
-    set $$resources $(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
+    set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
 
     # PHASES 
     # before locations insert server-rewrite phase
@@ -173,7 +173,7 @@ http {
 
     # GLOBAL VARIABLES
 
-    set $$resources $(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
+    set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
 
     # PHASES 
     # before locations insert server-rewrite phase

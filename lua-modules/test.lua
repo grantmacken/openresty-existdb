@@ -295,3 +295,70 @@ function say (var)
   ngx.say("close: ", ok, " ", err)
 
 end
+
+function redisStore(tbl)
+  -- https://github.com/openresty/lua-resty-redis
+  -- http://redis.io/commands
+   -- slugDict:replace("count", 1)
+
+  local redis = require "resty.redis"
+  local red = redis:new()
+
+  red:set_timeout(1000) -- 1 sec
+
+  local ok, err = red:connect("127.0.0.1", 6379)
+  if not ok then
+    ngx.say("failed to connect: ", err)
+    return
+  end
+
+    --ngx.say(slugDict:get("count"))
+    --ngx.say(slugDict:get("today"))
+    json = cjson.encode(tbl['type'])
+    ngx.say(json)
+
+   local hash = slugDict:get("today") .. slugDict:get("count")
+   ngx.say ( hash )
+
+
+    local res, err = red:hmset (hash,'type', tbl['type'])
+    if not res then
+      ngx.say("failed: ", err)
+      return
+    end
+
+    local res, err = red:hmset (hash,tbl['properties'])
+    if not res then
+      ngx.say("failed: ", err)
+      return
+    end
+
+    -- local res, err = red:hmget(hash, type)
+    -- if not res then
+    --   ngx.say("failed: ", err)
+    --   return
+    -- end
+
+
+    --    ngx.say(type(res))
+
+
+   ngx.say("res: ", cjson.encode(res))
+
+    local res, err = red:hget(hash, 'published' )
+    if not res then
+      ngx.say("failed: ", err)
+      return
+    end
+    ngx.say("res: ",type(res))
+    ngx.say("res: ", cjson.encode(res))
+
+    local res, err = red:hgetall(hash)
+    if not res then
+      ngx.say("failed: ", err)
+      return
+    end
+    ngx.say("res: ",type(res))
+    ngx.say("res: ", cjson.encode(res))
+end
+

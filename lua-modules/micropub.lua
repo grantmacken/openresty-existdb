@@ -258,13 +258,13 @@ function processPostArgs()
      local data = createEntry(args)
      -- ngx.say(require('xml').dump(data))
      -- ngx.say(' store XML data into eXistdb ' )
-     require('eXist').putXML(data)
+     require('mod.eXist').putXML(data)
     end
   elseif args['action'] then
     ngx.say( ' assume we are modifying a post item in some way'  )
     ngx.say ('TODO!')
   else
-    msg = "failed to get actionble POST argument, h or action required"
+    msg = "failed to get actionable POST argument, h or action required"
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
@@ -425,7 +425,7 @@ function processPost()
             end
             local newContent = table.concat(content, ", ")
             ngx.say(newContent)
-            require('eXist').replaceContent( url )
+            require('mod.eXist').replaceContent( url, newContent )
           end
         end
 
@@ -483,7 +483,11 @@ function processGet()
       ngx.say('TODO! https://www.w3.org/TR/micropub/#h-source-content')
       ngx.exit(ngx.OK)
     end
-  end
+  end     
+  ngx.status = ngx.HTTP_OK 
+  -- TODO!
+  ngx.say('You may query the endpoint using q pararm')
+  ngx.exit(ngx.OK)
 end
 
 

@@ -9,6 +9,9 @@ START_JAR := $(JAVA) \
  -Djetty.home=$(EXIST_HOME)/tools/jetty \
  -Dfile.encoding=UTF-8 \
  -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
+ -Djava.net.preferIPv4Stack=true \
+ -Dsun.security.ssl.allowUnsafeRenegotiation=true \
+ -Djsse.enableSNIExtension=true \
  -jar $(EXIST_HOME)/start.jar
 
 # http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization

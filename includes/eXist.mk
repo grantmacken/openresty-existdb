@@ -200,7 +200,7 @@ $(T)/webdav.log:
 
 $(T)/download_url.txt:
 	@echo "{{{## $(notdir $@) ##"
-	@curl -s x https://api.github.com/repos/$(DEPLOY)/releases/latest | \
+	@curl -s  https://api.github.com/repos/$(DEPLOY)/releases/latest | \
  jq '.assets[] | .browser_download_url'  >> $@
 	@$(call chownToUser,$(@))
 	@cat $@

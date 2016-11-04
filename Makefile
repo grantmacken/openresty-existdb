@@ -105,6 +105,13 @@ eXist-clean:
 	@rm $(EXIST_VERSION)
 	@rm -R $(EXIST_HOME)
 
+eXist-deploy: $(T)/deploy.sh
+	@$(T)/deploy.sh
+
+eXist-deploy-clean: 
+	@rm  $(T)/deploy.sh
+	@rm  $(T)/download_url.txt
+
 # shortcut aliases
 # create diffie
 ngDH: openresty/nginx/ssl/dh-param.pem

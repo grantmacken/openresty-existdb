@@ -210,7 +210,7 @@ $(T)/luarocks-latest.version: $(T)/luarocks-previous.version
 downloadLuarocks: $(T)/luarocks-latest.version
 	@echo 'download the latest  version'
 	@echo  "$$(<$(<))" 
-	curl  http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | tar xz --directory $(T)
+	curl -L http://keplerproject.github.io/luarocks/releases/luarocks-$(shell echo "$$(<$<)").tar.gz | tar xz --directory $(T)
 	@echo '------------------------------------------------'
 
 orPaths: 
@@ -238,7 +238,6 @@ rocksList = xml net-url lua-resty-http lua-resty-jwt
 rocks:
 	@luarocks list 'xml' | grep 'xml' && luarocks show 'xml' || luarocks install 'xml' 
 	@luarocks list 'net-url' | grep 'net-url' && luarocks show 'net-url' || luarocks install 'net-url' 
-	@luarocks list 'lua-resty-http' | grep 'lua-resty-http' && luarocks show 'lua-resty-http' || luarocks install 'lua-resty-http' 
 	@luarocks list 'lua-resty-jwt' | grep 'lua-resty-jwt' && luarocks show 'lua-resty-jwt' || luarocks install 'lua-resty-jwt' 
 	@luarocks list 
 

@@ -21,6 +21,11 @@ local _M = {}
 
 
 --]]
+
+local cfg = {
+port = 8080,
+host = '127.0.0.1'
+}
 --
 --UTILITY TODO move to utility.lua
 function requestError( status, msg ,description)
@@ -41,7 +46,7 @@ end
 
 function getRequest2( query )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
 
   local url = require "net.url"
@@ -72,7 +77,7 @@ function pathQuery( path )
   local appPath  = "/exist/rest/db/apps/" .. domain
   local reqPath = appPath .. '/' .. path
   local http = require "resty.http"
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
   local httpc = http.new()
   local ok, err = httpc:connect(host, port)
@@ -115,7 +120,7 @@ function getQuery( query )
   local queryString = '_wrap=no&_query=' ..  query 
   local reqPath = appPath .. '?' .. queryString
   local http = require "resty.http"
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
   local httpc = http.new()
   local ok, err = httpc:connect(host, port)
@@ -181,7 +186,7 @@ return (
   ngx.say(xml.dump(data))
 
   local http = require "resty.http"
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
 
   local httpc = http.new()
@@ -231,7 +236,7 @@ function _M.createXML( data )
   local appPath  = "/exist/restxq/db/apps/" .. domain  
   local endpoint  = "micropub"
   local endpointPath  = appPath .. '/' .. colPath
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
 
   --  ngx.say(putPath)
@@ -286,7 +291,7 @@ function _M.replaceContent( uri, content )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
   local contentType = 'application/xml'
   local domain   = ngx.var.http_Host
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
   local xmlContent = { 
     xml = 'content', 
@@ -367,7 +372,7 @@ function _M.putXML( data )
   local colPath  = "docs/posts/"
   local resource = xml.find(data, 'id')[1]
   local putPath  = dataPath .. '/' .. colPath .. '/' .. resource .. '.xml'
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
 
   --  ngx.say(putPath)
@@ -418,7 +423,7 @@ function deleteRequest( path )
   local domain = ngx.var.http_Host
   local appPath  = "/exist/rest/db/apps/" .. domain
   local deletePath = appPath .. '/' .. path 
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
   ngx.say(deletePath)
 
@@ -477,7 +482,7 @@ xmldb:store(']] .. colPath .. [[',']]  .. resource .. [[',<entry/> )
 --   } 
   -- return
   local http = require "resty.http"
-  local host = 'localhost'
+  local host = '127.0.0.1'
   local port = 8080
 
   local httpc = http.new()

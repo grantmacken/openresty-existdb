@@ -82,7 +82,7 @@ $(if $(wildcard $(T)/),,$(shell mkdir $(T)))
 
 default: help
 
-include includes/*
+include mk-includes/*
 
 .PHONY: help prep eXist-clean
 

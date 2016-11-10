@@ -10,7 +10,6 @@ watch-lua-modules:
 
 .PHONY:  watch-lua-modules 
 
-
 $(OPENRESTY_HOME)/site/lualib/mod/%.lua: lua-modules/%.lua 
 	@echo "## $@ ##"
 	@mkdir -p $(@D)

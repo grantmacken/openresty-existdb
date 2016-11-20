@@ -24,7 +24,6 @@ Check for latest versions of
 and download newest version
 
 ### `make orInstall`
-
 with latest versions compile and install openresty
 
 check the configure directives first

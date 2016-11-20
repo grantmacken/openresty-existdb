@@ -58,6 +58,24 @@ TEST: curl
 
 --]]
 
+local extensions = {
+png = 'image/png'
+}
+
+function getMimeType( filename )
+  -- get file extension Only handle 
+  local ext, err = ngx.re.match(filename, "[^.]+$")
+  if ext then
+   return extensions[ext[0]]
+  else
+    if err then
+      ngx.log(ngx.ERR, "error: ", err)
+      return
+    end
+    ngx.say("match not found")
+  end
+end
+
 
 -- https://www.w3.org/TR/micropub/#h-reserved-properties
 -- note reserved extension mp-* 
@@ -82,6 +100,20 @@ local microformatObjectTypes = {
   cite = false
 }
 
+postedEntryProperties= {
+  ['name'] = true,
+  ['summary'] = true,
+  ['rsvp'] = true,
+  ['in-reply-to'] = true,
+  ['repost-of'] = true,
+  ['like-of'] = true,
+  ['video'] = true,
+  ['photo'] = true,
+  ['content'] = true,
+  ['published'] = false,
+  ['updated'] = false
+}
+
 local actionTypes = {
    update = true,
    delete = true,
@@ -95,7 +127,10 @@ local updateTypes = {
    }
 
 local shortKindOfPost = {
- note = 'n'
+ note = 'n',
+ article = 'a',
+ photo = 'p',
+ media = 'm'
 }
 
 function getShortKindOfPost(kind)
@@ -128,104 +163,86 @@ local function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
-function getToday()
-  return os.date("%Y-%m-%d")
-end
-
-function encodeDate()
-  local shortDate = os.date("%y") .. os.date("*t").yday
-  local integer = tonumber(shortDate )
-  return b60Encode(integer)
-end
-
-function b60Encode(remaining)
-  local chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ_abcdefghijkmnopqrstuvwxyz'
-  local slug = ''
-  --local remaining = tonumber(str)
-  while (remaining > 0) do
-    local d = (remaining % 60)
-    local character = string.sub(chars, d + 1, d + 1)
-    slug = character .. slug
-    remaining = (remaining - d) / 60
-  end
-return slug
-end
 
 function discoverPostType(props)
   -- https://www.w3.org/TR/post-type-discovery/
-  -- p['rsvp'] = true
-  -- p['in-reply-to'] = true
-  -- p['repost-of'] = true
-  -- p['like-of'] = true
-  -- p['video'] = true
-  -- p['photo'] = true
-  local kindOfPost = nil
+  local kindOfPost = 'note'
   for key, val in pairs(props) do
     if key == "rsvp" then
       --TODO check valid value
       kindOfPost = 'RSVP'
-      return kindOfPost
     elseif key == "in-reply-to" then
       --TODO check valid value
       kindOfPost = 'reply'
-      return kindOfPost
     elseif key == "repost-of" then
       --TODO check valid value
       kindOfPost = 'share'
-      return kindOfPost
     elseif key == "like-of" then
       --TODO check valid value
       kindOfPost = 'like'
-      return kindOfPost
     elseif key == "video" then
       --TODO check valid value
       kindOfPost = 'video'
-      return kindOfPost
     elseif key == "photo" then
       --TODO check valid value
       kindOfPost = 'photo'
-      return kindOfPost
     elseif key == "name" then
       --TODO check valid value
       kindOfPost = 'article'
-      return kindOfPost
     else
       kindOfPost = 'note'
-      return kindOfPost
     end
   end
-  
-  -- if  == 'rsvp' then
-  --  return 'RSVP'
-  -- end
  return kindOfPost
 end
 
+-- Main entry point
 
-function getID(k)
-  local slugDict = ngx.shared.slugDict
-  local count = slugDict:get("count") or 0
-  -- setup count and today
-  if count  == 0 then
-    slugDict:add("count", count)
-    slugDict:add("today", encodeDate())
-  end
- -- if the same day increment
- -- otherwise reset today and reset counter
-  if slugDict:get("today") == encodeDate() then
-    -- ngx.say('increment counter')
-    slugDict:incr("count",1)
-    --ngx.say(slugDict:get("count"))
-    --ngx.say(slugDict:get("today"))
+function _M.processRequest()
+  local host = ngx.req.get_headers()["Host"]
+  --  the methods this endpoint can handle
+  local method =  acceptMethods({"POST","GET"})
+  -- ngx.say(method)
+if method == "POST" then
+   processPost()
   else
-    -- ngx.say('reset counter')
-   slugDict:replace("today", encodeDate())
-   slugDict:replace("count", 1)
- end
-  --slugDict:replace("count", 1)
--- ngx.say(slugDict:get("count"))
--- ngx.say(slugDict:get("today"))
- return k .. slugDict:get("today") .. b60Encode(slugDict:get("count"))
+    processGet()
+  end
+end
+
+function processGet()
+  --ngx.say( ' process GET query to micropub endpoint ' )
+  local response = {}
+  local msg = ''
+
+  local args = ngx.req.get_uri_args()
+  local domain = ngx.var.http_Host
+  local mediaEndpoint = 'https://' .. domain .. '/micropub'
+  if args['q'] then
+    -- ngx.say( ' query the endpoint ' )
+    local q = args['q']
+    if q  == 'config' then
+      -- 'https://www.w3.org/TR/micropub/#h-configuration'
+      -- TODO!
+      local status = ngx.HTTP_OK 
+      ngx.header.content_type = 'application/json' 
+      -- response = { 'media-endpoint' =  mediaEndpoint}
+      local json = cjson.encode({
+         [ 'media-endpoint' ]  = mediaEndpoint
+        })
+      ngx.print(json)
+      ngx.exit(status)
+    elseif q  == 'source' then
+      ngx.status = ngx.HTTP_OK 
+      -- TODO!
+      ngx.say('TODO! https://www.w3.org/TR/micropub/#h-source-content')
+      ngx.exit(ngx.OK)
+    end
+  end
+  ngx.status = ngx.HTTP_OK 
+  -- TODO!
+  ngx.say('You may query the endpoint using q pararm')
+  ngx.exit(ngx.OK)
 end
 
 
@@ -252,13 +269,13 @@ function processPostArgs()
         msg )
     end
 
-  --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
+    --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
 
     if hType == 'entry' then
-     local data = createEntry(args)
-     -- ngx.say(require('xml').dump(data))
-     -- ngx.say(' store XML data into eXistdb ' )
-     require('mod.eXist').putXML(data)
+      local data = createEntry(args)
+      -- ngx.say(require('xml').dump(data))
+      -- ngx.say(' store XML data into eXistdb  ' )
+      require('mod.eXist').putXML( 'posts' , data)
     end
   elseif args['action'] then
     ngx.say( ' assume we are modifying a post item in some way'  )
@@ -271,6 +288,7 @@ function processPostArgs()
       msg)
   end
 end
+
 
 function createEntry(args)
   local hType = args['h']
@@ -306,33 +324,118 @@ function createEntry(args)
       end
     end
   end
-
   -- ' we have sent properties of an entry ' 
   -- ' now add server generated properties '
   -- ' from the sent properties - discovery the kind of post '
-   local kindOfPost = discoverPostType( properties )
+  local kindOfPost = discoverPostType( properties )
+  -- ngx.say( ' add ' .. kindOfPost .. ' as an "type" attribute to documentElement: ' .. hType )
+  -- server added properties , published and id
+  properties['published'] = ngx.today()
+  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
+  -- construct data table 
+  -- top level entry
+  data = { 
+    xml = hType, 
+    kind = kindOfPost
+  } 
 
-    -- ngx.say( ' add ' .. kindOfPost .. ' as an "type" attribute to documentElement: ' .. hType )
-
-   -- top level entry
-   data = { 
-     xml = hType, 
-     type = kindOfPost
-   } 
-
-   properties['published'] = getToday()
-   -- ngx.say( 'add published property: '  .. properties['published'] )
-   properties['id'] =  getID(getShortKindOfPost(kindOfPost))
-   -- ngx.say( 'add id property: '  .. properties['id'] )
-   -- ngx.say( 'now create the table that can be converted to XML' )
+   -- insert all properties into data table
+   -- if we have a content property add a type attribute
    for key, val in pairs(properties) do
-     -- ngx.say(type(val))
-     -- ngx.say(key, ": ", val)
-     table.insert(data,1,{ xml = key, val })
+     if key  == 'content' then
+       -- TODO! assumed posted content type is 'text'
+       table.insert(data,1,{ xml = key,['type'] = 'text', val })
+     else
+       table.insert(data,1,{ xml = key, val })
+     end
    end
    return data
-end
+ end
 
+function createEntryFromJson( hType , props)
+  --[[
+  - all props is sent json should be a lua table 
+  @see  https://www.w3.org/TR/micropub/#h-json-syntax
+  When creating posts in JSON format, all values MUST be specified as arrays, even if there is only one value, identical
+  to the Microformats 2 JSON format. This request is sent with a content type of application/json.
+
+#CONTENT NODES
+
+  If the source of the post was written as HTML content, then the endpoint MUST return the content property as an object
+  containing an html property. Otherwise, the endpoint MUST return a string value for the content property, and the
+  client will treat the value as plain text. This matches the behavior of the values of properties in
+  [microformats2-parsing].
+
+json content as plain text
+
+  "content": ["hello world"]
+
+json content as html
+
+ "content": [{ "html": "<b>Hello</b> <i>World</i>" } ]
+
+json content as text 
+
+ "content": [{ "text": "hello world" } ]
+
+in converting to xml follow atom syntax
+
+ <content type="text">hello world</content>
+
+ <content type="html">"<b>Hello</b> <i>World</i>"</content>
+
+--]]
+  local data = {} -- the xml based table to return
+  -- Post Properties
+  -- https://www.w3.org/TR/jf2/#post-properties
+  local properties = {}
+  for key, val in pairs(props) do
+    if type(val) == "table" then
+     --  ngx.say('key', ": ", key)
+     --  ngx.say( 'value type: ' ..  type(val))
+      if key ~= 'content' then
+        if postedEntryProperties[key] ~=  nil then
+          properties[key] = table.concat(val, " ")
+          ngx.say(key)
+          ngx.say(properties[key])
+        end
+      end
+    else
+      ngx.say(type(val))
+      -- ngx.say(key, ": ", val)
+      -- if p[key] ~=  nil then
+      --   properties[key] = val
+      -- end
+    end
+  end
+
+  local kindOfPost = discoverPostType( properties )
+  -- top level entry
+  data = { 
+    xml = hType, 
+    kind = kindOfPost
+  }
+
+  -- ngx.say('content: ' ..  type(props['content'][1]) )
+  if type(props['content'][1]) == "table" then
+    for k, v in pairs(props['content'][1]) do
+     -- ngx.say('content k : ' ..  k )
+     -- ngx.say('content v : ' ..  v )
+      -- table.insert(data,1,{ xml = 'content',['type'] = k, v })
+       table.insert(data,1,{ xml = 'content',['type'] = k, v })
+    end 
+  elseif type(props['content'][1]) == "string" then
+    table.insert(data,1,{ xml = 'content',['type'] = 'text', props['content'][1]})
+  end
+
+  properties['published'] = ngx.today()
+  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost) )
+
+  for key, val in pairs(properties) do
+    table.insert(data,1,{ xml = key, val })
+  end
+  return data
+end
 
 function acceptMethods(methods)
   --  the methods this endpoint can handle
@@ -348,229 +451,293 @@ end
 
 function acceptContentTypes(contentTypes)
   --  the content-types this endpoint can handle
-  local contentType = ngx.req.get_headers()["Content-Type"]
+  local contentType = ngx.var.http_content_type
+  local from, to, err = ngx.re.find(contentType ,"(multipart/form-data)")
+  if from then
+    contentType =  'multipart/form-data'
+  end
+
   if not contains(contentTypes,contentType)  then
+    local msg = 'endpoint does not accept' .. contentType
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
-      'endpoint only accepts json or x-www-form-urlencoded content-type')
+      msg )
   end
   return contentType
 end
 
-function processPost()
-   -- ngx.say('the content-types this endpoint can handle')
-   local contentType = acceptContentTypes({'application/json','application/x-www-form-urlencoded'})
-   -- ngx.say( contentType )
-     if contentType  == 'application/x-www-form-urlencoded' then
-      processPostArgs()
-  elseif contentType  == 'application/json' then
-    
-    ngx.say( contentType )
-    ngx.req.read_body()
-    local args  = cjson.decode(ngx.req.get_body_data())
+function acceptFormFields(fields , field)
+  --  the multpart form fields  this endpoint can handle
+  if not contains( fields, field )  then
+    return requestError(
+      ngx.HTTP_NOT_ACCEPTABLE,
+      'not accepted',
+      'endpoint only doesnt accept' .. field )
+  end
+ return method  
+end
 
-    local acceptKey = {
-      action = true
-    }
+function processJsonBody()
+  ngx.req.read_body()
+  local args  = cjson.decode(ngx.req.get_body_data())
+  -- either 'ACTION' to modify post or 'TYPE' to create type of post
+  if args['action'] then 
+    processJsonActions(args) 
+  elseif args['type'] then
+    processJsonTypes(args)
+  end
+end
 
-    for key, val in pairs(args) do
-      if type(val) == "table" then
-        ngx.say(type(val))
-        ngx.say(key, ": ", table.concat(val, ", "))
-      else    
-        ngx.say(type(val))
-        ngx.say(key, ": ", val)
+function processJsonTypes(args)
+  -- ngx.say( ' assume we are creating a post item'  )
+  if type(args['type']) == 'table' then
+    local jType = table.concat(args['type'], ", ")
+    local hType, n, err = ngx.re.sub(jType, "h-", "")
+   --  ngx.say(hType)
+    if hType then
+      if not microformatObjectTypes[hType] then
+        msg = 'can not handle microformat  object type": ' .. hType
+        return requestError(
+          ngx.HTTP_NOT_ACCEPTABLE,
+          'not accepted',
+          msg )
+      end
+      -- TYPE ENTRY
+      if hType == 'entry' then
+        if type(args['properties']) == 'table' then
+          -- ngx.say( 'CREATE ' ..  hType)
+          local data =  createEntryFromJson( hType , args['properties'] )
+          ngx.say(require('xml').dump(data))
+          require('mod.eXist').putXML('posts', data)
+          -- -- require('mod.eXist').putXML(data)
+        end
       end
     end
-    if args['action'] then 
+  end
+end
+
+function processJsonActions()
       --[[
-    To update an entry, send "action": "update" and specify the URL of the entry that is being updated using the "url" property. The request MUST also include a replace, add or delete property (or any combination of these) containing the updates to make.
+    To update an entry, send "action": "update" and specify the URL of the entry that is being updated using the "url"
+    property. The request MUST also include a replace, add or delete property (or any combination of these) containing
+      the updates to make.
     --]]
 
       local action = args['action']
+      local url = args['url']
+      -- TODO! gen err if no action and or url
+      --start of ACTION UPDATEs
       if action == 'update' then
-        ngx.say(action)
-        local url = args['url']
+        -- ngx.say(action)
         if url == nil then
           ngx.say("exit TODO")
         end
 
         -- do any combination
+          --[[
+          The values of each property inside the replace, add or delete keys MUST be an array, even if there is only a
+          single value.
+          --]]
+        -- ACTION UPDATE REPLACE
         if args['replace'] then
           ngx.say("do replace")
-          -- args.replace should be table
-          ngx.say(type(args['replace']))
-          local replaceItems = args['replace']
-
-          for key, val in pairs(replaceItems) do
-            if type(val) == "table" then
-              ngx.say(type(val))
-              ngx.say(key, ": ", table.concat(val, ", "))
-            else    
-              ngx.say(type(val))
-              ngx.say(key, ": ", val)
-            end
-          end
-          --[[
-          The values of each property inside the replace, add or delete keys
-          MUST be an array, even if there is only a single value.
-          --]]
-          if replaceItems['content'] then
-            local content = replaceItems['content'] 
-            -- replaceItems.content should be table
-            if type(content) ~= 'table' then
-              ngx.say("replaceItems.content should be table")
-              ngx.say("exit TODO")
-            end
-            local newContent = table.concat(content, ", ")
-            ngx.say(newContent)
-            require('mod.eXist').replaceContent( url, newContent )
-          end
+           if type(args['replace']['content']) == 'table' then
+            local property = 'content'
+            local item = table.concat(args['replace']['content'], ", ")
+            -- TODO! for each item
+            require('mod.eXist').replaceProperty( url, property, item )
+           end
         end
-
+        -- ACTION UPDATE DELETE
         if args['delete'] then
           ngx.say("do delete")
+          -- ngx.say( args['delete'] ) 
+           if type(args['delete']['category']) == 'table' then
+            local property = 'category'
+            local item = table.concat(args['delete']['category'], ", ")
+            -- TODO! for each item
+            require('mod.eXist').removeProperty( url, property, item )
+           end
         end
-
+        -- ACTION UPDATE ADD
         if args['add'] then
           ngx.say("do add")
+          if type(args['add']['category']) == 'table' then
+            local property = 'category'
+            local item = table.concat(args['add']['category'], ", ")
+            ngx.say(item)
+            require('mod.eXist').addProperty( url, property, item )
+          end
         end
-
-      else
-        ngx.say("TODO!")
+        -- end of ACTION UPDATEs
+      elseif action == 'delete' then
+        -- start of ACTION DELETE
+        ngx.say("delete")
+        require('mod.eXist').deletePost( url )
+      elseif action == 'undelete' then
+        -- start of ACTION UNDELETE
+        ngx.say("undelete")
+        require('mod.eXist').undeletePost( url )
       end
-    elseif args['type'] then 
-      local action = args['action']
-    else
-      ngx.say("TODO!")
-    end
-
-
-   -- postData = cjson.decode(ngx.req.get_body_data())
-   --  hType = postData['type']
- end
 end
 
-
-function processGet()
-  --ngx.say( ' process GET query to micropub endpoint ' )
-  response = {}
-  local msg = ''
-
-  local args = ngx.req.get_uri_args()
-  for key, val in pairs(args) do
-    if type(val) == "table" then
-      ngx.say(key, ": ", table.concat(val, ", "))
-    else
-     -- ngx.say(key, ": ", val)
-    end
+function processPost()
+  -- ngx.say('the content-types this endpoint can handle')
+  local contentType = acceptContentTypes({
+      'application/json',
+      'application/x-www-form-urlencoded',
+      'multipart/form-data'
+    })
+  --  ngx.say( contentType )
+  if contentType  == 'application/x-www-form-urlencoded' then
+    processPostArgs()
+  elseif contentType  == 'multipart/form-data' then
+    processMultPartForm()
+  elseif contentType  == 'application/json' then
+     processJsonBody()
   end
-
-  if args['q'] then
-    --ngx.say( ' query the endpoint ' )
-    local q = args['q']
-    if q  == 'config' then
-      -- 'https://www.w3.org/TR/micropub/#h-configuration'
-      -- TODO!
-      ngx.status = ngx.HTTP_OK 
-      ngx.header.content_type = 'application/json' 
-      ngx.say(cjson.encode(response))
-      ngx.exit(ngx.OK)
-    elseif q  == 'source' then
-      ngx.status = ngx.HTTP_OK 
-      -- TODO!
-      ngx.say('TODO! https://www.w3.org/TR/micropub/#h-source-content')
-      ngx.exit(ngx.OK)
-    end
-  end     
-  ngx.status = ngx.HTTP_OK 
-  -- TODO!
-  ngx.say('You may query the endpoint using q pararm')
-  ngx.exit(ngx.OK)
 end
 
+function processMultPartForm()
+  local msg = ''
+  --  mod.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
+  --  from agentzha TODO! check if avaible on OPM
+  --  @see https://github.com/agentzh/lua-resty-multipart-parser
+  local parser = require "mod.parser" 
+  ngx.req.read_body()
+  local body = ngx.req.get_body_data()
+  local p, err = parser.new(body, ngx.var.http_content_type)
+  if not p then
+    msg = "failed to create parser: ", err
+    return requestError(
+      ngx.HTTP_NOT_ACCEPTABLE,
+      'not accepted',
+      msg)
+  end
+  while true do
+    local part_body, name, mime, filename = p:parse_part()
 
-function _M.processRequest()
-  local host = ngx.req.get_headers()["Host"]
-  --  the methods this endpoint can handle
-  local method =  acceptMethods({"POST","GET"})
+    if not part_body then
+      break
+    end
+
+    if not mime then
+      break
+    end
+
+    if not filename then
+      break
+    end
+
+    if name ~= 'file' then
+      break
+    end
+
+  --  ngx.say("== part ==")
+    ngx.say("name: [", name, "]")
+    ngx.say("file: [", filename, "]")
+    ngx.say("mime: [", mime, "]")
+
+    -- get file extension. Only handle named extensions
+    local mimeType = getMimeType(filename)
+
+    if not mimeType then
+      break
+    end
+
+
+    ngx.say("mimeType: [", mimeType, "]")
+ 
+
+
+
+   -- local md5 =  ngx.md5(part_body)
+   --  ngx.say("md5:  [", md5, "]")
+
+   -- top level entry
+   -- local data = { 
+   --   xml = 'entry', 
+   --   type = 'photo'
+   -- } 
+
+   -- top level entry
+   -- http://microformats.org/wiki/hmedia
+   -- https://indieweb.org/Shoebox
 
 --[[
-  get METHOD then branch
+  shoebox idea  - a collection of 'findable'  media items
+  
+  accept publishing photos 
+   - photos -  images 
 
- --> POST
-  - branch on hasMicroformatObjectType or hasAction request
+   media-info like atomPub media-edit
+
+
+  media  properties
+
+  upon upload create hMedia entry
+
+  name        original file name
+  
+  id         [m][DATE][i]  
+           shortKindOfPost |  base60Date | incremented integer representing item published that day
+  signature -- a md5 signiture to prevent storing\uploading of same photoi
+               A file's unique identifier is the hash of its contents
+  published  date
+  mime       resource stored as content-type & http response/request as ...
+
+
+ after upload 
+  you can add/edit/delete media entry properties
+
+  -- name      
+  -- summary    
+  -- category -- tags
+  
+  property values can be used in HTML templates
+
+  summary     : figure figcaption text
+  name        : img alt attribute text ( defaults to upload filename )
+  id          : img src attribute text
+
+https://developer.mozilla.org/en-US/docs/Web/HTML/Element/figure
+
+search for items in shoebox collection by
+ - date  (resent items)
+ - contains  string in 'name or summary'
+ - tag
+
 --]]
 
-if method == "POST" then
-   processPost()
-  else
-    -- ngx.say(method)
-    processGet()
-  end
-
---[[
-
-  CREATE: https://www.w3.org/TR/micropub/#create
-   a 'POST' request that contains arg key 'h' 
-
-  ACTION:
-    a 'POST' request that contains arg key 'action' 
-   
-   actionTypes = {
-   update = true,
-   delete = true,
-   undelete = true
+   local data = { 
+     xml = 'media'
    }
 
-   updateTypes = {
-    add = true,
-    delete = true,
-    replace = true
-   }
+   local properties = {}
+   properties['name'] = filename
+   properties['published'] = ngx.today()
+   properties['signature'] = ngx.md5(part_body)
+   properties['mime'] = mimeType
+   -- id prefix always M
+   properties['id'] = require('mod.postID').getID( 'M' )
+
+   for key, val in pairs(properties) do
+     -- ngx.say(type(val))
+     -- ngx.say(key, ": ", val)
+     table.insert(data,1,{ xml = key, val })
+   end
+   ngx.say(require('xml').dump(data))
 
 
-  UODATE: https://www.w3.org/TR/micropub/#update
-
-
-
- - MUST support creating posts using the x-www-form-urlencoded syntax
- - MUST support creating posts with the [h-entry] vocabulary
-
-
---]] 
-  --
-  --  the microformat objects this endpoint can handle at the mo
-  -- local data = {}
-  -- ngx.req.read_body()
-  -- if contentType  == 'application/x-www-form-urlencoded' then
-  --   -- ngx.say(contentType)
-  --    data  = processFormArgs()
-  -- elseif contentType  == 'application/json' then
-  --  -- postData = cjson.decode(ngx.req.get_body_data())
-  --  --  hType = postData['type']
- -- end
-
- -- require('eXist').putXML(data)
-
- -- local xml = require 'xml'
-  -- local lub = require 'lub'
-  -- ngx.say(require('xml').dump(data))
-
-   -- local resource = xml.find(data, 'id')[1]
-   -- ngx.say(resource)
-   --local  = xml.find(data, 'type' )
--- local x = lub.join({'foo', 'bar', 'baz'}, '.')
-   -- ngx.say(type(data))
-   -- local kind = xml.find(data,'entry')['type'] 
-   -- ngx.say(kind)
-   --  ngx.say(require('mydata').getShortKindOfPost(kind))
-
-  -- note data is a lua table 
-  -- could send xml as param instead 
-  -- on success return
-  -- https://www.w3.org/TR/micropub/#response
-end
+   require('mod.eXist').putMedia(  part_body,  properties['mime'] , properties['id']   )
+   require('mod.eXist').putXML( 'uploads' ,  data )
+ end
+   -- msg = "submitted data in form does not have required fields "
+   -- return requestError(
+   --   ngx.HTTP_NOT_ACCEPTABLE,
+   --   'not accepted',
+   --   msg)
+ end
 
 return _M

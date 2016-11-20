@@ -41,4 +41,49 @@ DESCRIPTION:  create a short id unique to the db
 
 --]]
 --
+
+
+function encodeDate()
+  local shortDate = os.date("%y") .. os.date("*t").yday
+  local integer = tonumber(shortDate )
+  return b60Encode(integer)
+end
+
+function b60Encode(remaining)
+  local chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ_abcdefghijkmnopqrstuvwxyz'
+  local slug = ''
+  --local remaining = tonumber(str)
+  while (remaining > 0) do
+    local d = (remaining % 60)
+    local character = string.sub(chars, d + 1, d + 1)
+    slug = character .. slug
+    remaining = (remaining - d) / 60
+  end
+return slug end function _M.getID(k)
+ --  ngx.say( 'get Post ID' )
+  local slugDict = ngx.shared.slugDict
+  local count = slugDict:get("count") or 0
+  -- setup count and today
+  if count  == 0 then
+    slugDict:add("count", count)
+    slugDict:add("today", encodeDate())
+  end
+ -- if the same day increment
+ -- otherwise reset today and reset counter
+  if slugDict:get("today") == encodeDate() then
+    -- ngx.say('increment counter')
+    slugDict:incr("count",1)
+    --ngx.say(slugDict:get("count"))
+    --ngx.say(slugDict:get("today"))
+  else
+    -- ngx.say('reset counter')
+   slugDict:replace("today", encodeDate())
+   slugDict:replace("count", 1)
+ end
+  --slugDict:replace("count", 1)
+-- ngx.say(slugDict:get("count"))
+-- ngx.say(slugDict:get("today"))
+ return k .. slugDict:get("today") .. b60Encode(slugDict:get("count"))
+end
+
 return _M

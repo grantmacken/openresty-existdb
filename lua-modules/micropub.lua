@@ -199,7 +199,6 @@ end
 -- Main entry point
 
 function _M.processRequest()
-  local host = ngx.req.get_headers()["Host"]
   --  the methods this endpoint can handle
   local method =  acceptMethods({"POST","GET"})
   -- ngx.say(method)
@@ -291,6 +290,7 @@ end
 
 
 function createEntry(args)
+  local host = ngx.req.get_headers()["Host"]
   local hType = args['h']
   -- ngx.say( 'create ' .. hType  ..  ' entry item with args' )
   local data = {} -- the xml based table to return
@@ -299,27 +299,15 @@ function createEntry(args)
 
   local properties = {}
   -- TODO expand entry properties and place in data module
-  p = {}
-  p['name'] = true
-  p['summary'] = true
-  p['rsvp'] = true
-  p['in-reply-to'] = true
-  p['repost-of'] = true
-  p['like-of'] = true
-  p['video'] = true
-  p['photo'] = true
-  p['content'] = true
-  p['published'] = false
-  p['updated'] = false
 
   for key, val in pairs(args) do
     if type(val) == "table" then
       ngx.say(type(val))
       ngx.say(key, ": ", table.concat(val, ", "))
     else    
-       --  ngx.say(type(val))
-       -- ngx.say(key, ": ", val)
-      if p[key] ~=  nil then
+      --  ngx.say(type(val))
+      -- ngx.say(key, ": ", val)
+      if postedEntryProperties[key] ~=  nil then
         properties[key] = val
       end
     end
@@ -332,6 +320,7 @@ function createEntry(args)
   -- server added properties , published and id
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
+  properties['url'] = 'https://' .. host .. '/' .. properties['id']
   -- construct data table 
   -- top level entry
   data = { 
@@ -385,6 +374,7 @@ in converting to xml follow atom syntax
  <content type="html">"<b>Hello</b> <i>World</i>"</content>
 
 --]]
+  local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
@@ -429,7 +419,8 @@ in converting to xml follow atom syntax
   end
 
   properties['published'] = ngx.today()
-  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost) )
+  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
+  properties['url'] = 'https://' .. host ..  '/' .. properties['id']
 
   for key, val in pairs(properties) do
     table.insert(data,1,{ xml = key, val })

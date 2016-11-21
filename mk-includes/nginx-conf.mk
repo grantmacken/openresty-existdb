@@ -246,9 +246,7 @@ ngClean:
 	@find $(NGINX_HOME)/logs -type f -name 'error.log' -delete
 	@find $(NGINX_HOME)/conf -type f -name '*.conf' -delete
 
-openresty/nginx/ssl/dh-param.pem: 
+/etc/letsencrypt/dh-param.pem: 
 	@mkdir -p $(dir $@)
-	@[ -e $(NGINX_HOME)/ssl/dh-param.pem  ] || \
- echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
+	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
 	@openssl dhparam -out $@ 2048
-	@$(MAKE) stow

@@ -67,6 +67,11 @@ certbotConf:
 #       on local dev use sudo to remake and set permissions for dir
 #       then secure copy certs from remote
 
+
+certbotRenew:
+	@echo "renew my certs"
+	@$(T)/certbot/certbot-auto certonly
+
 syncCerts:
 	@echo 'copy certs from remote'
 	@scp -r $(SERVER):/etc/letsencrypt/live /etc/letsencrypt
@@ -77,3 +82,5 @@ syncCertsPerm:
 	@[ -d /etc/letsencrypt ] || mkdir /etc/letsencrypt
 	@$(call chownToUser, /etc/letsencrypt )
 	@ls -al /etc/letsencrypt 
+
+ngDH: /etc/letsencrypt/dh-param.pem

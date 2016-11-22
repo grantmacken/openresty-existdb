@@ -114,7 +114,7 @@ eXist-deploy-clean:
 
 # shortcut aliases
 # create diffie
-ngDH: /etc/letsencrypt/dh-param.pem
+
 # port 80 only
 # @sudo rm $(NGINX_HOME)/logs/access.log
 # @[ -e openresty/nginx/conf/dev.conf ] && rm openresty/nginx/conf/dev.conf || echo 'first run' 

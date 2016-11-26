@@ -34,9 +34,9 @@ Type=forking
 Environment="OPENRESTY_HOME=$(OPENRESTY_HOME)"
 Environment="EXIST_AUTH=$(shell echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )"
 WorkingDirectory=$(OPENRESTY_HOME)
-PIDFile=$(OPENRESTY_HOME)/openresty/logs/nginx.pid
+PIDFile=$(OPENRESTY_HOME)/nginx/logs/nginx.pid
 ExecStartPre=$(OPENRESTY_HOME)/bin/openresty -t
-ExecStart=$(OPENRESTY_HOME)/bin/openresty -p $(OPENRESTY_HOME)
+ExecStart=$(OPENRESTY_HOME)/bin/openresty
 ExecReload=/bin/kill -s HUP $$MAINPID
 ExecStop=/bin/kill -s QUIT $$MAINPID
 PrivateTmp=true
@@ -55,9 +55,7 @@ orService:
 	@echo "$(systemctl is-enabled openresty.service)"
 	@echo 'Check if service is active'
 	@systemctl is-active openresty.service && systemctl stop  openresty.service || echo 'inactive'
-	@echo 'Check if service is failed'
-	@systemctl is-failed openresty.service || systemctl stop openresty.service && echo 'inactive'
-	@echo "$${openrestyService}" > /dev/null
+	@echo "$${openrestyService}"
 	@echo "$${openrestyService}" > /lib/systemd/system/openresty.service
 	@systemd-analyze verify openresty.service
 	@systemctl is-enabled openresty.service || systemctl enable openresty.service
@@ -69,15 +67,15 @@ orService:
 	@echo 'Check if service is failed'
 	@systemctl is-failed openresty.service || echo 'OK!'
 	@journalctl -f -u openresty.service -o cat
-	@echo '--------------------------------------------------------------'
+# @echo '--------------------------------------------------------------'
 
 orRemoveService:
 	@$(call assert-is-root)
 	@$(call assert-is-systemd)
 	@echo 'Check if service is enabled'
-	@systemctl is-active  nginx.service && systemctl stop  nginx.service || echo 'inactive'
-	@systemctl is-enabled nginx.service && systemctl disable nginx.service || echo 'disabled'
-	@[ -e /lib/systemd/system/nginx.service ] && rm /lib/systemd/system/nginx.service
+	@systemctl is-active  openresty.service && systemctl stop  openresty.service || echo 'inactive'
+	@systemctl is-enabled openresty.service && systemctl disable openresty.service || echo 'disabled'
+	@[ -e /lib/systemd/system/openresty.service ] && rm /lib/systemd/system/openresty.service
 	@systemctl daemon-reload
 	@systemctl reset-failed
 

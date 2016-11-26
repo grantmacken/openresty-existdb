@@ -99,6 +99,33 @@ prep:
 	@[ -x  bin/prep ] || chmod +x bin/prep
 	@prep
 
+# OPENRESTY
+
+or:
+	@echo 'check if current versions up to date'
+	@$(MAKE) checkLatest
+	@echo 'install openresty'
+	@$(MAKE) orInstall
+	$(MAKE) ngClean
+	$(MAKE) ngConf
+	@echo 'contruct a nginx.conf file' 
+	$(MAKE) orDev
+	@echo 'Diffie-Hellman parameter file'
+	$(MAKE) ngDH
+	@echo  'copy over any wip modules'
+	$(MAKE) lua-mudules 
+
+orClean:
+	@echo 'remove openresty'
+	@rm -r $(OPENRESTY_HOME)
+
+opmGet:
+	@echo "install opm packages"
+	@opm get pintsized/lua-resty-http
+
+# luarocksinstall
+# rocks
+
 eXist: $(T)/eXist-run.sh
 
 eXist-clean:
@@ -112,18 +139,6 @@ eXist-deploy-clean:
 	@rm  $(T)/deploy.sh
 	@rm  $(T)/download_url.txt
 
-# shortcut aliases
-# create diffie
-
-# port 80 only
-# @sudo rm $(NGINX_HOME)/logs/access.log
-# @[ -e openresty/nginx/conf/dev.conf ] && rm openresty/nginx/conf/dev.conf || echo 'first run' 
-# @$(MAKE) openresty/nginx/conf/dev.conf
-# @$(MAKE) stow
-# @sudo systemctl stop nginx.service
-# @sudo $(NGINX_HOME)/sbin/nginx -t -c conf/dev.conf
-# @sudo systemctl start nginx.service
-
 crl:
 	w3m http://$(DOMAIN)
 
@@ -134,9 +149,9 @@ seige:
 
 check2:
 	@openssl s_client -connect $(DOMAIN):443 -status
-# @cat $(NGINX_HOME)/logs/access.log | awk '{print $4}' 
+# @cat $(OPENRESTY_HOME)/nginx/logs/access.log | awk '{print $4}' 
 # | awk -F : '{print $2 ":" $3}' | uniq -c
 
 monitor:
-	@echo '$(NGINX_HOME)/logs/access.log'
-	@ngxtop -v  -l $(NGINX_HOME)/logs/access.log -f combined
+	@echo '$(OPENRESTY_HOME)/nginx/logs/access.log'
+	@ngxtop -v  -l $(OPENRESTY_HOME)/nginx/logs/access.log -f combined

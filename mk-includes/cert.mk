@@ -40,7 +40,7 @@ text = true
 # use the webroot authenticator. 
 # set path to the default html dir 
 authenticator = webroot
-webroot-path = $(NGINX_HOME)/html
+webroot-path = $(OPENRESTY_HOME)/nginx/html
 
 agree-tos = true
 

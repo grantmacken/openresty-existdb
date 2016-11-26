@@ -8,6 +8,19 @@ I wanted to
  - enable HTTPS by default
  - explore openresty/lua middleware capability
 
+#Make Task List
+
+1. make dl
+2. make orInstall
+3. make ngClean
+4. make ngDH
+3. make nginx-config
+4. make orDev or orProd
+5. make lua-modules
+6. make orTestConf TODO!
+3. make orService
+
+
 ## Openresty
 
 I want to automate the install of the latest openresty,

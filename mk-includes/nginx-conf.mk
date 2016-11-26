@@ -1,12 +1,12 @@
 #################################
 #
 #  generate nginx conf file on the fly  then reload server
-#  
+#
 # 1.  `make orDev`  development conguration 
 #   -  everything on HTTPS
 #   -  lua_code_cache off;
 #   flow: 
-#      - remake main nginx.conf and place in $(NGINX_HOME)/conf
+#      - remake main nginx.conf and place in $(OPENRESTY_HOME)/nginx/conf
 #      - stow any new includes
 #      - reload conf
 # 
@@ -32,17 +32,17 @@
 
 SRC_CONF := $(shell find nginx-config -name '*.conf' )
 SRC_TYPES := $(shell find nginx-config -name '*.types' )
-NGX  := $(patsubst nginx-config/%,$(NGINX_HOME)/conf/%,$(SRC_CONF) $(SRC_TYPES))
+NGX  := $(patsubst nginx-config/%,$(OPENRESTY_HOME)/nginx/conf/%,$(SRC_CONF) $(SRC_TYPES))
 
-nginx-config: $(NGX)
+ngConf: $(NGX)
 
 watch-nginx-conf:
-	@watch -q $(MAKE) nginx-config
+	@watch -q $(MAKE) ngConf
 
-.PHONY:  watch-nginx-config
+.PHONY:  watch-nginx-conf
 
 
-$(NGINX_HOME)/conf/%.conf: nginx-config/%.conf
+$(OPENRESTY_HOME)/nginx/conf/%.conf: nginx-config/%.conf
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
 	@echo "SRC: $<" >/dev/null
@@ -50,7 +50,7 @@ $(NGINX_HOME)/conf/%.conf: nginx-config/%.conf
 	@cp $< $@
 	@echo '-----------------------------------------------------------------'
 
-$(NGINX_HOME)/conf/%.types: nginx-config/%.types
+$(OPENRESTY_HOME)/nginx/conf/%.types: nginx-config/%.types
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
 	@echo "SRC: $<" >/dev/null
@@ -218,22 +218,22 @@ orBasic: export cnfPort80:=$(cnfPort80)
 orBasic:
 	@echo 'create basic nginx config'
 	@echo "$${cnfPort80}" > $@
-	@echo "$${cnfPort80}" > $(NGINX_HOME)/conf/nginx.conf
+	@echo "$${cnfPort80}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
 	@$(MAKE) orReload
 
 orProd: export cnfProd:=$(cnfProd)
 orProd:
 	@echo 'create nginx production conf'
-	@echo "$${cnfProd}" >  $(NGINX_HOME)/conf/nginx.conf
+	@echo "$${cnfProd}" >  $(OPENRESTY_HOME)/nginx/conf/nginx.conf
 	@$(MAKE) orReload
 
 orDev: export cnfDev:=$(cnfDev)
 orDev:
 	@echo 'create nginx dev conf'
-	@echo "$(NGINX_HOME)/conf/nginx.conf"
+	@echo "$(OPENRESTY_HOME)/nginx/conf/nginx.conf"
 	@echo "$${cnfDev}"
-	@echo "$${cnfDev}" > $(NGINX_HOME)/conf/nginx.conf
-	@$(call chownToUser,$(NGINX_HOME)/conf/nginx.conf)
+	@echo "$${cnfDev}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
+	@$(call chownToUser,$(OPENRESTY_HOME)/nginx/conf/nginx.conf)
 	@echo '---------------------------------------------'
 
 orReload:
@@ -242,9 +242,10 @@ orReload:
 
 ngClean:
 	@echo 'clean out nginx conf dir but leave mimetypes'
-	@find $(NGINX_HOME)/conf -type f -name '*.default' -delete
-	@find $(NGINX_HOME)/logs -type f -name 'error.log' -delete
-	@find $(NGINX_HOME)/conf -type f -name '*.conf' -delete
+	@find $(OPENRESTY_HOME)/nginx/conf -type f -name '*.default' -delete
+	@find $(OPENRESTY_HOME)/nginx/logs -type f -name 'error.log' -delete
+	@find $(OPENRESTY_HOME)/nginx/conf -type f -name '*.conf' -delete
+	@find $(OPENRESTY_HOME)/nginx/conf -type f -name '*_params' -delete
 
 /etc/letsencrypt/dh-param.pem: 
 	@mkdir -p $(dir $@)

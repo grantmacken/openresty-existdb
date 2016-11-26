@@ -10,7 +10,6 @@ START_JAR := $(JAVA) \
  -Dfile.encoding=UTF-8 \
  -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
  -Djava.net.preferIPv4Stack=true \
- -Dsun.security.ssl.allowUnsafeRenegotiation=true \
  -Djsse.enableSNIExtension=true \
  -jar $(EXIST_HOME)/start.jar
 

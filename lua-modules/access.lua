@@ -145,7 +145,7 @@ function extractToken()
     return token 
   end
 
- return  requestError(ngx.HTTP_UNAUTHORIZED,'error', 'unauthorized') 
+ return  requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'no token') 
 end
 
 function _M.verifyToken()

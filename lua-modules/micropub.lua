@@ -103,6 +103,7 @@ local microformatObjectTypes = {
 postedEntryProperties= {
   ['name'] = true,
   ['summary'] = true,
+  ['category'] = true,
   ['rsvp'] = true,
   ['in-reply-to'] = true,
   ['repost-of'] = true,
@@ -272,9 +273,9 @@ function processPostArgs()
 
     if hType == 'entry' then
       local data = createEntry(args)
-      -- ngx.say(require('xml').dump(data))
+      --  ngx.say(require('xml').dump(data))
       -- ngx.say(' store XML data into eXistdb  ' )
-      require('mod.eXist').putXML( 'posts' , data)
+       require('mod.eXist').putXML( 'posts' , data)
     end
   elseif args['action'] then
     ngx.say( ' assume we are modifying a post item in some way'  )
@@ -296,16 +297,21 @@ function createEntry(args)
   local data = {} -- the xml based table to return
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
-
   local properties = {}
-  -- TODO expand entry properties and place in data module
-
+  -- ngx.say('expand entry properties and place in prperties')
   for key, val in pairs(args) do
     if type(val) == "table" then
-      ngx.say(type(val))
-      ngx.say(key, ": ", table.concat(val, ", "))
-    else    
-      --  ngx.say(type(val))
+      -- ngx.say(type(val))
+      -- ngx.say(type(key))
+      -- ngx.say(key, ": ", table.concat(val, ", "))
+      local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
+      if pKey then
+        if postedEntryProperties[pKey] ~=  nil then
+          properties[pKey] = table.concat(val, ", ")
+        end
+      end 
+    else
+      -- ngx.say(type(val))
       -- ngx.say(key, ": ", val)
       if postedEntryProperties[key] ~=  nil then
         properties[key] = val

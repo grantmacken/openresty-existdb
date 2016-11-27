@@ -565,7 +565,7 @@ end
 
 function sendMicropubRequest( restPath, txt  )
   local http = require "resty.http"
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
+  local authorization = cfg.auth
   local contentType = 'application/xml'
   -- ngx.say( txt )
 
@@ -601,7 +601,6 @@ end
 
 function isMedia( )
   return xml.find(data,'media')
-
 end
 
 function _M.putXML( collection,  data )

@@ -151,7 +151,6 @@ end
 function _M.verifyToken()
   local ssl = require "ngx.ssl"
   local jwt = require "resty.jwt"
-  local url = require "net.url"
   local jwtObj = jwt:load_jwt(extractToken())
 
   if not jwtObj.valid then
@@ -194,10 +193,7 @@ function _M.verifyToken()
    return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'can not establish serrver name') 
   end
 
-  local domain = url.parse(me).host
-
-   --  ngx.say(domain)
-  if serverName ~= domain  then
+  if serverName ~= ngx.var.site  then
    return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'you are not me') 
   end
 

@@ -154,32 +154,32 @@ function _M.verifyToken()
   local jwtObj = jwt:load_jwt(extractToken())
 
   if not jwtObj.valid then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'not a jwt token') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'not a jwt token') 
   end
 
   local me = jwtObj.payload.me
   if me == nil then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'missing me') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing me') 
   end
 
   local clientID = jwtObj.payload.client_id
   if clientID == nil then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'missing client id') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing client id') 
   end
 
   local scope = jwtObj.payload.scope
   if scope == nil then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'missing scope') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing scope') 
   end
 
   local issuedAt = jwtObj.payload.issued_at
   if  issuedAt == nil then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'missing issued_at') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued_at') 
   end
 
   local issuedBy = jwtObj.payload.issued_by
   if  issuedBy == nil then
-   return  requestError(ngx.HTTP_BAD_REQUEST,'invalid_token', 'missing issued by') 
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued by') 
   end
 
   -- local json = cjson.encode(jwtObj.payload)

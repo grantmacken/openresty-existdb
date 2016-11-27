@@ -205,12 +205,10 @@ luarocksInstall:
 --with-lua-include=$(OPENRESTY_HOME)/luajit/include/luajit-2.1 && make && make install
 	@echo '--------------------------------------------'
 
-rocksList = xml net-url lua-resty-http lua-resty-jwt
 
 rocks:
 	@luarocks list 'xml' | grep 'xml' && luarocks show 'xml' || luarocks install 'xml' 
 	@luarocks list 'net-url' | grep 'net-url' && luarocks show 'net-url' || luarocks install 'net-url' 
-	@luarocks list 'lua-resty-jwt' | grep 'lua-resty-jwt' && luarocks show 'lua-resty-jwt' || luarocks install 'lua-resty-jwt' 
 	@luarocks list 
 
 downloadSiege:

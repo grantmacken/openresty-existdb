@@ -121,7 +121,8 @@ orClean:
 
 opmGet:
 	@echo "install opm packages"
-	@opm get pintsized/lua-resty-http
+		@opm get pintsized/lua-resty-http
+		@opm get SkyLothar/lua-resty-jwt
 
 # luarocksinstall
 # rocks

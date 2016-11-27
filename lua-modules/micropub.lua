@@ -529,7 +529,10 @@ function processJsonActions( args )
       if action == 'update' then
         -- ngx.say(action)
         if url == nil then
-          ngx.say("exit TODO")
+          return requestError(
+          ngx.HTTP_NOT_ACCEPTABLE,
+            'HTTP not acceptable',
+            'update action must have a URL')
         end
 
         -- do any combination
@@ -540,6 +543,7 @@ function processJsonActions( args )
         -- ACTION UPDATE REPLACE
         if args['replace'] then
            -- ngx.say("do replace")
+           -- TODO! replace other properties
            if type(args['replace']['content']) == 'table' then
             local property = 'content'
             local item = table.concat(args['replace']['content'], ", ")
@@ -560,11 +564,12 @@ function processJsonActions( args )
         end
         -- ACTION UPDATE ADD
         if args['add'] then
-          ngx.say("do add")
+          --  ngx.say("do add")
+          --  TODO add more properties
           if type(args['add']['category']) == 'table' then
             local property = 'category'
-            local item = table.concat(args['add']['category'], ", ")
-            ngx.say(item)
+            local item = table.concat(args['add']['category'], " ")
+            -- ngx.say(item)
             require('mod.eXist').addProperty( url, property, item )
           end
         end

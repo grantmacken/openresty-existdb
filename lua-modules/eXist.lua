@@ -1,5 +1,3 @@
-
-
 local _M = {}
 
 --[[
@@ -37,6 +35,14 @@ function requestError( status, msg ,description)
   ngx.print(json)
   ngx.exit(status)
 end
+
+function connect()
+
+
+
+end
+
+
 
 function getPostsPath()
   return '/db/data/' ..  ngx.var.http_Host .. '/docs/posts/'
@@ -593,25 +599,22 @@ end
 function _M.putXML( collection,  data )
   local xml = require 'xml'
   local http = require "resty.http"
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
+  local authorization = cfg.auth
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
+  local domain   = ngx.var.site
   local resource = xml.find(data, 'id')[1]
   --local kindOfPost = xml.find(data, 'entry').kind
   local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
   -- store without extension
   local putPath  = dataPath .. '/' .. collection .. '/' .. resource
-  local host = '127.0.0.1'
-  local port = 8080
-
-  --  ngx.say(putPath)
-  --  ngx.say(xml.dump(data))
 
   local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
   end
 
   local res, err = httpc:request({

@@ -328,18 +328,18 @@ function createEntry(args)
     kind = kindOfPost
   } 
 
-   -- insert all properties into data table
-   -- if we have a content property add a type attribute
-   for key, val in pairs(properties) do
-     if key  == 'content' then
-       -- TODO! assumed posted content type is 'text'
-       table.insert(data,1,{ xml = key,['type'] = 'text', val })
-     else
-       table.insert(data,1,{ xml = key, val })
-     end
-   end
-   return data
- end
+  -- insert all properties into data table
+  -- if we have a content property add a type attribute
+  for key, val in pairs(properties) do
+    if key  == 'content' then
+      -- TODO! assumed posted content type is 'text'
+      table.insert(data,1,{ xml = key,['type'] = 'text', val })
+    else
+      table.insert(data,1,{ xml = key, val })
+    end
+  end
+  return data
+end
 
 function createEntryFromJson( hType , props)
   --[[
@@ -499,9 +499,8 @@ function processJsonTypes(args)
         if type(args['properties']) == 'table' then
           -- ngx.say( 'CREATE ' ..  hType)
           local data =  createEntryFromJson( hType , args['properties'] )
-          ngx.say(require('xml').dump(data))
+          --  ngx.say(require('xml').dump(data))
           require('mod.eXist').putXML('posts', data)
-          -- -- require('mod.eXist').putXML(data)
         end
       end
     end

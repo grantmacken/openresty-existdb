@@ -190,12 +190,12 @@ function _M.verifyToken()
 
   local serverName = ssl.server_name()
   if serverName == nil then
-   return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'can not establish serrver name') 
+   return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'can not establish server name') 
   end
 
-  if serverName ~= ngx.var.site  then
-   return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'you are not me') 
-  end
+  -- if serverName ~= ngx.var.site then
+  --  return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'you are not me') 
+  -- end
 
 -- I have the appropiate post scope
   if scope ~= 'post'  then

@@ -546,7 +546,7 @@ function processJsonActions( args )
            -- TODO! replace other properties
            if type(args['replace']['content']) == 'table' then
             local property = 'content'
-            local item = table.concat(args['replace']['content'], ", ")
+            local item = table.concat(args['replace']['content'], " ")
             -- TODO! for each item
             require('mod.eXist').replaceProperty( url, property, item )
            end
@@ -555,9 +555,10 @@ function processJsonActions( args )
         if args['delete'] then
           ngx.say("do delete")
           -- ngx.say( args['delete'] ) 
+           -- TODO! replace other properties
            if type(args['delete']['category']) == 'table' then
             local property = 'category'
-            local item = table.concat(args['delete']['category'], ", ")
+            local item = table.concat(args['delete']['category'], " ")
             -- TODO! for each item
             require('mod.eXist').removeProperty( url, property, item )
            end

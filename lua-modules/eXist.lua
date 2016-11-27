@@ -42,6 +42,11 @@ function getPostsPath()
   return '/db/data/' ..  ngx.var.http_Host .. '/docs/posts/'
 end
 
+  -- generic exist endpoint for talking to eXistdb 
+
+function _M.processRequest()
+ ngx.say('OK')
+end
 
 function getRequest2( query )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
@@ -152,8 +157,8 @@ function getQuery( query )
       return
     end
   end
-    ngx.say(body)
-  end
+  ngx.say(body)
+end
 
 function postQuery( query )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
@@ -741,6 +746,9 @@ end
 --   end
 --     ngx.say(body)
 -- end
+
+
+
 
 function _M.exist()
   -- proccess application 'application/x-www-form-urlencoded' requests

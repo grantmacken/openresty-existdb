@@ -469,11 +469,12 @@ function acceptFormFields(fields , field)
  return method  
 end
 
-function processJsonBody()
+function processJsonBody( )
   ngx.req.read_body()
   local args  = cjson.decode(ngx.req.get_body_data())
   -- either 'ACTION' to modify post or 'TYPE' to create type of post
   if args['action'] then 
+    -- ngx.say( 'action' )
     processJsonActions(args) 
   elseif args['type'] then
     processJsonTypes(args)
@@ -507,7 +508,7 @@ function processJsonTypes(args)
   end
 end
 
-function processJsonActions()
+function processJsonActions( args )
       --[[
     To update an entry, send "action": "update" and specify the URL of the entry that is being updated using the "url"
     property. The request MUST also include a replace, add or delete property (or any combination of these) containing
@@ -531,7 +532,7 @@ function processJsonActions()
           --]]
         -- ACTION UPDATE REPLACE
         if args['replace'] then
-          ngx.say("do replace")
+           -- ngx.say("do replace")
            if type(args['replace']['content']) == 'table' then
             local property = 'content'
             local item = table.concat(args['replace']['content'], ", ")

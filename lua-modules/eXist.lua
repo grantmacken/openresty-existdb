@@ -316,16 +316,16 @@ function _M.replaceProperty( uri, property, item )
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local xmlNode = {} 
   -- TODO only allow certain properties
-  ngx.say( uri )
-  ngx.say( property )
-  ngx.say( item )
+  -- ngx.say( uri )
+  -- ngx.say( property )
+  -- ngx.say( item )
   if property == 'content' then
     xmlNode = { xml = property, type = 'text', item } 
   else
     xmlNode = { xml = property, item } 
   end
 
-  ngx.say(xml.dump(xmlNode))
+  -- ngx.say(xml.dump(xmlNode))
 
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -348,10 +348,11 @@ function _M.replaceProperty( uri, property, item )
     </text>
   </query>
 ]]
-  ngx.say(txt)
+ --  ngx.say(txt)
   local response =  sendMicropubRequest( restPath, txt )
-  ngx.say("status: ", response.status)
-  ngx.say("reason: ", response.reason)
+  ngx.exit(response.status)
+  --  ngx.say("status: ", response.status)
+  -- ngx.say("reason: ", response.reason)
 end
 
 function _M.addProperty( uri, property, item )
@@ -434,8 +435,9 @@ function _M.removeProperty( uri, property, item )
 ]]
   ngx.say(txt)
   local response =  sendMicropubRequest( restPath, txt )
-  ngx.say("status: ", response.status)
-  ngx.say("reason: ", response.reason)
+  ngx.exit(response.status)
+  --ngx.say("status: ", response.status)
+  -- ngx.say("reason: ", response.reason)
 end
 
 --[[
@@ -565,12 +567,15 @@ function sendMicropubRequest( restPath, txt  )
   local http = require "resty.http"
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
   local contentType = 'application/xml'
-  ngx.say( txt )
+  -- ngx.say( txt )
+
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then
-    ngx.say("failed to connect to ",cfg.host ," ",  err)
-    return
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
   end
 
   local res, err = httpc:request({
@@ -586,7 +591,10 @@ function sendMicropubRequest( restPath, txt  )
     })
   if not res then
     ngx.say("failed to request: ", err)
-    return
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
   end
   return res
 end
@@ -601,7 +609,7 @@ function _M.putXML( collection,  data )
   local http = require "resty.http"
   local authorization = cfg.auth
   local contentType = 'application/xml'
-  local domain   = ngx.var.site
+  local domain   = ngx.var.http_Host
   local resource = xml.find(data, 'id')[1]
   --local kindOfPost = xml.find(data, 'entry').kind
   local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'

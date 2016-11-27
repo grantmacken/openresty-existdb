@@ -304,10 +304,11 @@ function createEntry(args)
       -- ngx.say(type(val))
       -- ngx.say(type(key))
       -- ngx.say(key, ": ", table.concat(val, ", "))
+      -- Note: Categories space delimited
       local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
       if pKey then
         if postedEntryProperties[pKey] ~=  nil then
-          properties[pKey] = table.concat(val, ", ")
+          properties[pKey] = table.concat(val, " ")
         end
       end 
     else
@@ -392,8 +393,8 @@ in converting to xml follow atom syntax
       if key ~= 'content' then
         if postedEntryProperties[key] ~=  nil then
           properties[key] = table.concat(val, " ")
-          ngx.say(key)
-          ngx.say(properties[key])
+          -- ngx.say(key)
+          -- ngx.say(properties[key])
         end
       end
     else
@@ -506,7 +507,7 @@ function processJsonTypes(args)
         if type(args['properties']) == 'table' then
           -- ngx.say( 'CREATE ' ..  hType)
           local data =  createEntryFromJson( hType , args['properties'] )
-          --  ngx.say(require('xml').dump(data))
+          -- ngx.say(require('xml').dump(data))
           require('mod.eXist').putXML('posts', data)
         end
       end

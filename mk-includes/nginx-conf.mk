@@ -84,11 +84,18 @@ http {
   server {
     listen 443      ssl http2 default_server;
     listen [::]:443 ssl http2 default_server;
-    server_name $(DOMAIN);
+    # server_name $(DOMAIN);
+# A named regular expression capture can be used later as a variable: 
+    server_name  ~^(www\.)?(?<domain>.+)$$;
+    # GLOBAL VARIABLES
+    set $$site  $$domain;
+    set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$$domain/;
 
     ssl_certificate_by_lua_block {
       print("ssl cert by lua is running!")
+      #TODO! handle certs using site var
     }
+
     # certificates from letsencrypt
     ssl_certificate         /etc/letsencrypt/live/$(DOMAIN)/fullchain.pem;
     # Path to private key used to create certificate.
@@ -104,9 +111,7 @@ http {
     server_tokens off;
     resolver '8.8.8.8' ipv6=off;
 
-    # GLOBAL VARIABLES
 
-    set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$(DOMAIN)/;
 
     # PHASES 
     # before locations insert server-rewrite phase

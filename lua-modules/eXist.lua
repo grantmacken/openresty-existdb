@@ -46,6 +46,8 @@ end
 
 function _M.processRequest()
  ngx.say('OK')
+ ngx.say( ngx.var.resources )
+ ngx.say( ngx.var.site)
 end
 
 function getRequest2( query )

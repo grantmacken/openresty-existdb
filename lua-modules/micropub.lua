@@ -66,7 +66,7 @@ function getMimeType( filename )
   -- get file extension Only handle 
   local ext, err = ngx.re.match(filename, "[^.]+$")
   if ext then
-   return extensions[ext[0]]
+   return ext[0], extensions[ext[0]]
   else
     if err then
       ngx.log(ngx.ERR, "error: ", err)
@@ -638,40 +638,46 @@ function processMultPartForm()
       break
     end
 
-  --  ngx.say("== part ==")
-    ngx.say("name: [", name, "]")
-    ngx.say("file: [", filename, "]")
-    ngx.say("mime: [", mime, "]")
+    -- ngx.say("== part ==")
+    -- ngx.say("name: [", name, "]")
+    -- ngx.say("file: [", filename, "]")
+    -- ngx.say("mime: [", mime, "]")
 
     -- get file extension. Only handle named extensions
-    local mimeType = getMimeType(filename)
-
+    -- local ext = ngx.re.match(filename, "[^.]+$")
+    local ext, mimeType = getMimeType( filename )
+    local sID = require('mod.postID').getID( 'm' )
+    local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
+    -- ngx.say( ext )
+    -- ngx.say( mimeType )
+    -- ngx.say( sID )
+    -- ngx.say( mediaFileName )
     if not mimeType then
       break
     end
 
 
-    ngx.say("mimeType: [", mimeType, "]")
- 
+    --  ngx.say("mimeType: [", mimeType, "]")
 
 
 
-   -- local md5 =  ngx.md5(part_body)
-   --  ngx.say("md5:  [", md5, "]")
 
-   -- top level entry
-   -- local data = { 
-   --   xml = 'entry', 
-   --   type = 'photo'
-   -- } 
+    -- local md5 =  ngx.md5(part_body)
+    --  ngx.say("md5:  [", md5, "]")
 
-   -- top level entry
-   -- http://microformats.org/wiki/hmedia
-   -- https://indieweb.org/Shoebox
+    -- top level entry
+    -- local data = { 
+    --   xml = 'entry', 
+    --   type = 'photo'
+    -- } 
 
---[[
+    -- top level entry
+    -- http://microformats.org/wiki/hmedia
+    -- https://indieweb.org/Shoebox
+
+    --[[
   shoebox idea  - a collection of 'findable'  media items
-  
+
   accept publishing photos 
    - photos -  images 
 
@@ -683,7 +689,7 @@ function processMultPartForm()
   upon upload create hMedia entry
 
   name        original file name
-  
+
   id         [m][DATE][i]  
            shortKindOfPost |  base60Date | incremented integer representing item published that day
   signature -- a md5 signiture to prevent storing\uploading of same photoi
@@ -698,7 +704,7 @@ function processMultPartForm()
   -- name      
   -- summary    
   -- category -- tags
-  
+
   property values can be used in HTML templates
 
   summary     : figure figcaption text
@@ -714,34 +720,41 @@ search for items in shoebox collection by
 
 --]]
 
-   local data = { 
-     xml = 'media'
-   }
+    local data = { 
+      xml = 'media'
+    }
 
-   local properties = {}
-   properties['name'] = filename
-   properties['published'] = ngx.today()
-   properties['signature'] = ngx.md5(part_body)
-   properties['mime'] = mimeType
-   -- id prefix always M
-   properties['id'] = require('mod.postID').getID( 'M' )
-
-   for key, val in pairs(properties) do
-     -- ngx.say(type(val))
-     -- ngx.say(key, ": ", val)
-     table.insert(data,1,{ xml = key, val })
-   end
-   ngx.say(require('xml').dump(data))
-
-
-   require('mod.eXist').putMedia(  part_body,  properties['mime'] , properties['id']   )
-   require('mod.eXist').putXML( 'uploads' ,  data )
- end
-   -- msg = "submitted data in form does not have required fields "
-   -- return requestError(
-   --   ngx.HTTP_NOT_ACCEPTABLE,
-   --   'not accepted',
-   --   msg)
- end
+    local properties = {}
+    properties['name']      = filename
+    properties['uploaded']  = ngx.today()
+    properties['signature'] = ngx.md5(part_body)
+    properties['mime']      = mimeType
+    -- id prefix always M
+    properties['id']  = sID
+    properties['url'] = 'https://' .. ngx.var.host .. '/' .. sID
+    properties['src'] = 'https://' .. ngx.var.host .. '/' .. mediaFileName
+    for key, val in pairs(properties) do
+      -- ngx.say(type(val))
+      -- ngx.say(key, ": ", val)
+      table.insert(data,1,{ xml = key, val })
+    end
+    local reason =  require('mod.eXist').putMedia( part_body,  mediaFileName , mimeType )
+    if reason == 'Created' then
+        -- NOTE: return binary source as location
+      ngx.header.location = properties['src']
+        -- Note create a doc for the 'shoebox
+      local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
+      if reason2 == 'Created' then
+        ngx.say(require('xml').dump(data))
+        ngx.exit(ngx.HTTP_CREATED)
+      end
+    end
+  end
+  -- msg = "submitted data in form does not have required fields "
+  -- return requestError(
+  --   ngx.HTTP_NOT_ACCEPTABLE,
+  --   'not accepted',
+  --   msg)
+end
 
 return _M

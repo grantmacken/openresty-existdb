@@ -123,7 +123,7 @@ opmGet:
 	@echo "install opm packages"
 		@opm get pintsized/lua-resty-http
 		@opm get SkyLothar/lua-resty-jwt
-
+		@opm get chunpu/lua-min-url
 # luarocksinstall
 # rocks
 

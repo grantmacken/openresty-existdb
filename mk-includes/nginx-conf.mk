@@ -90,6 +90,7 @@ http {
     # GLOBAL VARIABLES
     set $$site  $$domain;
     set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$$domain/;
+    set $$media $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/data/$$domain/;
 
     ssl_certificate_by_lua_block {
       print("ssl cert by lua is running!")

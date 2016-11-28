@@ -515,20 +515,22 @@ function _M.undeletePost( uri)
    ngx.say("reason: ", response.reason)
 end
 
-function _M.putMedia( part_body, mime, resource )
+function _M.putMedia( part_body, resource, mime  )
   local http = require "resty.http"
   local authorization = cfg.auth 
-  local domain        = ngx.var.http_Host
+  local domain        = ngx.var.site
   -- ngx.say( contentType )
-  local dataPath = "/exist/rest/db/data/" .. domain  
+  local dataPath = "/exist/rest/db/data/" .. domain
   local colPath  = "media"
   local putPath  = dataPath .. '/' .. colPath .. '/' .. resource
 
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then
-    ngx.say("failed to connect to ",cfg.host ," ",  err)
-    return
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
   end
 
   local res, err = httpc:request({
@@ -543,12 +545,14 @@ function _M.putMedia( part_body, mime, resource )
       ssl_verify = false
     })
   if not res then
-    ngx.say("failed to request: ", err)
-    return
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'request failure')
   end
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-  ngx.say("has body: ", res.has_body)
+  -- ngx.say("status: ", res.status)
+  -- ngx.say("reason: ", res.reason)
+  -- ngx.say("has body: ", res.has_body)
 
   if res.has_body then
     body, err = res:read_body()
@@ -557,10 +561,10 @@ function _M.putMedia( part_body, mime, resource )
       return
     end
   end
-
-  ngx.status = ngx.HTTP_CREATED
-  ngx.header.content_type = 'text/plain'
-  ngx.header.location = 'http://' .. domain .. '/_media/' .. resource 
+  return res.reason
+ -- ngx.header.location = 'http://' .. domain .. '/_media/' .. resource 
+ --  ngx.status = ngx.HTTP_CREATED
+ -- ngx.header.content_type = 'text/plain'
 end 
 
 function sendMicropubRequest( restPath, txt  )
@@ -650,9 +654,7 @@ function _M.putXML( collection,  data )
       return
     end
   end
-  ngx.status = ngx.HTTP_CREATED
-  --ngx.header.content_type = 'text/plain'
-  ngx.header.location = 'http://' .. domain .. '/' .. resource 
+  return res.reason
 end
 
 function deleteRequest( path )

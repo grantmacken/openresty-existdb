@@ -620,46 +620,56 @@ function processMultPartForm()
       'not accepted',
       msg)
   end
-  while true do
-    local part_body, name, mime, filename = p:parse_part()
 
-    if not part_body then
-      msg = "submitted data in form does not have required fields "
-      return requestError(
-        ngx.HTTP_NOT_ACCEPTABLE,
-        'no part body',
-        msg)
+ while true do
+   local part_body, name, mime, filename = p:parse_part()
+   if not part_body then
       break
-    end
+   end
+   ngx.say("== part ==")
+   ngx.say("name: [", name, "]")
+   ngx.say("file: [", filename, "]")
+   ngx.say("mime: [", mime, "]")
+   -- ngx.say("body: [", part_body, "]")
+ end
+ -- while true do
+  --   local part_body, name, mime, filename = p:parse_part()
 
-  --  if not mime then
-  --    break
-  --  end
+  --   if not part_body then
+  --     msg = "submitted data in form does not have required fields "
+  --     return requestError(
+  --       ngx.HTTP_NOT_ACCEPTABLE,
+  --       'no part body',
+  --       msg)
+  --     break
+  --   end
 
-    if not filename then
-      msg = "submitted data in form does not have required fields "
-      return requestError(
-        ngx.HTTP_NOT_ACCEPTABLE,
-        'no part body',
-        msg)
-      break
-    end
+  -- --  if not mime then
+  -- --    break
+  -- --  end
 
-    if name ~= 'file' then
-      msg = "submitted data in form does not have required fields "
-      return requestError(
-        ngx.HTTP_NOT_ACCEPTABLE,
-        'no part body',
-        msg)
-      break
-    end
+  --   if not filename then
+  --     msg = "submitted data in form does not have required fields "
+  --     return requestError(
+  --       ngx.HTTP_NOT_ACCEPTABLE,
+  --       'no part body',
+  --       msg)
+  --     break
+  --   end
+
+  --   if name ~= 'file' then
+  --     msg = "submitted data in form does not have required fields "
+  --     return requestError(
+  --       ngx.HTTP_NOT_ACCEPTABLE,
+  --       'no part body',
+  --       msg)
+  --     break
+  --   end
     -- ngx.say("== part ==")
     -- ngx.say("name: [", name, "]")
     -- ngx.say("file: [", filename, "]")
     -- ngx.say("mime: [", mime, "]")
-  end
-
-  ngx.exit(200)
+ 
 
 end
 

@@ -597,7 +597,9 @@ function processPost()
   if contentType  == 'application/x-www-form-urlencoded' then
     processPostArgs()
   elseif contentType  == 'multipart/form-data' then
-    processMultPartForm()
+    ngx.say( contentType )
+     ngx.exit( 200 )
+   -- processMultPartForm()
   elseif contentType  == 'application/json' then
      processJsonBody()
   end

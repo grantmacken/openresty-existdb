@@ -515,6 +515,38 @@ function _M.undeletePost( uri)
    ngx.say("reason: ", response.reason)
 end
 
+function _M.fetchMediaLinkDoc( )
+  -- ngx.say( 'Fetch Media Link Doc' )
+  local http = require "resty.http"
+  local authorization = cfg.auth 
+  local domain        = ngx.var.site
+  -- ngx.say( ngx.var.uri )
+  -- ngx.say( ngx.var.request_uri )
+  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs' ..  ngx.var.uri
+  -- ngx.say( docPath )
+  local httpc = http.new()
+  -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "GET",
+        path = docPath,
+        headers = {
+          ["Content-Type"] = "application/xml",
+          ["Authorization"] = authorization 
+        },
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+end
+
 function _M.putMedia( part_body, resource, mime  )
   local http = require "resty.http"
   local authorization = cfg.auth 

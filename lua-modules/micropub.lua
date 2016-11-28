@@ -626,9 +626,9 @@ function processMultPartForm()
       break
     end
 
-    if not mime then
-      break
-    end
+  --  if not mime then
+  --    break
+  --  end
 
     if not filename then
       break
@@ -643,8 +643,6 @@ function processMultPartForm()
     -- ngx.say("file: [", filename, "]")
     -- ngx.say("mime: [", mime, "]")
 
-    -- get file extension. Only handle named extensions
-    -- local ext = ngx.re.match(filename, "[^.]+$")
     local ext, mimeType = getMimeType( filename )
     local sID = require('mod.postID').getID( 'm' )
     local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
@@ -658,10 +656,6 @@ function processMultPartForm()
 
 
     --  ngx.say("mimeType: [", mimeType, "]")
-
-
-
-
     -- local md5 =  ngx.md5(part_body)
     --  ngx.say("md5:  [", md5, "]")
 

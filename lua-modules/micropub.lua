@@ -527,10 +527,10 @@ function processJsonTypes(args)
           ngx.header.location = location
           ngx.status = ngx.HTTP_CREATED
           -- ngx.header.content_type = 'application/xml'
-          local reason =  require('mod.eXist').putXML( 'uploads',  data )
+          local reason =  require('mod.eXist').putXML( 'posts',  data )
           if reason == 'Created' then
-            ngx.say(require('xml').dump(data))
-           --  ngx.exit(ngx.HTTP_CREATED)
+            -- ngx.say(require('xml').dump(data))
+            ngx.exit(ngx.HTTP_CREATED)
           end
           -- require('mod.eXist').putXML('posts', data)
         end
@@ -566,14 +566,26 @@ function processJsonActions( args )
           --]]
         -- ACTION UPDATE REPLACE
         if args['replace'] then
-           -- ngx.say("do replace")
-           -- TODO! replace other properties
-           if type(args['replace']['content']) == 'table' then
-            local property = 'content'
-            local item = table.concat(args['replace']['content'], " ")
-            -- TODO! for each item
-            require('mod.eXist').replaceProperty( url, property, item )
-           end
+          -- ngx.say("do replace")
+          -- TODO! replace other properties
+          if type(args['replace'] ) == 'table' then
+            if type(args['replace']['content']) == 'table' then
+              local property = 'content'
+              local item = table.concat(args['replace']['content'], " ")
+              -- TODO! for each item
+              require('mod.eXist').replaceProperty( url, property, item )
+            else
+            return requestError(
+              ngx.HTTP_BAD_REQUEST,
+              'HTTP BAD REQUEST',
+              'content value should be in an array')
+            end
+          else
+            return requestError(
+              ngx.HTTP_BAD_REQUEST,
+              'HTTP BAD REQUEST',
+              'replace value should be in an array')
+          end
         end
         -- ACTION UPDATE DELETE
         if args['delete'] then

@@ -381,6 +381,7 @@ in converting to xml follow atom syntax
  <content type="html">"<b>Hello</b> <i>World</i>"</content>
 
 --]]
+
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
   -- Post Properties
@@ -388,8 +389,8 @@ in converting to xml follow atom syntax
   local properties = {}
   for key, val in pairs(props) do
     if type(val) == "table" then
-     --  ngx.say('key', ": ", key)
-     --  ngx.say( 'value type: ' ..  type(val))
+      -- ngx.say('key', ": ", key)
+      -- ngx.say( 'value type: ' ..  type(val))
       if key ~= 'content' then
         if postedEntryProperties[key] ~=  nil then
           properties[key] = table.concat(val, " ")
@@ -405,6 +406,8 @@ in converting to xml follow atom syntax
       'properties should be in an array') 
     end
   end
+ -- ngx.say('' )
+ --  ngx.exit(200)
 
   local kindOfPost = discoverPostType( properties )
   -- top level entry
@@ -432,7 +435,7 @@ in converting to xml follow atom syntax
   for key, val in pairs(properties) do
     table.insert(data,1,{ xml = key, val })
   end
-  return data
+  return properties['url'] ,  data
 end
 
 function acceptMethods(methods)
@@ -506,9 +509,16 @@ function processJsonTypes(args)
       if hType == 'entry' then
         if type(args['properties']) == 'table' then
           -- ngx.say( 'CREATE ' ..  hType)
-          local data =  createEntryFromJson( hType , args['properties'] )
+          local location, data = createEntryFromJson( hType , args['properties'] )
+          -- ngx.say( location  )
           -- ngx.say(require('xml').dump(data))
-          require('mod.eXist').putXML('posts', data)
+          ngx.header.location = location
+          local reason =  require('mod.eXist').putXML( 'uploads',  data )
+          if reason == 'Created' then
+            ngx.say(require('xml').dump(data))
+            ngx.exit(ngx.HTTP_CREATED)
+          end
+          -- require('mod.eXist').putXML('posts', data)
         end
       end
     end

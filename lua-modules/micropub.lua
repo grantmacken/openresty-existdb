@@ -58,6 +58,18 @@ TEST: curl
 
 --]]
 
+--UTILITY TODO move to utility.lua
+function requestError( status, msg ,description)
+  ngx.status = status
+  ngx.header.content_type = 'application/json'
+  local json = cjson.encode({
+      error  = msg,
+      error_description = description
+    })
+  ngx.print(json)
+  ngx.exit(status)
+end
+
 local extensions = {
 png = 'image/png'
 }
@@ -513,10 +525,12 @@ function processJsonTypes(args)
           -- ngx.say( location  )
           -- ngx.say(require('xml').dump(data))
           ngx.header.location = location
+          ngx.status = ngx.HTTP_CREATED
+          -- ngx.header.content_type = 'application/xml'
           local reason =  require('mod.eXist').putXML( 'uploads',  data )
           if reason == 'Created' then
             ngx.say(require('xml').dump(data))
-            ngx.exit(ngx.HTTP_CREATED)
+           --  ngx.exit(ngx.HTTP_CREATED)
           end
           -- require('mod.eXist').putXML('posts', data)
         end

@@ -635,39 +635,6 @@ function processJsonActions( args )
 
             end
           end
-
-          --for key, property in ipairs(args['delete']) do
-          --    ngx.say( type(property) ) 
-              -- if type(property) == 'string' then
-              --   local reason =  require('mod.eXist').removeProperty( url, property )
-              --   if reason == 'OK' then
-              --    require('mod.eXist').fetchPostsDoc( url )
-              --   end
-              -- end
-             -- ++++++++++++++++++++++++++++++++++++++++++++++++++
-              -- if type(val) == "table" then
-            --   local next = next 
-            --   if next(val) == nil then
-            --     ngx.say( ' myTable is empty' )
-            --   end
-
-            --   ngx.say( key ) 
-            --   ngx.say( type( val ) ) 
-            --   for index, value in ipairs (val) do
-            --     ngx.say(key)
-            --     ngx.say( value )
-            --   end
-            -- end
-          -- end
-
-          -- if type(args['delete']['category']) == 'table' then
-          --   local property = 'category'
-          --   local item = table.concat(args['delete']['category'], " ")
-          --   ngx.say( type( item[0] ) ) 
-
-          --   -- TODO! for each item
-          --  --  require('mod.eXist').removeProperty( url, property, item )
-          -- end
         end
         -- ACTION UPDATE ADD
         if args['add'] then
@@ -683,7 +650,7 @@ function processJsonActions( args )
         -- end of ACTION UPDATEs
       elseif action == 'delete' then
         -- start of ACTION DELETE
-        ngx.say("delete")
+        -- ngx.say("delete")
         require('mod.eXist').deletePost( url )
       elseif action == 'undelete' then
         -- start of ACTION UNDELETE

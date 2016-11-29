@@ -489,11 +489,9 @@ on windows
 --]]
 
 function _M.deletePost( uri)
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
-  ngx.say( uri )
+  local domain      = ngx.var.site
+  local resource    = extractID( uri) 
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local sourceCollection = '/db/data/' .. domain .. '/docs/posts'
   local targetCollection = '/db/data/' .. domain .. '/docs/recycle'
@@ -511,15 +509,16 @@ function _M.deletePost( uri)
      xmldb:move( $sourceCollection, $targetCollection, $resource)
     )
     else ( )
-
     ]] ..']]>' .. [[ 
     </text>
   </query>
 ]]
-  ngx.say(txt)
-   local response =  sendMicropubRequest( restPath, txt )
-   ngx.say("status: ", response.status)
-   ngx.say("reason: ", response.reason)
+  -- ngx.say(txt)
+  local response =  sendMicropubRequest( restPath, txt )
+  -- ngx.say("status: ", response.status)
+  -- ngx.say("reason: ", response.reason)
+  ngx.exit(response.status )
+
 end
 
 function _M.undeletePost( uri)

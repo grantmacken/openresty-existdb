@@ -396,6 +396,7 @@ in converting to xml follow atom syntax
 
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
+
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
   local properties = {}
@@ -405,9 +406,22 @@ in converting to xml follow atom syntax
       -- ngx.say( 'value type: ' ..  type(val))
       if key ~= 'content' then
         if postedEntryProperties[key] ~=  nil then
+          -- space delimited list
           properties[key] = table.concat(val, " ")
-          -- ngx.say(key)
-          -- ngx.say(properties[key])
+          -- each property value should be an array
+          -- all properties are flat
+          -- easily extracted into a sequence //category/string()
+          -- will get a list odf category values
+          -- for index, value in ipairs (val) do
+          --   -- ngx.say(key)
+          --   -- ngx.say( value )
+          --   properties[key] = value
+          -- end
+        else
+          return requestError(
+            ngx.ngx.HTTP_BAD_REQUEST,
+            'Bad Request',
+            'TODO! add unknown props') 
         end
       end
     else
@@ -418,27 +432,14 @@ in converting to xml follow atom syntax
       'properties should be in an array') 
     end
   end
- -- ngx.say('' )
- --  ngx.exit(200)
-
   local kindOfPost = discoverPostType( properties )
+
   -- top level entry
   data = { 
     xml = hType, 
     kind = kindOfPost
   }
 
-  -- ngx.say('content: ' ..  type(props['content'][1]) )
-  if type(props['content'][1]) == "table" then
-    for k, v in pairs(props['content'][1]) do
-     -- ngx.say('content k : ' ..  k )
-     -- ngx.say('content v : ' ..  v )
-      -- table.insert(data,1,{ xml = 'content',['type'] = k, v })
-       table.insert(data,1,{ xml = 'content',['type'] = k, v })
-    end 
-  elseif type(props['content'][1]) == "string" then
-    table.insert(data,1,{ xml = 'content',['type'] = 'text', props['content'][1]})
-  end
 
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
@@ -447,6 +448,19 @@ in converting to xml follow atom syntax
   for key, val in pairs(properties) do
     table.insert(data,1,{ xml = key, val })
   end
+
+  -- ngx.say('content: ' ..  type(props['content'][1]) )
+  if type(props['content'][1]) == "table" then
+    for k, v in pairs(props['content'][1]) do
+      -- ngx.say('content k : ' ..  k )
+      -- ngx.say('content v : ' ..  v )
+      -- table.insert(data,1,{ xml = 'content',['type'] = k, v })
+      table.insert(data,1,{ xml = 'content',['type'] = k, v })
+    end 
+  elseif type(props['content'][1]) == "string" then
+    table.insert(data,1,{ xml = 'content',['type'] = 'text', props['content'][1]})
+  end
+
   return properties['url'] ,  data
 end
 
@@ -526,10 +540,10 @@ function processJsonTypes(args)
           -- ngx.say(require('xml').dump(data))
           ngx.header.location = location
           ngx.status = ngx.HTTP_CREATED
-          -- ngx.header.content_type = 'application/xml'
+          ngx.header.content_type = 'application/xml'
           local reason =  require('mod.eXist').putXML( 'posts',  data )
           if reason == 'Created' then
-            -- ngx.say(require('xml').dump(data))
+             ngx.say(require('xml').dump(data))
             ngx.exit(ngx.HTTP_CREATED)
           end
           -- require('mod.eXist').putXML('posts', data)

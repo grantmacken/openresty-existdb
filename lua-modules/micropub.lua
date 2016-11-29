@@ -597,7 +597,7 @@ function processPost()
   if contentType  == 'application/x-www-form-urlencoded' then
     processPostArgs()
   elseif contentType  == 'multipart/form-data' then
-    ngx.say( contentType )
+    -- ngx.say( contentType )
     processMultPartForm()
   elseif contentType  == 'application/json' then
      processJsonBody()
@@ -621,95 +621,63 @@ function processMultPartForm()
       msg)
   end
 
-   local part_body, name, mime, filename = p:parse_part()
- -- while true do
- --   local part_body, name, mime, filename = p:parse_part()
- --   if not part_body then
- --      break
- --   end
-   ngx.say("== part ==")
-   ngx.say("name: [", name, "]")
-   ngx.say("file: [", filename, "]")
-   ngx.say("mime: [", mime, "]")
- --   -- ngx.say("body: [", part_body, "]")
- -- end
-
-   ngx.exit(200)
- -- while true do
-  --   local part_body, name, mime, filename = p:parse_part()
-
-  --   if not part_body then
-  --     msg = "submitted data in form does not have required fields "
-  --     return requestError(
-  --       ngx.HTTP_NOT_ACCEPTABLE,
-  --       'no part body',
-  --       msg)
-  --     break
-  --   end
-
-  -- --  if not mime then
-  -- --    break
-  -- --  end
-
-  --   if not filename then
-  --     msg = "submitted data in form does not have required fields "
-  --     return requestError(
-  --       ngx.HTTP_NOT_ACCEPTABLE,
-  --       'no part body',
-  --       msg)
-  --     break
-  --   end
-
-  --   if name ~= 'file' then
-  --     msg = "submitted data in form does not have required fields "
-  --     return requestError(
-  --       ngx.HTTP_NOT_ACCEPTABLE,
-  --       'no part body',
-  --       msg)
-  --     break
-  --   end
+  while true do
+    local part_body, name, mime, filename = p:parse_part()
+    if not part_body then
+      break
+    end
     -- ngx.say("== part ==")
     -- ngx.say("name: [", name, "]")
     -- ngx.say("file: [", filename, "]")
     -- ngx.say("mime: [", mime, "]")
- 
+    if not filename then
+      return requestError(
+        ngx.HTTP_BAD_REQUEST,
+        'no filename',
+        'submitted data in form does not have required fields' )
+    end
+    if name ~= 'file'  then
+      return requestError(
+        ngx.HTTP_BAD_REQUEST,
+        'no file',
+        'submitted data in form does not have required fields' )
+    end
 
-end
+    local ext, mimeType = getMimeType( filename )
+    local sID = require('mod.postID').getID( 'm' )
+    local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
+    local data = { 
+      xml = 'media'
+    }
 
-function uploader()
-  local ext, mimeType = getMimeType( filename )
-  local sID = require('mod.postID').getID( 'm' )
-  local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
-  local data = { 
-    xml = 'media'
-  }
-
-  local properties = {}
-  properties['name']      = filename
-  properties['uploaded']  = ngx.today()
-  properties['signature'] = ngx.md5(part_body)
-  properties['mime']      = mimeType
-  -- id prefix always M
-  properties['id']  = sID
-  properties['url'] = 'https://' .. ngx.var.host .. '/' .. sID
-  properties['src'] = 'https://' .. ngx.var.host .. '/' .. mediaFileName
-  for key, val in pairs(properties) do
-    -- ngx.say(type(val))
-    -- ngx.say(key, ": ", val)
-    table.insert(data,1,{ xml = key, val })
-  end
-  local reason =  require('mod.eXist').putMedia( part_body,  mediaFileName , mimeType )
-  if reason == 'Created' then
-    -- NOTE: return binary source as location
-    ngx.header.location = properties['src']
-    -- Note create a doc for the 'shoebox
-    local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
-    if reason2 == 'Created' then
-      ngx.say(require('xml').dump(data))
-      ngx.exit(ngx.HTTP_CREATED)
+    local properties = {}
+    properties['name']      = filename
+    properties['uploaded']  = ngx.today()
+    properties['signature'] = ngx.md5(part_body)
+    properties['mime']      = mimeType
+    -- id prefix always M
+    properties['id']  = sID
+    properties['url'] = 'https://' .. ngx.var.host .. '/' .. sID
+    properties['src'] = 'https://' .. ngx.var.host .. '/' .. mediaFileName
+    for key, val in pairs(properties) do
+      -- ngx.say(type(val))
+      -- ngx.say(key, ": ", val)
+      table.insert(data,1,{ xml = key, val })
+    end
+    local reason =  require('mod.eXist').putMedia( part_body,  mediaFileName , mimeType )
+    if reason == 'Created' then
+      -- NOTE: return binary source as location
+      ngx.header.location = properties['src']
+      -- Note create a doc for the 'shoebox
+      local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
+      if reason2 == 'Created' then
+        ngx.say(require('xml').dump(data))
+        ngx.exit(ngx.HTTP_CREATED)
+      end
     end
   end
 end
+
 
 --[[
 

@@ -621,15 +621,16 @@ function processMultPartForm()
       msg)
   end
 
+   local part_body, name, mime, filename = p:parse_part()
  -- while true do
  --   local part_body, name, mime, filename = p:parse_part()
  --   if not part_body then
  --      break
  --   end
- --   ngx.say("== part ==")
- --   ngx.say("name: [", name, "]")
- --   ngx.say("file: [", filename, "]")
- --   ngx.say("mime: [", mime, "]")
+   ngx.say("== part ==")
+   ngx.say("name: [", name, "]")
+   ngx.say("file: [", filename, "]")
+   ngx.say("mime: [", mime, "]")
  --   -- ngx.say("body: [", part_body, "]")
  -- end
 

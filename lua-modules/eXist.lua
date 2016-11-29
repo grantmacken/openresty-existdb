@@ -348,11 +348,12 @@ function _M.replaceProperty( uri, property, item )
     </text>
   </query>
 ]]
- --  ngx.say(txt)
+  --  ngx.say(txt)
   local response =  sendMicropubRequest( restPath, txt )
   ngx.exit(response.status)
-  --  ngx.say("status: ", response.status)
-  -- ngx.say("reason: ", response.reason)
+  ngx.say("status: ", response.status)
+  ngx.say("reason: ", response.reason)
+  ngx.exit(response.status)
 end
 
 function _M.addProperty( uri, property, item )
@@ -398,16 +399,55 @@ function _M.addProperty( uri, property, item )
   ngx.status = ngx.HTTP_OK
 end
 
-
 function _M.removeProperty( uri, property, item )
   local url = require('net.url').parse(uri)
   local resource = string.gsub(url.path, "/", "")
   local xml = require 'xml'
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
+  local domain   = ngx.var.site
   -- TODO only allow certain properties
   ngx.say( uri )
   ngx.say( property )
+  ngx.say( domain )
+
+  -- local xmlNode = { xml = property }
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
+  -- ngx.say(xml.dump(xmlNode))
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [["
+    let $document := doc($path)
+    return
+    if ( exists($document//]] .. property .. [[ )) 
+      then ( update delete $document//]] .. property .. [[ )
+    else ( )
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  ngx.say(txt)
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.say("status: ", response.status)
+  ngx.say("reason: ", response.reason)
+  ngx.exit(response.status)
+end
+
+
+
+function _M.removePropertyItem( uri, property, item )
+  local url = require('net.url').parse(uri)
+  local resource = string.gsub(url.path, "/", "")
+  local xml = require 'xml'
+  local contentType = 'application/xml'
+  local domain   = ngx.var.site
+  -- TODO only allow certain properties
+  ngx.say( uri )
+  ngx.say( property )
+  ngx.exit(200)
   ngx.say( item )
   local xmlNode = { xml = property, item }
   local restPath  = '/exist/rest/db/apps/' .. domain 
@@ -434,8 +474,8 @@ function _M.removeProperty( uri, property, item )
   </query>
 ]]
   ngx.say(txt)
-  local response =  sendMicropubRequest( restPath, txt )
-  ngx.exit(response.status)
+ -- local response =  sendMicropubRequest( restPath, txt )
+ --  ngx.exit(response.status)
   --ngx.say("status: ", response.status)
   -- ngx.say("reason: ", response.reason)
 end

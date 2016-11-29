@@ -605,13 +605,39 @@ function processJsonActions( args )
         if args['delete'] then
           ngx.say("do delete")
           -- ngx.say( args['delete'] ) 
-           -- TODO! replace other properties
-           if type(args['delete']['category']) == 'table' then
-            local property = 'category'
-            local item = table.concat(args['delete']['category'], " ")
-            -- TODO! for each item
-            require('mod.eXist').removeProperty( url, property, item )
-           end
+         --  ngx.say( type( args['delete']) ) 
+          -- TODO! replace other properties
+          for key, property in ipairs(args['delete']) do
+              ngx.say( type(property) ) 
+              if type(property) == 'string' then
+                  require('mod.eXist').removeProperty( url, property, nil )
+             -- ngx.say(  property ) 
+             --  ngx.say(  url ) 
+              end
+
+              -- if type(val) == "table" then
+            --   local next = next 
+            --   if next(val) == nil then
+            --     ngx.say( ' myTable is empty' )
+            --   end
+
+            --   ngx.say( key ) 
+            --   ngx.say( type( val ) ) 
+            --   for index, value in ipairs (val) do
+            --     ngx.say(key)
+            --     ngx.say( value )
+            --   end
+            -- end
+          end
+
+          -- if type(args['delete']['category']) == 'table' then
+          --   local property = 'category'
+          --   local item = table.concat(args['delete']['category'], " ")
+          --   ngx.say( type( item[0] ) ) 
+
+          --   -- TODO! for each item
+          --  --  require('mod.eXist').removeProperty( url, property, item )
+          -- end
         end
         -- ACTION UPDATE ADD
         if args['add'] then

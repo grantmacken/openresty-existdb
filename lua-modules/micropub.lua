@@ -398,11 +398,11 @@ in converting to xml follow atom syntax
         end
       end
     else
-      ngx.say(type(val))
-      -- ngx.say(key, ": ", val)
-      -- if p[key] ~=  nil then
-      --   properties[key] = val
-      -- end
+      -- all props should be array
+    return requestError(
+      ngx.ngx.HTTP_BAD_REQUEST,
+      'Bad Request',
+      'properties should be in an array') 
     end
   end
 

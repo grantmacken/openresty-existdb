@@ -399,17 +399,16 @@ function _M.addProperty( uri, property, item )
   ngx.status = ngx.HTTP_OK
 end
 
-function _M.removeProperty( uri, property, item )
+function _M.removeProperty( uri, property)
   local url = require('net.url').parse(uri)
   local resource = string.gsub(url.path, "/", "")
   local xml = require 'xml'
   local contentType = 'application/xml'
   local domain   = ngx.var.site
   -- TODO only allow certain properties
-  ngx.say( uri )
-  ngx.say( property )
-  ngx.say( domain )
-
+  -- ngx.say( uri )
+  -- ngx.say( property )
+  -- ngx.say( domain )
   -- local xmlNode = { xml = property }
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
@@ -429,11 +428,9 @@ function _M.removeProperty( uri, property, item )
     </text>
   </query>
 ]]
-  ngx.say(txt)
+  -- ngx.say(txt)
   local response =  sendMicropubRequest( restPath, txt )
-  ngx.say("status: ", response.status)
-  ngx.say("reason: ", response.reason)
-  ngx.exit(response.status)
+  return response.reason
 end
 
 
@@ -563,6 +560,42 @@ function _M.fetchMediaLinkDoc( )
   -- ngx.say( ngx.var.uri )
   -- ngx.say( ngx.var.request_uri )
   local docPath  = "/exist/rest/db/data/" .. domain .. '/docs' ..  ngx.var.uri
+  -- ngx.say( docPath )
+  local httpc = http.new()
+  -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "GET",
+        path = docPath,
+        headers = {
+          ["Content-Type"] = "application/xml",
+          ["Authorization"] = authorization 
+        },
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+end
+
+function _M.fetchPostsDoc( url )
+  -- ngx.say( 'Fetch Posts Doc' )
+ --  local ngx_re = require "ngx.re"
+  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+  -- ngx.say(sID)
+  -- ngx.exit( 200 )
+  local http = require "resty.http"
+  local authorization = cfg.auth 
+  local domain        = ngx.var.site
+  -- ngx.say( ngx.var.uri )
+  -- ngx.say( ngx.var.request_uri )
+  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs/posts/' .. sID 
   -- ngx.say( docPath )
   local httpc = http.new()
   -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))

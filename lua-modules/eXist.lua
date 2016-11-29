@@ -36,16 +36,22 @@ function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
-function connect()
-
-
-
+function extractID( url )
+  -- short urls https://gmack.nz/xxxxx
+  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+  if err then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  return sID
 end
 
 
 
 function getPostsPath()
-  return '/db/data/' ..  ngx.var.http_Host .. '/docs/posts/'
+  return '/db/data/' ..  ngx.var.site .. '/docs/posts/'
 end
 
   -- generic exist endpoint for talking to eXistdb 
@@ -436,20 +442,15 @@ end
 
 
 function _M.removePropertyItem( uri, property, item )
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
-  local xml = require 'xml'
   local contentType = 'application/xml'
-  local domain   = ngx.var.site
+  local domain      = ngx.var.site
+  local resource    = extractID( uri) 
   -- TODO only allow certain properties
-  ngx.say( uri )
-  ngx.say( property )
-  ngx.exit(200)
-  ngx.say( item )
-  local xmlNode = { xml = property, item }
+  -- ngx.say( resource )
+  -- ngx.say( property )
+  -- ngx.say( item )
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
-  ngx.say(xml.dump(xmlNode))
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
     <text>
@@ -457,24 +458,28 @@ function _M.removePropertyItem( uri, property, item )
     xquery version "3.1";
     let $path := "]] .. docPath .. [["
     let $document := doc($path)
-    let $node := ]] .. xml.dump(xmlNode) .. [[
-
     let $item := ']] .. item .. [['
-    return
-    if ($document/entry/]] .. property .. [[  = $node ) then (
-     update delete $document/entry/]] .. property .. [[[./string() eq $item] 
-    )
+    let $oldString := if($document/entry/]] .. property .. [[/text()) then (
+       $document/entry/]] .. property .. [[/string())
     else ( )
-
+    let $newString := if ( empty( $oldString )) then ( )
+    else(
+        let $tokens := tokenize( $oldString, ' ' ) 
+        let $filtered := filter( $tokens , function($token){not( $token eq $item )})
+        return
+        string-join($filtered,' ')
+    )
+    return
+    if ( empty( $oldString )) then ( )
+    else ( update value $document/entry/]] .. property .. [[ with $newString )
     ]] ..']]>' .. [[ 
     </text>
   </query>
 ]]
-  ngx.say(txt)
- -- local response =  sendMicropubRequest( restPath, txt )
- --  ngx.exit(response.status)
-  --ngx.say("status: ", response.status)
-  -- ngx.say("reason: ", response.reason)
+  -- ngx.say(txt)
+
+  local response =  sendMicropubRequest( restPath, txt )
+  return response.reason
 end
 
 --[[

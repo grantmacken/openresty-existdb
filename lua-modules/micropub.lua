@@ -603,19 +603,48 @@ function processJsonActions( args )
         end
         -- ACTION UPDATE DELETE
         if args['delete'] then
-          -- ngx.say("do delete")
+          --  ngx.say("do delete")
           -- ngx.say( args['delete'] ) 
           --  ngx.say( type( args['delete']) ) 
           -- TODO! replace other properties
-          for key, property in ipairs(args['delete']) do
-              -- ngx.say( type(property) ) 
-              if type(property) == 'string' then
+          --local n = #args['delete']
+          for key, property in pairs(args['delete']) do
+           -- ngx.say( type(key) ) 
+           -- ngx.say( type(property) ) 
+            if type(key) == 'number' then
+              -- should not happen
+             -- ngx.say(key)
+             --  ngx.say(property)
+            elseif type(key) == 'string' then
+              -- ngx.say(key)
+              --ngx.say( type(property) ) 
+              if type(property) == 'table' then
+                for index, item in ipairs (property) do
+                  local reason =  require('mod.eXist').removePropertyItem( url, key , item )
+                  if reason == 'OK' then
+                    --  ngx.say(reason)
+                   require('mod.eXist').fetchPostsDoc( url )
+                  end
+                end
+              elseif type(property) == 'string' then
                 local reason =  require('mod.eXist').removeProperty( url, property )
                 if reason == 'OK' then
-                 require('mod.eXist').fetchPostsDoc( url )
+                  require('mod.eXist').fetchPostsDoc( url )
                 end
               end
 
+            end
+          end
+
+          --for key, property in ipairs(args['delete']) do
+          --    ngx.say( type(property) ) 
+              -- if type(property) == 'string' then
+              --   local reason =  require('mod.eXist').removeProperty( url, property )
+              --   if reason == 'OK' then
+              --    require('mod.eXist').fetchPostsDoc( url )
+              --   end
+              -- end
+             -- ++++++++++++++++++++++++++++++++++++++++++++++++++
               -- if type(val) == "table" then
             --   local next = next 
             --   if next(val) == nil then
@@ -629,7 +658,7 @@ function processJsonActions( args )
             --     ngx.say( value )
             --   end
             -- end
-          end
+          -- end
 
           -- if type(args['delete']['category']) == 'table' then
           --   local property = 'category'

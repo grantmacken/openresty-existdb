@@ -547,10 +547,9 @@ function _M.undeletePost( uri )
     </text>
   </query>
 ]]
-  ngx.say(txt)
+   --  ngx.say(txt)
    local response =  sendMicropubRequest( restPath, txt )
-   ngx.say("status: ", response.status)
-   ngx.say("reason: ", response.reason)
+   return response.reason
 end
 
 function _M.fetchMediaLinkDoc( )

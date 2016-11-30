@@ -284,10 +284,17 @@ function processPostArgs()
     --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
 
     if hType == 'entry' then
-      local data = createEntry(args)
-      --  ngx.say(require('xml').dump(data))
-      -- ngx.say(' store XML data into eXistdb  ' )
-       require('mod.eXist').putXML( 'posts' , data)
+      -- ngx.say( 'Create Entry ' )
+      local location, data = createEntry(hType, args) 
+      -- ngx.say( location )
+      ngx.header.location = location
+      ngx.status = ngx.HTTP_CREATED
+      ngx.header.content_type = 'application/xml'
+      local reason =  require('mod.eXist').putXML( 'posts',  data )
+      if reason == 'Created' then
+        ngx.say(require('xml').dump(data))
+        ngx.exit(ngx.HTTP_CREATED)
+      end
     end
   elseif args['action'] then
     ngx.say( ' assume we are modifying a post item in some way'  )
@@ -302,15 +309,14 @@ function processPostArgs()
 end
 
 
-function createEntry(args)
-  local host = ngx.req.get_headers()["Host"]
-  local hType = args['h']
+function createEntry( hType, args)
   -- ngx.say( 'create ' .. hType  ..  ' entry item with args' )
+  local domain = ngx.var.site
   local data = {} -- the xml based table to return
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
   local properties = {}
-  -- ngx.say('expand entry properties and place in prperties')
+  -- ngx.say('expand entry properties and place in properties')
   for key, val in pairs(args) do
     if type(val) == "table" then
       -- ngx.say(type(val))
@@ -339,14 +345,13 @@ function createEntry(args)
   -- server added properties , published and id
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
-  properties['url'] = 'https://' .. host .. '/' .. properties['id']
+  properties['url'] = 'https://' .. domain .. '/' .. properties['id']
   -- construct data table 
   -- top level entry
   data = { 
     xml = hType, 
     kind = kindOfPost
-  } 
-
+  }
   -- insert all properties into data table
   -- if we have a content property add a type attribute
   for key, val in pairs(properties) do
@@ -357,43 +362,10 @@ function createEntry(args)
       table.insert(data,1,{ xml = key, val })
     end
   end
-  return data
+  return  properties['url'], data
 end
 
 function createEntryFromJson( hType , props)
-  --[[
-  - all props is sent json should be a lua table 
-  @see  https://www.w3.org/TR/micropub/#h-json-syntax
-  When creating posts in JSON format, all values MUST be specified as arrays, even if there is only one value, identical
-  to the Microformats 2 JSON format. This request is sent with a content type of application/json.
-
-#CONTENT NODES
-
-  If the source of the post was written as HTML content, then the endpoint MUST return the content property as an object
-  containing an html property. Otherwise, the endpoint MUST return a string value for the content property, and the
-  client will treat the value as plain text. This matches the behavior of the values of properties in
-  [microformats2-parsing].
-
-json content as plain text
-
-  "content": ["hello world"]
-
-json content as html
-
- "content": [{ "html": "<b>Hello</b> <i>World</i>" } ]
-
-json content as text 
-
- "content": [{ "text": "hello world" } ]
-
-in converting to xml follow atom syntax
-
- <content type="text">hello world</content>
-
- <content type="html">"<b>Hello</b> <i>World</i>"</content>
-
---]]
-
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
 
@@ -408,15 +380,6 @@ in converting to xml follow atom syntax
         if postedEntryProperties[key] ~=  nil then
           -- space delimited list
           properties[key] = table.concat(val, " ")
-          -- each property value should be an array
-          -- all properties are flat
-          -- easily extracted into a sequence //category/string()
-          -- will get a list odf category values
-          -- for index, value in ipairs (val) do
-          --   -- ngx.say(key)
-          --   -- ngx.say( value )
-          --   properties[key] = value
-          -- end
         else
           return requestError(
             ngx.ngx.HTTP_BAD_REQUEST,
@@ -440,7 +403,6 @@ in converting to xml follow atom syntax
     kind = kindOfPost
   }
 
-
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
   properties['url'] = 'https://' .. host ..  '/' .. properties['id']
@@ -452,9 +414,6 @@ in converting to xml follow atom syntax
   -- ngx.say('content: ' ..  type(props['content'][1]) )
   if type(props['content'][1]) == "table" then
     for k, v in pairs(props['content'][1]) do
-      -- ngx.say('content k : ' ..  k )
-      -- ngx.say('content v : ' ..  v )
-      -- table.insert(data,1,{ xml = 'content',['type'] = k, v })
       table.insert(data,1,{ xml = 'content',['type'] = k, v })
     end 
   elseif type(props['content'][1]) == "string" then
@@ -819,6 +778,39 @@ search for items in shoebox collection by
  - date  (resent items)
  - contains  string in 'name or summary'
  - tag
+
+--]]
+
+  --[[
+  - all props is sent json should be a lua table 
+  @see  https://www.w3.org/TR/micropub/#h-json-syntax
+  When creating posts in JSON format, all values MUST be specified as arrays, even if there is only one value, identical
+  to the Microformats 2 JSON format. This request is sent with a content type of application/json.
+
+#CONTENT NODES
+
+  If the source of the post was written as HTML content, then the endpoint MUST return the content property as an object
+  containing an html property. Otherwise, the endpoint MUST return a string value for the content property, and the
+  client will treat the value as plain text. This matches the behavior of the values of properties in
+  [microformats2-parsing].
+
+json content as plain text
+
+  "content": ["hello world"]
+
+json content as html
+
+ "content": [{ "html": "<b>Hello</b> <i>World</i>" } ]
+
+json content as text 
+
+ "content": [{ "text": "hello world" } ]
+
+in converting to xml follow atom syntax
+
+ <content type="text">hello world</content>
+
+ <content type="html">"<b>Hello</b> <i>World</i>"</content>
 
 --]]
 

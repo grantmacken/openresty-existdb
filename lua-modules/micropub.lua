@@ -610,7 +610,11 @@ function processJsonActions( args )
       elseif action == 'delete' then
         -- start of ACTION DELETE
         -- ngx.say("delete")
-        require('mod.eXist').deletePost( url )
+        local reason =  require('mod.eXist').deletePost( url )
+        if reason == 'OK' then
+          ngx.status = ngx.HTTP_NO_CONTENT
+          ngx.exit( ngx.HTTP_NO_CONTENT )
+        end
       elseif action == 'undelete' then
         -- start of ACTION UNDELETE
         ngx.say("undelete")

@@ -524,7 +524,7 @@ function _M.undeletePost( uri )
   local contentType = 'application/xml'
   local domain      = ngx.var.site
   local resource    = extractID( uri) 
-  ngx.say( uri )
+  -- ngx.say( uri )
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local sourceCollection = '/db/data/' .. domain .. '/docs/recycle'
   local targetCollection = '/db/data/' .. domain .. '/docs/posts'

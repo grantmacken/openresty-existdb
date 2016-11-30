@@ -517,17 +517,14 @@ function _M.deletePost( uri)
   local response =  sendMicropubRequest( restPath, txt )
   -- ngx.say("status: ", response.status)
   -- ngx.say("reason: ", response.reason)
-  ngx.exit(response.status )
-
+  return response.reason
 end
 
-function _M.undeletePost( uri)
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
+function _M.undeletePost( uri )
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
+  local domain      = ngx.var.site
+  local resource    = extractID( uri) 
   ngx.say( uri )
-  local xmlNode = { xml = property, item }
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local sourceCollection = '/db/data/' .. domain .. '/docs/recycle'
   local targetCollection = '/db/data/' .. domain .. '/docs/posts'

@@ -617,10 +617,14 @@ function processJsonActions( args )
         end
       elseif action == 'undelete' then
         -- start of ACTION UNDELETE
-        ngx.say("undelete")
-        require('mod.eXist').undeletePost( url )
+        -- ngx.say("undelete")
+        local reason =  require('mod.eXist').undeletePost( url )
+        if reason == 'OK' then
+          ngx.status = ngx.HTTP_OK
+          ngx.exit( ngx.HTTP_OK )
+        end
       end
-end
+    end
 
 function processPost()
   -- ngx.say('the content-types this endpoint can handle')

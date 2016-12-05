@@ -181,7 +181,7 @@ function discoverPostType(props)
   -- https://www.w3.org/TR/post-type-discovery/
   local kindOfPost = 'note'
   for key, val in pairs(props) do
-    ngx.say(key)
+    -- ngx.say(key)
     if key == "rsvp" then
       --TODO check valid value
       kindOfPost = 'RSVP'
@@ -288,16 +288,16 @@ function processPostArgs()
     if hType == 'entry' then
       -- ngx.say( 'Create Entry ' )
       local location, data = createEntry(hType, args) 
-      ngx.say(require('xml').dump(data))
-      ngx.say( location )
-      -- ngx.header.location = location
-      -- ngx.status = ngx.HTTP_CREATED
-      -- ngx.header.content_type = 'application/xml'
-      -- local reason =  require('mod.eXist').putXML( 'posts',  data )
-      -- if reason == 'Created' then
-      --   ngx.say(require('xml').dump(data))
-      --   ngx.exit(ngx.HTTP_CREATED)
-      -- end
+      -- ngx.say(require('xml').dump(data))
+      -- ngx.say( location )
+      ngx.header.location = location
+      ngx.status = ngx.HTTP_CREATED
+      ngx.header.content_type = 'application/xml'
+      local reason =  require('mod.eXist').putXML( 'posts',  data )
+      if reason == 'Created' then
+        ngx.say(require('xml').dump(data))
+        ngx.exit(ngx.HTTP_CREATED)
+      end
     end
   elseif args['action'] then
     ngx.say( ' assume we are modifying a post item in some way'  )
@@ -344,7 +344,7 @@ function createEntry( hType, args)
   -- ' now add server generated properties '
   -- ' from the sent properties - discovery the kind of post '
   local kindOfPost = discoverPostType( properties )
-  ngx.say( ' add ' .. kindOfPost .. ' as an "type" attribute to documentElement: ' .. hType )
+  -- ngx.say( ' add ' .. kindOfPost .. ' as an "type" attribute to documentElement: ' .. hType )
   -- server added properties , published and id
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))

@@ -22,7 +22,6 @@ cat = $(shell if [ -e $(1) ] ;then echo "$$(<$(1))";fi )
 colon := :
 $(colon) := :
 
-
 REPO  := $(shell  echo '$(DEPLOY)' | cut -d/ -f2 )
 OWNER := $(shell echo $(DEPLOY) |cut -d/ -f1 )
 WEBSITE := $(addprefix https://,$(REPO))
@@ -129,12 +128,15 @@ opmGet:
 
 eXist: $(T)/eXist-run.sh
 
+eXist-service: $(T)/exist.service
+
 eXist-clean:
 	@rm $(EXIST_VERSION)
 	@rm -R $(EXIST_HOME)
 
 eXist-deploy: $(T)/deploy.sh
 	@$(T)/deploy.sh
+	@$(MAKE) eXist-deploy-clean
 
 eXist-deploy-clean: 
 	@rm  $(T)/deploy.sh

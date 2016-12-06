@@ -300,8 +300,9 @@ function processPostArgs()
       end
     end
   elseif args['action'] then
-    ngx.say( ' assume we are modifying a post item in some way'  )
-    ngx.say ('TODO!')
+   --  ngx.say( ' assume we are modifying a post item in some way'  )
+   --  ngx.say ('TODO!')
+    processActions( 'form' , args )
   else
     msg = "failed to get actionable POST argument, h or action required"
     return requestError(
@@ -473,7 +474,7 @@ function processJsonBody( )
   -- either 'ACTION' to modify post or 'TYPE' to create type of post
   if args['action'] then 
     -- ngx.say( 'action' )
-    processJsonActions(args) 
+    processActions( 'json' , args) 
   elseif args['type'] then
     processJsonTypes(args)
   end
@@ -515,119 +516,125 @@ function processJsonTypes(args)
   end
 end
 
-function processJsonActions( args )
-      --[[
+
+-- ACTIONS 
+-- processing form actions
+-- processing json actions
+
+function processActions( postType, args )
+  --[[
+  --postType form or json 
     To update an entry, send "action": "update" and specify the URL of the entry that is being updated using the "url"
     property. The request MUST also include a replace, add or delete property (or any combination of these) containing
       the updates to make.
     --]]
 
-      local action = args['action']
-      local url = args['url']
-      -- TODO! gen err if no action and or url
-      --start of ACTION UPDATEs
-      if action == 'update' then
-        -- ngx.say(action)
-        if url == nil then
-          return requestError(
-          ngx.HTTP_NOT_ACCEPTABLE,
-            'HTTP not acceptable',
-            'update action must have a URL')
-        end
+  local action = args['action']
+  local url = args['url']
+  -- TODO! gen err if no action and or url
+  --start of ACTION UPDATEs
+  if action == 'update' then
+    -- ngx.say(action)
+    if url == nil then
+      return requestError(
+        ngx.HTTP_NOT_ACCEPTABLE,
+        'HTTP not acceptable',
+        'update action must have a URL')
+    end
 
-        -- do any combination
-          --[[
+    -- do any combination
+    --[[
           The values of each property inside the replace, add or delete keys MUST be an array, even if there is only a
           single value.
           --]]
-        -- ACTION UPDATE REPLACE
-        if args['replace'] then
-          -- ngx.say("do replace")
-          -- TODO! replace other properties
-          if type(args['replace'] ) == 'table' then
-            if type(args['replace']['content']) == 'table' then
-              local property = 'content'
-              local item = table.concat(args['replace']['content'], " ")
-              -- TODO! for each item
-              require('mod.eXist').replaceProperty( url, property, item )
-            else
-            return requestError(
-              ngx.HTTP_BAD_REQUEST,
-              'HTTP BAD REQUEST',
-              'content value should be in an array')
-            end
-          else
-            return requestError(
-              ngx.HTTP_BAD_REQUEST,
-              'HTTP BAD REQUEST',
-              'replace value should be in an array')
-          end
+    -- ACTION UPDATE REPLACE
+    if args['replace'] then
+      -- ngx.say("do replace")
+      -- TODO! replace other properties
+      if type(args['replace'] ) == 'table' then
+        if type(args['replace']['content']) == 'table' then
+          local property = 'content'
+          local item = table.concat(args['replace']['content'], " ")
+          -- TODO! for each item
+          require('mod.eXist').replaceProperty( url, property, item )
+        else
+          return requestError(
+            ngx.HTTP_BAD_REQUEST,
+            'HTTP BAD REQUEST',
+            'content value should be in an array')
         end
-        -- ACTION UPDATE DELETE
-        if args['delete'] then
-          --  ngx.say("do delete")
-          -- ngx.say( args['delete'] ) 
-          --  ngx.say( type( args['delete']) ) 
-          -- TODO! replace other properties
-          --local n = #args['delete']
-          for key, property in pairs(args['delete']) do
-           -- ngx.say( type(key) ) 
-           -- ngx.say( type(property) ) 
-            if type(key) == 'number' then
-              -- should not happen
-             -- ngx.say(key)
-             --  ngx.say(property)
-            elseif type(key) == 'string' then
-              -- ngx.say(key)
-              --ngx.say( type(property) ) 
-              if type(property) == 'table' then
-                for index, item in ipairs (property) do
-                  local reason =  require('mod.eXist').removePropertyItem( url, key , item )
-                  if reason == 'OK' then
-                    --  ngx.say(reason)
-                   require('mod.eXist').fetchPostsDoc( url )
-                  end
-                end
-              elseif type(property) == 'string' then
-                local reason =  require('mod.eXist').removeProperty( url, property )
-                if reason == 'OK' then
-                  require('mod.eXist').fetchPostsDoc( url )
-                end
+      else
+        return requestError(
+          ngx.HTTP_BAD_REQUEST,
+          'HTTP BAD REQUEST',
+          'replace value should be in an array')
+      end
+    end
+    -- ACTION UPDATE DELETE
+    if args['delete'] then
+      --  ngx.say("do delete")
+      -- ngx.say( args['delete'] ) 
+      --  ngx.say( type( args['delete']) ) 
+      -- TODO! replace other properties
+      --local n = #args['delete']
+      for key, property in pairs(args['delete']) do
+        -- ngx.say( type(key) ) 
+        -- ngx.say( type(property) ) 
+        if type(key) == 'number' then
+          -- should not happen
+          -- ngx.say(key)
+          --  ngx.say(property)
+        elseif type(key) == 'string' then
+          -- ngx.say(key)
+          --ngx.say( type(property) ) 
+          if type(property) == 'table' then
+            for index, item in ipairs (property) do
+              local reason =  require('mod.eXist').removePropertyItem( url, key , item )
+              if reason == 'OK' then
+                --  ngx.say(reason)
+                require('mod.eXist').fetchPostsDoc( url )
               end
-
+            end
+          elseif type(property) == 'string' then
+            local reason =  require('mod.eXist').removeProperty( url, property )
+            if reason == 'OK' then
+              require('mod.eXist').fetchPostsDoc( url )
             end
           end
-        end
-        -- ACTION UPDATE ADD
-        if args['add'] then
-          --  ngx.say("do add")
-          --  TODO add more properties
-          if type(args['add']['category']) == 'table' then
-            local property = 'category'
-            local item = table.concat(args['add']['category'], " ")
-            -- ngx.say(item)
-            require('mod.eXist').addProperty( url, property, item )
-          end
-        end
-        -- end of ACTION UPDATEs
-      elseif action == 'delete' then
-        -- start of ACTION DELETE
-        -- ngx.say("delete")
-        local reason =  require('mod.eXist').deletePost( url )
-        if reason == 'OK' then
-          ngx.status = ngx.HTTP_NO_CONTENT
-          ngx.exit( ngx.HTTP_NO_CONTENT )
-        end
-      elseif action == 'undelete' then
-        -- start of ACTION UNDELETE
-        -- ngx.say("undelete")
-        local reason =  require('mod.eXist').undeletePost( url )
-        if reason == 'OK' then
-          ngx.status = ngx.HTTP_OK
-          ngx.exit( ngx.HTTP_OK )
+
         end
       end
     end
+    -- ACTION UPDATE ADD
+    if args['add'] then
+      --  ngx.say("do add")
+      --  TODO add more properties
+      if type(args['add']['category']) == 'table' then
+        local property = 'category'
+        local item = table.concat(args['add']['category'], " ")
+        -- ngx.say(item)
+        require('mod.eXist').addProperty( url, property, item )
+      end
+    end
+    -- end of ACTION UPDATEs
+  elseif action == 'delete' then
+    -- start of ACTION DELETE
+    -- ngx.say("delete")
+    local reason =  require('mod.eXist').deletePost( url )
+    if reason == 'OK' then
+      ngx.status = ngx.HTTP_NO_CONTENT
+      ngx.exit( ngx.HTTP_NO_CONTENT )
+    end
+  elseif action == 'undelete' then
+    -- start of ACTION UNDELETE
+    -- ngx.say("undelete")
+    local reason =  require('mod.eXist').undeletePost( url )
+    if reason == 'OK' then
+      ngx.status = ngx.HTTP_OK
+      ngx.exit( ngx.HTTP_OK )
+    end
+  end
+end
 
 function processPost()
   -- ngx.say('the content-types this endpoint can handle')

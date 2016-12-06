@@ -138,8 +138,12 @@ eXist-clean:
 	@rm -R $(EXIST_HOME)
 
 eXist-deploy: $(T)/deploy.sh
-	@$(T)/deploy.sh
+	@$(<)
 	@$(MAKE) eXist-deploy-clean
+
+eXist-undeploy: $(T)/undeploy.sh
+	@$(<)
+	@rm $(<)
 
 eXist-deploy-clean: 
 	@rm  $(T)/deploy.sh

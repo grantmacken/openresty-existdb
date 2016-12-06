@@ -162,7 +162,6 @@ git-user-as-eXist-user:
  java -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(P) | \
  tail -1
 
-
 $(T)/webdav.log:
 	@echo '{{{ $(notdir $@) '
 	@$(call assert-is-root)

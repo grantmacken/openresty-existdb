@@ -130,6 +130,9 @@ eXist: $(T)/eXist-run.sh
 
 eXist-service: $(T)/exist.service
 
+eXist-ghUser: 
+	@$(MAKE) git-user-as-eXist-user
+
 eXist-clean:
 	@rm $(EXIST_VERSION)
 	@rm -R $(EXIST_HOME)

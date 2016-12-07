@@ -70,7 +70,12 @@ function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
-
+local extensions = {
+png = 'image/png',
+jpg = 'image/jpeg',
+jpeg = 'image/jpeg',
+gif = 'image/gif'
+}
 
 function read(f)
   local open     = io.open
@@ -97,12 +102,7 @@ function getMimeType( filename )
   end
 end
 
-local extensions = {
-png = 'image/png',
-jpg = 'image/jpeg',
-jpeg = 'image/jpeg',
-gif = 'image/gif',
-}
+
 -- https://www.w3.org/TR/micropub/#h-reserved-properties
 -- note reserved extension mp-* 
 

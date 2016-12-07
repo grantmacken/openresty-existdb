@@ -25,20 +25,6 @@ $(colon) := :
 REPO  := $(shell  echo '$(DEPLOY)' | cut -d/ -f2 )
 OWNER := $(shell echo $(DEPLOY) |cut -d/ -f1 )
 WEBSITE := $(addprefix http://,$(REPO))
-# MAKE_VERSION := $(shell make --version | head -1)
-# SYSTEMD := $(shell ps -p1 | grep systemd )
-# $(info who am i - $(WHOAMI))
-# $(info SUDO USER - $(SUDO_USER))
-# $(info make version - $(MAKE_VERSION))
-# $(info system - $(SYSTEMD))
-# $(info current working directory - $(shell pwd))
-# $(info which - $(shell which netstat))
-# $(info eXist home - $(EXIST_HOME))
-# $(info  travis java  home - $(JAVA_HOME))
-# $(info  repo - $(REPO))
-# $(info  owner - $(OWNER))
-# $(info  website - $(WEBSITE))
-# $(info GIT USER - $(GIT_USER))
 
 #this will evaluate when running as sudo
 # otherwise will be empty when running on remote
@@ -63,7 +49,18 @@ ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
 $(if $(ACCESS_TOKEN),\
  $(info using found 'access token' for password),\
  $(info using 'admin' for password ))
+
 GIT_USER := $(shell git config --get user.name)
+$(if $(GIT_USER),\
+ $(info git user name established),\
+ $(error no git user name ))
+
+GIT_EMAIL := $(shell git config --get user.email)
+$(if $(GIT_EMAIL),\
+ $(info git user email established),\
+ $(error no git user email ))
+
+
 P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 #AUTH_BASIC := $(shell  echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )
 ## SETUP ###

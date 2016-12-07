@@ -29,12 +29,12 @@ It assumes you
 `mkdir -p ~/projects/$(git config --global user.name)`
 
 2. create your github access token file and place github token in it.
- `touch  ~/projects/$(git config --global user.name)/.access.token`
-[get a token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/) and place in above file.
-WARNING!! do not place the containing 'owner' folder or access token file under  git control. 
+ -  `touch  ~/projects/$(git config --global user.name)/.access.token`
+ - [Get a github token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/) and place in above file.
+ - WARNING!! do not place the containing 'owner' folder or a  place access token file under git control. 
 
 3. cd into the owner folder and clone this project 
-`cd  ~/projects/$(git config --global user.name) && git clone gitt@github.com:grantmacken/openresty-existdb.git`
+ - `cd  ~/projects/$(git config --global user.name) && git clone gitt@github.com:grantmacken/openresty-existdb.git`
 
 4. take a look at the config file
    The key values you can change are 
@@ -42,43 +42,84 @@ WARNING!! do not place the containing 'owner' folder or access token file under 
     - DOMAIN : a list of domains you want hosted on server
     - SERVER : the ssh host
 
-#Make Task List
+## OPENRESTY  Install and Configure
 
-1. `make or`       :  gets latest src files installs openresty
-                      plus creates a nginx conf files
+1. `make or`       :  gets latest src files and compiles and installs openresty
+                      plus creates nginx conf files
                       plus creates a Diffie-Hellman pameter file
-                      plus copies over my wip modules
+                      plus copies over my wip lua modules
 2. `make opmGet`   :  installs some opm packages
 3. `make lrInstall`:  installs luarocks (temp until opm takes over)
 4. `make rocks`    :  installs rocks ( lua packages not avaiable to opm ) 
-5. `make orClean`  :  just removes the openrestt dir
+5. `make orClean`  :  just removes the openresty dir
+
+## Only On Remote Production Server Get SSL Certs For Your Domains
+
+If you have not got any certs from letsencrypt
+
+1. `make cnfPort80`
+ - basic nginx conf for getting certs from letsencypt
+
+Then get certbot auto and setup the bots config
+
+1. `make certbotConf` :
+ - do once or if you make changes to conf e.g. add more domains
+ - downloads cerbot auto
+ - creates the certbot configuration file
+2. `make certbotRenew`
+ - use to renew
+ - uses the config to get certs from lets encrypt
 
 
-## Openresty
 
-I want to automate the install of the latest openresty,
-with ssl enabled
 
-### `make dl`
 
-Check for latest versions of
- -  openresty
- -  pcre
- -  openssl
- -  zlib
+## Only On Local Development Server Copy Over Certs
 
-and download newest version
+1.  as sudo `make syncCertPerm`
+ - set permissions
+2.  `make syncCerts` 
+ - copy over certs from remote
 
-### `make orInstall`
-with latest versions compile and install openresty
+## Create a openresty systemd service
 
-check the configure directives first
+1. `make orService` 
+ - installs openresty as a systemd init service
 
-### `make orService 
+## Setting Up Serving HTTPS by default
 
-This installs openresty as a systemd init service
+1. `make orDev`
+  - creates development nginx conf and places into nginx conf dir
+2. `sudo systenctl stop openresty`
+3. `sudo systenctl start openresty`
+4. `sudo systenctl status openresty`
 
-Note: system environment variables
+
+## Openresty Development Workfow
+
+1. `make ngConf` on local development server use  `make watch-nginx-conf`
+ - copy any any files in nginx-conf files over into openresty
+ - development work mainly on
+   - serverRewrite.conf
+   - locationBlocks.conf
+2. `make orReload` On local server run as sudo
+ - test nginx conf and reload
+3. `make lua-modules`  `make watch-lua-modules`
+ - copy any files in lua-modules over into openresty
+ - note: no need to nginx reload in dev enviroment
+
+## Ready For Production
+
+1. `make orProd`
+  - creates production  nginx conf and places into nginx conf dir
+2. `sudo systenctl stop openresty`
+3. `sudo systenctl start openresty`
+4. `sudo systenctl status openresty`
+
+#NOTES:
+
+## system environment variables
+
   OPENRESTY HOME  file path to openresty
   EXIST_AUTH      basic access authentication for exist admin account-
   this is a base64 encoded string that can  be used for HTTP Basic Athentication  with eXistdb proxied behind nginx
@@ -101,6 +142,24 @@ with the password as my current GitHub access token. The pathway to the token is
 
 
 
+
+## Openresty automated install
+I want to automate the install of the latest openresty,
+with ssl enabled
+
+Check for latest versions of
+ -  openresty
+ -  pcre
+ -  openssl
+ -  zlib
+
+and download newest version
+
+with latest versions compile and install openresty
+
+check the configure directives first
+
+
 ## Openresty Package Management
 
 The next version of openresty will use its own package manager,
@@ -117,7 +176,6 @@ note luajit version is hardwired
 `make rocks` 
   - install some rocks
 
-## Setting Up Serving HTTPS by default
 
 
 `make ngDH` 

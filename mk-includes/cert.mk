@@ -28,7 +28,7 @@ define certbotConfig
 rsa-key-size = 2048
 
 # Uncomment and update to register with the specified e-mail address
-email = grantmacken@gmail.com
+email = $(GIT_EMAIL)
 
 # Uncomment and update to generate certificates for the specified
 # domains.

@@ -8,17 +8,50 @@ I wanted to
  - enable HTTPS by default
  - explore openresty/lua middleware capability
 
+# How to use
+
+The repo was designed to be used on a production VPS 
+or local development environment.
+
+It assumes you 
+1. own you own domains and 2. 
+2. set git with configured global user.name and user.email
+ -  `git config --global user.name` 
+ -  `git config --global user.email`
+3. have your own github account and obtained github access token that can be used on the commandline
+
+[setting-your-username-in-git]( https://help.github.com/articles/setting-your-username-in-git/)
+ 
+
+## steps
+
+1. Create a dir structure following your github owner account.
+`mkdir -p ~/projects/$(git config --global user.name)`
+
+2. create your github access token file and place github token in it.
+ `touch  ~/projects/$(git config --global user.name)/.access.token`
+[get a token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/) and place in above file.
+WARNING!! do not place the containing 'owner' folder or access token file under  git control. 
+
+3. cd into the owner folder and clone this project 
+`cd  ~/projects/$(git config --global user.name) && git clone gitt@github.com:grantmacken/openresty-existdb.git`
+
+4. take a look at the config file
+   The key values you can change are 
+    - DEPLOY : {OWNER/DOMAIN} the github repo of the development website you can deploy
+    - DOMAIN : a list of domains you want hosted on server
+    - SERVER : the ssh host
+
 #Make Task List
 
-1. make dl
-2. make orInstall
-3. make ngClean
-4. make ngDH
-3. make nginx-config
-4. make orDev or orProd
-5. make lua-modules
-6. make orTestConf TODO!
-3. make orService
+1. `make or`       :  gets latest src files installs openresty
+                      plus creates a nginx conf files
+                      plus creates a Diffie-Hellman pameter file
+                      plus copies over my wip modules
+2. `make opmGet`   :  installs some opm packages
+3. `make lrInstall`:  installs luarocks (temp until opm takes over)
+4. `make rocks`    :  installs rocks ( lua packages not avaiable to opm ) 
+5. `make orClean`  :  just removes the openrestt dir
 
 
 ## Openresty

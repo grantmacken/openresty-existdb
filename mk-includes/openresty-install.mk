@@ -194,7 +194,7 @@ orPaths:
 
 luaJitVer =  $(shell echo "$$(luajit -v | grep -oP 'LuaJIT\s\K(\S+)')")
 
-luarocksInstall:
+lrInstall:
 	@echo 'install luarocks version'
 	@echo $(luarocksVer)
 	@cd $(T)/luarocks-$(luarocksVer) && \

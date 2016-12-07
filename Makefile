@@ -24,7 +24,7 @@ $(colon) := :
 
 REPO  := $(shell  echo '$(DEPLOY)' | cut -d/ -f2 )
 OWNER := $(shell echo $(DEPLOY) |cut -d/ -f1 )
-WEBSITE := $(addprefix https://,$(REPO))
+WEBSITE := $(addprefix http://,$(REPO))
 # MAKE_VERSION := $(shell make --version | head -1)
 # SYSTEMD := $(shell ps -p1 | grep systemd )
 # $(info who am i - $(WHOAMI))

@@ -197,7 +197,6 @@ $(T)/webdav.log:
  su -c "mount $(HOME)/eXist" -s /bin/sh $(INSTALLER))
 	@echo '-------------}}} '
 
-
 $(T)/download_url.txt:
 	@echo "{{{## $(notdir $@) ##"
 	@curl -s  https://api.github.com/repos/$(DEPLOY)/releases/latest | \
@@ -205,6 +204,8 @@ $(T)/download_url.txt:
 	@$(call chownToUser,$(@))
 	@cat $@
 	@echo '}}}'
+
+# (: note pkgName is a string :)
 
 $(T)/deploy.sh: $(T)/download_url.txt
 	@echo "{{{## $(notdir $@) ##"

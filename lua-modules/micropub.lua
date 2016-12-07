@@ -656,7 +656,72 @@ end
 
 function processMultPartForm()
   local msg = ''
-  --  mod.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
+  local options = {
+    tmp_dir          = "/tmp",
+    timeout          = 1000,
+    chunk_size       = 4096,
+    max_get_args     = 100,
+    mas_post_args    = 100,
+    max_line_size    = 512,
+    max_file_uploads = 10
+  }
+  ngx.say( 'process MultPart Form' )
+
+  local reqargs = require "resty.reqargs"
+  local get, post, files = reqargs( options )
+   if not get then
+    error(post)
+  end
+
+  ngx.say( 'files' )
+  for key, val in pairs(files) do
+    if type(val) == "table" then
+       ngx.say('key', ": ", key)
+       ngx.say( 'value type: ' ..  type(val))
+       for k, v in pairs( val ) do
+       ngx.say('key', ": ", k)
+       ngx.say( 'value type: ' ..  v)
+       end
+
+    else
+       ngx.say('key', ": ", key)
+    end
+  end
+  ngx.say( 'post ')
+
+  for key, val in pairs(get) do
+    if type(val) == "table" then
+       ngx.say('key', ": ", key)
+       ngx.say( 'value type: ' ..  type(val))
+       for k, v in pairs( val ) do
+       ngx.say('key', ": ", k)
+       ngx.say( 'value type: ' ..  v)
+       end
+
+    else
+       ngx.say('key', ": ", key)
+    end
+  end
+
+  ngx.say( ' get' )
+
+  for key, val in pairs(post) do
+    if type(val) == "table" then
+       ngx.say('key', ": ", key)
+       ngx.say( 'value type: ' ..  type(val))
+       for k, v in pairs( val ) do
+       ngx.say('key', ": ", k)
+       ngx.say( 'value type: ' ..  v)
+       end
+
+    else
+       ngx.say('key', ": ", key)
+    end
+  end
+end
+
+function xprocessMultPartForm()
+    --  mod.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
   --  from agentzha TODO! check if avaible on OPM
   --  @see https://github.com/agentzh/lua-resty-multipart-parser
   local parser = require "mod.parser" 

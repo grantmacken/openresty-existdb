@@ -81,6 +81,7 @@ syncCertsPerm:
 	@$(call assert-is-root)
 	@[ -d /etc/letsencrypt ] || mkdir /etc/letsencrypt
 	@$(call chownToUser, /etc/letsencrypt )
+	@$(call chownToUser, /tmp)
 	@ls -al /etc/letsencrypt 
 
 ngDH: /etc/letsencrypt/dh-param.pem

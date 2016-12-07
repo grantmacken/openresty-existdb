@@ -14,16 +14,14 @@ The repo was designed to be used on a production VPS
 or local development environment.
 
 It assumes you 
-1. own you own domains and 2. 
-2. set git with configured global user.name and user.email
+1. setup your VPS server with IP address, DNS zones and registered domain(s) etc
+2. setup git with configured global [user.name]( https://help.github.com/articles/setting-your-username-in-git/)
+ and user.email
  -  `git config --global user.name` 
  -  `git config --global user.email`
 3. have your own github account and obtained github access token that can be used on the commandline
 
-[setting-your-username-in-git]( https://help.github.com/articles/setting-your-username-in-git/)
- 
-
-## steps
+## Prior Steps
 
 1. Create a dir structure following your github owner account.
 `mkdir -p ~/projects/$(git config --global user.name)`
@@ -42,7 +40,29 @@ It assumes you
     - DOMAIN : a list of domains you want hosted on server
     - SERVER : the ssh host
 
-## OPENRESTY  Install and Configure
+## Preperation
+
+1. `make prep`
+ - install some console applications via apt 
+ - install Oracle Java 8
+ - install some build tools
+ - install some stuff for nginx
+
+## eXist Install On Production Server and For Local Development
+
+1. `make eXist`
+ - download and install latest release
+2. `make eXist-service`
+ - setup eXist as a systemd init service
+ - `systemctl stop exist`
+ - `systemctl start exist`
+ - `systemctl status exist`
+3. `make eXist-ghUser
+ -  set up an admin account with your git user.name
+ -  and github access token as your password
+
+
+## OpenResty Install and Configure
 
 1. `make or`  
  - gets latest src files and compiles and installs openresty
@@ -74,10 +94,6 @@ Then get certbot auto and setup the bots config
 2. `make certbotRenew`
  - use to renew
  - uses the config to get certs from lets encrypt
-
-
-
-
 
 ## Only On Local Development Server Copy Over Certs
 

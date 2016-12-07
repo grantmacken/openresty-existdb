@@ -60,7 +60,6 @@ $(if $(GIT_EMAIL),\
  $(info git user email established),\
  $(error no git user email ))
 
-
 P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 #AUTH_BASIC := $(shell  echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )
 ## SETUP ###
@@ -120,6 +119,7 @@ opmGet:
 		@opm get pintsized/lua-resty-http
 		@opm get SkyLothar/lua-resty-jwt
 		@opm get chunpu/lua-min-url
+		@opm get bungle/lua-resty-reqargs
 # luarocksinstall
 # rocks
 

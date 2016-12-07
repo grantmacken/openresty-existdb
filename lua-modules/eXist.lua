@@ -744,21 +744,34 @@ function _M.putXML( collection,  data )
       body =  xml.dump(data),
       ssl_verify = false
     })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
+
+  if not res then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
   end
+
  --  ngx.say("status: ", res.status)
  --  ngx.say("reason: ", res.reason)
  --  ngx.say("has body: ", res.has_body)
 
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
-    end
-  end
+  -- if res.has_body then
+  --   body, err = res:read_body()
+  --   if not body then
+  --     ngx.say("failed to read body: ", err)
+  --     return
+  --   end
+  -- end
+  --
+  -- ok, err = http:close()
+  -- if not ok then 
+  --   return requestError(
+  --     ngx.HTTP_SERVICE_UNAVAILABLE,
+  --     'HTTP service unavailable',
+  --     'failure on closing connection' )
+  -- end
+
   return res.reason
 end
 

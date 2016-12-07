@@ -74,6 +74,17 @@ local extensions = {
 png = 'image/png'
 }
 
+function read(f)
+  local open     = io.open
+  local f, e = open(f, "rb")
+  if not f then
+    return nil, e
+  end
+  local c = f:read "*a"
+  f:close()
+  return c
+end
+
 function getMimeType( filename )
   -- get file extension Only handle 
   local ext, err = ngx.re.match(filename, "[^.]+$")
@@ -657,7 +668,6 @@ end
 function processMultPartForm()
   local msg = ''
   local options = {
-    tmp_dir          = "/tmp",
     timeout          = 1000,
     chunk_size       = 4096,
     max_get_args     = 100,
@@ -665,7 +675,7 @@ function processMultPartForm()
     max_line_size    = 512,
     max_file_uploads = 10
   }
-  ngx.say( 'process MultPart Form' )
+  -- ngx.say( 'process MultPart Form' )
 
   local reqargs = require "resty.reqargs"
   local get, post, files = reqargs( options )
@@ -673,51 +683,87 @@ function processMultPartForm()
     error(post)
   end
 
-  ngx.say( 'files' )
+  -- ngx.say( 'files' )
+  -- this is like the php files array
   for key, val in pairs(files) do
     if type(val) == "table" then
-       ngx.say('key', ": ", key)
-       ngx.say( 'value type: ' ..  type(val))
-       for k, v in pairs( val ) do
-       ngx.say('key', ": ", k)
-       ngx.say( 'value type: ' ..  v)
-       end
+     -- ngx.say('key', ": ", key)
+     -- ngx.say( 'value type: ' ..  type(val))
+     --  for k, v in pairs( val ) do
+     --    ngx.say('k', ": ", k)
+     --    ngx.say( 'v: ' ..  v)
+     --  end
+     --  ngx.say('-------------------------')
 
+      -- id prefix always M
+      local ext, mimeType = getMimeType( val.file )
+      local sID = require('mod.postID').getID( 'm' )
+      local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
+      local data = { 
+        xml = 'media'
+      }
+
+      local properties = {}
+      properties['name']      = val.file
+     --  properties['size']      = val.size
+      properties['uploaded']  = ngx.today()
+      -- properties['signature'] = ngx.md5(part_body)
+      properties['mime']      = mimeType
+      -- id prefix always M
+      properties['id']  = sID
+      properties['url'] = 'https://' .. ngx.var.host .. '/' .. sID
+      properties['src'] = 'https://' .. ngx.var.host .. '/' .. mediaFileName
+      for k, v in pairs(properties) do
+       -- ngx.say(type(v))
+       -- ngx.say(k, ": ", v)
+        table.insert(data,1,{ xml = k, v })
+      end
+      local reason =  require('mod.eXist').putMedia( read( val.temp ),  mediaFileName , mimeType )
+      if reason == 'Created' then
+        -- NOTE: return binary source as location
+        ngx.header.location = properties['src']
+        -- Note create a doc for the 'shoebox
+        local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
+        if reason2 == 'Created' then
+          -- ngx.say(require('xml').dump(data))
+          ngx.exit(ngx.HTTP_CREATED)
+        end
+      end
     else
-       ngx.say('key', ": ", key)
+      ngx.say('key', ": ", key)
     end
   end
-  ngx.say( 'post ')
+  -- ngx.say( 'post ')
 
-  for key, val in pairs(get) do
-    if type(val) == "table" then
-       ngx.say('key', ": ", key)
-       ngx.say( 'value type: ' ..  type(val))
-       for k, v in pairs( val ) do
-       ngx.say('key', ": ", k)
-       ngx.say( 'value type: ' ..  v)
-       end
+  -- for key, val in pairs(get) do
+  --   if type(val) == "table" then
+  --      ngx.say('key', ": ", key)
+  --      ngx.say( 'value type: ' ..  type(val))
+  --      for k, v in pairs( val ) do
+  --      ngx.say('key', ": ", k)
+  --      ngx.say( 'value type: ' ..  v)
+  --      end
 
-    else
-       ngx.say('key', ": ", key)
-    end
-  end
+  --   else
+  --      ngx.say('key', ": ", key)
+  --   end
+  -- end
 
-  ngx.say( ' get' )
+  -- ngx.say( 'get' )
 
-  for key, val in pairs(post) do
-    if type(val) == "table" then
-       ngx.say('key', ": ", key)
-       ngx.say( 'value type: ' ..  type(val))
-       for k, v in pairs( val ) do
-       ngx.say('key', ": ", k)
-       ngx.say( 'value type: ' ..  v)
-       end
+  -- for key, val in pairs(post) do
+  --   if type(val) == "table" then
+  --      ngx.say('key', ": ", key)
+  --      ngx.say( 'value type: ' ..  type(val))
+  --      for k, v in pairs( val ) do
+  --      ngx.say('key', ": ", k)
+  --      ngx.say( 'value type: ' ..  v)
+  --      end
+  --   else
+  --      ngx.say('key', ": ", key)
+  --   end
+  -- end
 
-    else
-       ngx.say('key', ": ", key)
-    end
-  end
 end
 
 function xprocessMultPartForm()

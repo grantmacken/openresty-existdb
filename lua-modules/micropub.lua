@@ -240,6 +240,7 @@ end
 
 function processGet()
   --ngx.say( ' process GET query to micropub endpoint ' )
+  ngx.header.content_type = 'application/json' 
   local response = {}
   local msg = ''
 
@@ -253,7 +254,6 @@ function processGet()
       -- 'https://www.w3.org/TR/micropub/#h-configuration'
       -- TODO!
       local status = ngx.HTTP_OK 
-      ngx.header.content_type = 'application/json' 
       -- response = { 'media-endpoint' =  mediaEndpoint}
       local json = cjson.encode({
          [ 'media-endpoint' ]  = mediaEndpoint

@@ -265,6 +265,13 @@ function processGet()
       -- TODO!
       ngx.say('TODO! https://www.w3.org/TR/micropub/#h-source-content')
       ngx.exit(ngx.OK)
+    elseif q  == 'syndicate-to' then
+      ngx.status = ngx.HTTP_OK 
+      local json = cjson.encode({
+         [ 'syndicate-to' ]  = {''}
+        })
+      ngx.print(json)
+      ngx.exit(ngx.OK)
     end
   end
   ngx.status = ngx.HTTP_OK 

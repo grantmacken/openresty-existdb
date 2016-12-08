@@ -267,10 +267,11 @@ function processGet()
       ngx.exit(ngx.OK)
     elseif q  == 'syndicate-to' then
       ngx.status = ngx.HTTP_OK 
-      local json = cjson.encode({
-         [ 'syndicate-to' ]  = {''}
-        })
-      ngx.print(json)
+      -- https://github.com/bungle/lua-resty-libcjson
+      -- https://github.com/bungle/lua-resty-libcjson/issues/1
+      --  ngx.print(cjson.encode(json.decode('{"syndicate-to":[]}'))) 
+     local json = '{"syndicate-to":[]}'
+     ngx.print(json)
       ngx.exit(ngx.OK)
     end
   end

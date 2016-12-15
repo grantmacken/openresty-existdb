@@ -248,7 +248,7 @@ function processGet()
   local domain = ngx.var.http_Host
   local mediaEndpoint = 'https://' .. domain .. '/micropub'
   if args['q'] then
-    -- ngx.say( ' query the endpoint ' )
+    -- ngx.say( ' query the endpoint ' )-
     local q = args['q']
     if q  == 'config' then
       -- 'https://www.w3.org/TR/micropub/#h-configuration'
@@ -263,7 +263,21 @@ function processGet()
     elseif q  == 'source' then
       ngx.status = ngx.HTTP_OK 
       -- TODO!
-      ngx.say('TODO! https://www.w3.org/TR/micropub/#h-source-content')
+      -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
+      if args['url'] then
+        local url = args['url']
+        ngx.say( 'has url: ' , url  )
+
+        local data =  require('mod.eXist').fetchPostsDoc( url )
+        -- local xml = require 'xml'
+        -- local d =  xml.load( data ) 
+      else 
+      msg = 'source must have associated url'
+      return requestError(
+        ngx.HTTP_NOT_ACCEPTABLE,
+        'not accepted',
+        msg )
+      end
       ngx.exit(ngx.OK)
     elseif q  == 'syndicate-to' then
       ngx.status = ngx.HTTP_OK 
@@ -278,6 +292,7 @@ function processGet()
   ngx.status = ngx.HTTP_OK 
   -- TODO!
   ngx.say('You may query the endpoint using q pararm')
+
   ngx.exit(ngx.OK)
 end
 

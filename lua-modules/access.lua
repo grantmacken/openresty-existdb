@@ -4,7 +4,6 @@ local _M = {}
 
 delegation of endpoints for authentication
 
-
 #
  - [authorization-endpoint]( https://indieweb.org/authorization-endpoint )
    identify user OR obtain athorization code 
@@ -12,7 +11,14 @@ delegation of endpoints for authentication
  
 # VERIFICATION
  [token-endpoint] (https://indieweb.org/token-endpoint)
-  grant an access token as well as verify an access token
+
+  1. grant an access token 
+  2. verify an access token
+
+ Micropub endpoint interested in -- 2
+
+  Requests with tokens
+  so we need to verify token validity
 
  is token valid?
 
@@ -32,6 +38,8 @@ delegation of endpoints for authentication
  - verifyToken
 
 
+
+
 lua modules used
 
 @see https://github.com/pintsized/lua-resty-http
@@ -49,53 +57,6 @@ lua modules used
  
  - MUST support both header and form parameter methods of authentication
  - MUST support creating posts with the [h-entry] vocabulary
-
-TEST: curl
-
-1. token in the HTTP Authorization header
-
- curl -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub
-
-2. token in the post body for x-www-form-urlencoded requests
-
-curl -L  https://gmack.nz/micropub -d "access_token=$(<../.me-access-token)"
-
-3. POST   x-www-form-urlencoded 
-
- curl -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub  -d 'h=entry' -d 'content=hello moon'
-
- 4. POST application/json
-
- curl -H "Content-Type: application/json"  -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub -d '{"type": ["h-entry"],"properties":{"content": ["hello world"]}}'
-
-
- id unique to the db
-   [a-z]{1}  shortKindOfPost n = note
-   O
-   [\w]{3}   short date base60 encoded 
-   [\w]{1}   the base60 encoded incremented number of entries for the day
-   total of 5 chars 
-  the short URL http://{domain}/{uid)  - no extension
-  expanded  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/{KIND}/{CHAR}
-  where kind = kind of post e.g. note
-  where char = the incremented entry number for the day
-  5 chars limited to less than 60 entries for the day
-  6 chars  limited to less than 360 entries for the day
-
-  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/notes
-  list notes for day
-
-  URL http://{domain}/{YEAR}/{MONTH}/{DAY}
-  list any archived posts for day
-
-  URL http://{domain}/{YEAR}/{MONTH}
-  list archived posts for month 
-
-  URL http://{domain}/{YEAR}/{MONTH}/notes
-  list notes for month
-  
-  etc
-
 --]]
 
 function string:split(delimiter)
@@ -128,31 +89,77 @@ local function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
+function extractDomain( url )
+  local sDomain, err = require("ngx.re").split(url, "([/]{1,2})")[3]
+  if err then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  return sDomain
+end
+
+
 function extractToken()
   --TODO! token in post args
   --access_token - the OAuth Bearer token authenticating the request
   --(the access token may be sent in an HTTP Authorization header or
   --this form parameter)
-  local token  = ngx.var.http_authorization
-  if token  ~=  nil then
-     token  = token:split(' ')[2]
-     return token
-   end
-
-  ngx.req.read_body()
-  local token  = ngx.req.get_post_args()['access_token']
-  if token  ~=  nil then
-    return token 
+  if ngx.var.http_authorization == nil then
+    ngx.req.read_body()
+    local token  = ngx.req.get_post_args()['access_token']
+    if token  ~=  nil then
+      return token 
+    else
+      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'no token') 
+    end
+  else
+    local token, err = require("ngx.re").split(ngx.var.http_authorization,' ')[2]
+    if err then 
+      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'no token') 
+    end
+    return token
   end
-
- return  requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'no token') 
 end
 
-function _M.verifyToken()
-  local ssl = require "ngx.ssl"
-  local jwt = require "resty.jwt"
-  local jwtObj = jwt:load_jwt(extractToken())
 
+function _M.verifyToken()
+  -- ngx.say("Verify Token")
+  local msg = ''
+  local tokens = ngx.shared.dTokens
+  local token = extractToken()
+  local jwt = require "resty.jwt"
+  local jwtObj = jwt:load_jwt(token)
+
+  if isTokenValid( jwtObj ) then
+    -- ngx.say( ' -  token is valid ' )
+    -- if a token has been verified the in will be stores in shared dic
+    local thisDomain =  extractDomain( jwtObj.payload.me )
+    local clientDomain =  extractDomain( jwtObj.payload.client_id )
+    local domainHash = ngx.encode_base64( thisDomain .. clientDomain , true)
+    local value, flags = tokens:get( domainHash )
+    if not value then
+      -- ngx.say( ' token has not been verified ' )
+      if verifyAtTokenEndpoint( 'token' ) then
+        -- ngx.say( ' token verified at token endpoint ' )
+        tokens:set(domainHash, true)
+        return true
+      else
+        msg = "failed to verfify token at token endpoint: " 
+        return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+      end
+    else
+      return true
+    end
+  else
+    -- should not endup here
+    msg = "failed to validate token "
+    return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+  end
+end
+
+function isTokenValid( jwtObj )
   if not jwtObj.valid then
    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'not a jwt token') 
   end
@@ -182,25 +189,16 @@ function _M.verifyToken()
    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued by') 
   end
 
-  -- local json = cjson.encode(jwtObj.payload)
-  -- ngx.say(json)
-
 -- am I the one who authorized the use of this token
--- TODO! establish my sni name
-
-  local serverName = ssl.server_name()
-  if serverName == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'can not establish server name') 
-  end
-
-  -- if serverName ~= ngx.var.site then
-  --  return  requestError(ngx.HTTP_FORBIDDEN,'insufficient_scope', 'you are not me') 
-  -- end
+  local thisDomain =  extractDomain( me )
+  if ngx.var.domain  ~=  thisDomain  then
+   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
+ end
 
 -- I have the appropiate post scope
   if scope ~= 'post'  then
    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', ' do not have the appropiate post scope') 
-  end
+ end
 
 -- I have the appropiate post scope
 -- TODO! scope is a list
@@ -212,16 +210,104 @@ function _M.verifyToken()
 -- I accept tokens no older than 
 -- -- TODO!
 
- return 'token verifed'
+ return true
+ 
+ end
 
--- return ngx.encode_args(jwtObj.payload)
--- return cjson.encode(jwtObj.payload)
+ function verifyAtTokenEndpoint( )
+   local msg = ''
+   local tokenEndpoint =  'https://tokens.indieauth.com'
+   local host = 'tokens.indieauth.com'
+   local port = 443
+   local http = require "resty.http"
+   local httpc = http.new()
+   httpc:set_timeout(60000) -- one min timeout
+   local ok, err = httpc:connect(host, port)
+   if not ok then
+     msg = "failed to connect to ",host ," ",  err
+     return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+   end
+   -- 4 sslhandshake opts
+   local reusedSession = nil -- defaults to nil
+   local serverName = host    -- for SNI name resolution
+   local sslVerify = false  -- boolean if true make sure the directives set
+   -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
+   local sendStatusReq = '' -- boolean OCSP status request
 
-  -- ngx.status =  ngx.status = ngx.HTTP_OK
-  -- ngx.header.content_type = 'application/json'
-  -- local json = cjson.encode(jwtObj.payload)
-  -- ngx.say(json)
-  -- ngx.exit(ngx.HTTP_OK)
-end
+   local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
+   if not shake then
+     msg = "failed to do SSL handshake: ", err
+     return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+   end
 
+   -- ngx.say("ssl handshake: ", type(shake))
+   --ngx.var.http_authorization
+
+   httpc:set_timeout(2000)
+   local response, err = httpc:request({
+       version = 1.1,
+       method = "GET",
+       path = "/token",
+       headers = {
+         ["Authorization"] =  ngx.var.http_authorization
+       },
+       ssl_verify = sslVerify
+     })
+
+   if not response then
+     msg = "failed to complete request: ", err
+     return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+   end
+
+   ngx.say("status: ", response.status)
+   -- ngx.say("reason: ", response.reason)
+   -- ngx.say("has body: ", response.has_body)
+
+   if response.has_body then
+     body, err = response:read_body()
+     if not body then
+       msg = "failed to read post args: " ..  err
+       return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+     end
+
+     local args = ngx.decode_args(body, 0)  
+     if not args then
+       msg = "failed to decode post args: " ..  err
+       return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+     end
+
+     local myDomain = extractDomain( args['me'] )
+     -- local clientDomain = extractDomain( args['client_id'] )
+     -- am I the one who authorized the use of this token
+     if ngx.var.domain  ~=  myDomain  then
+       return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
+     end
+     -- I have the appropiate post scope
+     if args['scope'] ~= 'post'  then
+       return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', ' do not have the appropiate post scope') 
+     end
+     return true
+   else
+     return false
+   end
+   return false
+ end
+
+  --   ngx.say( myDomain )
+  --   ngx.say(args['issued_by'])
+  --   ngx.say(args['client_id'])
+  --   ngx.say(args['issued_at'])
+  --   ngx.say(args['scope'])
+  --   ngx.say(args['nonce'])
+  --   ngx.say(myURL)
+    -- ngx.say(ngx.var.uri)
+    -- ngx.say(ngx.var.server_name)
+    -- ngx.say(ngx.var.server_addr)
+    -- ngx.say(ngx.var.domain)
+    -- ngx.say(ngx.var.realpath_root)
+    -- ngx.say(ngx.var.host)
+    -- ngx.say(ngx.var.https)
+    -- ngx.say(ngx.var.request)
+    -- ngx.say(ngx.var.request_uri)
+    -- ngx.say(ngx.var.scheme)
 return _M

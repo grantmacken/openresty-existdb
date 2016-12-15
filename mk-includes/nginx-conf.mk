@@ -93,11 +93,6 @@ http {
     set $$resources $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/apps/$$domain/;
     set $$media $(EXIST_HOME)/$(EXIST_DATA_DIR)/fs/db/data/$$domain/;
 
-    ssl_certificate_by_lua_block {
-      print("ssl cert by lua is running!")
-      #TODO! handle certs using site var
-    }
-
     # certificates from letsencrypt
     ssl_certificate         /etc/letsencrypt/live/$(DOMAIN)/fullchain.pem;
     # Path to private key used to create certificate.
@@ -113,9 +108,13 @@ http {
     server_tokens off;
     resolver '8.8.8.8' ipv6=off;
 
-
-
     # PHASES 
+
+   # ssl_certificate_by_lua_block {
+   #   print("ssl cert by lua is running!")
+   #   #TODO! handle certs using site var
+   # }
+
     # before locations insert server-rewrite phase
 
     include serverRewrite.conf;

@@ -75,6 +75,7 @@ http {
   init_by_lua 'cjson = require("cjson")';
   #  SHARED DICT stays lifetime of nginx proccess
   lua_shared_dict slugDict 1m;
+  lua_shared_dict dTokens 12k;
 
   include mime.types;
   include accessLog.conf;

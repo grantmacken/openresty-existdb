@@ -51,16 +51,10 @@ end
 
 
 function getPostsPath()
-  return '/db/data/' ..  ngx.var.site .. '/docs/posts/'
+  return '/db/data/' ..  ngx.var.domain .. '/docs/posts/'
 end
 
-  -- generic exist endpoint for talking to eXistdb 
 
-function _M.processRequest()
- ngx.say('OK')
- ngx.say( ngx.var.resources )
- ngx.say( ngx.var.site)
-end
 
 function getRequest2( query )
   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
@@ -313,11 +307,10 @@ end
 --]]
 
 function _M.replaceProperty( uri, property, item )
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
+  local domain      = ngx.var.site
+  local resource    = extractID( uri)
   local xml = require 'xml'
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
   local restPath  = '/exist/rest/db/apps/' .. domain 
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local xmlNode = {} 
@@ -363,11 +356,10 @@ function _M.replaceProperty( uri, property, item )
 end
 
 function _M.addProperty( uri, property, item )
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
+  local domain      = ngx.var.site
+  local resource    = extractID( uri) 
   local xml = require 'xml'
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
   -- TODO only allow certain properties
   ngx.say( uri )
   ngx.say( property )
@@ -406,11 +398,10 @@ function _M.addProperty( uri, property, item )
 end
 
 function _M.removeProperty( uri, property)
-  local url = require('net.url').parse(uri)
-  local resource = string.gsub(url.path, "/", "")
+  local domain      = ngx.var.site
+  local resource    = extractID( uri) 
   local xml = require 'xml'
   local contentType = 'application/xml'
-  local domain   = ngx.var.site
   -- TODO only allow certain properties
   -- ngx.say( uri )
   -- ngx.say( property )
@@ -438,8 +429,6 @@ function _M.removeProperty( uri, property)
   local response =  sendMicropubRequest( restPath, txt )
   return response.reason
 end
-
-
 
 function _M.removePropertyItem( uri, property, item )
   local contentType = 'application/xml'
@@ -584,18 +573,16 @@ function _M.fetchMediaLinkDoc( )
   httpc:set_keepalive()
 end
 
-function _M.fetchPostsDoc( url )
+function _M.fetchPostsDoc( uri )
   -- ngx.say( 'Fetch Posts Doc' )
- --  local ngx_re = require "ngx.re"
-  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
-  -- ngx.say(sID)
-  -- ngx.exit( 200 )
+  local domain      = ngx.var.site
+  local resource    = extractID( uri)
   local http = require "resty.http"
   local authorization = cfg.auth 
   local domain        = ngx.var.site
   -- ngx.say( ngx.var.uri )
   -- ngx.say( ngx.var.request_uri )
-  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs/posts/' .. sID 
+  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs/posts/' .. resource
   -- ngx.say( docPath )
   local httpc = http.new()
   -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
@@ -879,8 +866,48 @@ end
 --     ngx.say(body)
 -- end
 
+ -- +++++++++++++++++++++++++++++++++++++++++++++++++++
+ -- generic exist endpoint for talking to eXistdb 
 
-
+ function _M.processRequest()
+   local method = ngx.req.get_method()
+   local contentType =  ngx.req.get_headers()["Content-Type"]
+   -- ngx.say( method )
+   -- ngx.say( contentType )
+   -- ngx.say( ngx.var.resources )
+   -- ngx.say( ngx.var.media)
+   ngx.req.read_body()
+   local data = ngx.req.get_body_data()
+   local http = require "resty.http"
+   local authorization = cfg.auth 
+   local domain        = ngx.var.site
+   -- ngx.say( ngx.var.uri )
+   -- ngx.say( ngx.var.request_uri )
+   local restPath  = "/exist/rest/db/apps/" .. domain 
+   -- ngx.say( docPath )
+   local httpc = http.new()
+   -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
+   local ok, err = httpc:connect(cfg.host, cfg.port)
+   if not ok then 
+     return requestError(
+       ngx.HTTP_SERVICE_UNAVAILABLE,
+       'HTTP service unavailable',
+       'connection failure')
+   end
+   httpc:set_timeout(2000)
+   httpc:proxy_response( httpc:request({
+         version = 1.1,
+         method = "POST",
+         path = restPath,
+         headers = {
+           ["Content-Type"] = "application/xml",
+           ["Authorization"] = authorization 
+         },
+         body =  data,
+         ssl_verify = false
+     }))
+   httpc:set_keepalive()
+ end
 
 function _M.exist()
   -- proccess application 'application/x-www-form-urlencoded' requests

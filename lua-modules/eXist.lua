@@ -21,7 +21,8 @@ local _M = {}
 local cfg = {
 port = 8080,
 host = '127.0.0.1',
-auth = 'Basic ' .. os.getenv("EXIST_AUTH") 
+auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
+domain = ngx.var.site 
 }
 --
 --UTILITY TODO move to utility.lua
@@ -699,13 +700,57 @@ function isMedia( )
   return xml.find(data,'media')
 end
 
+function _M.putJSON( collection, resource,  data )
+  local http = require "resty.http"
+  local authorization = cfg.auth
+  local contentType = 'application/json'
+  local domain   = cfg.domain
+  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
+   -- ngx.say( domain )
+   -- ngx.say( authorization )
+   -- ngx.say( collection )
+   -- ngx.say( resource  )
+   -- ngx.say( cjson.encode( data ))
+  -- store without extension
+  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = putPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body =   cjson.encode( data ),
+      ssl_verify = false
+    })
+
+  if not res then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
+  end
+  --  ngx.say( res.reason )
+  return res.reason
+end
+
 function _M.putXML( collection,  data )
   local xml = require 'xml'
   local http = require "resty.http"
   local authorization = cfg.auth
   local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
-  local resource = xml.find(data, 'id')[1]
+  local domain   = cfg.domain 
+  local resource = xml.find(data, 'uid')[1]
   --local kindOfPost = xml.find(data, 'entry').kind
   local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
   -- store without extension

@@ -160,6 +160,23 @@ local shortKindOfPost = {
  media = 'm'
 }
 
+local longKindOfPost = {
+ n = 'note',
+ a = 'article',
+ p = 'photo',
+ m = 'media'
+}
+
+
+local reqargsOptions = {
+  timeout          = 1000,
+  chunk_size       = 4096,
+  max_get_args     = 100,
+  mas_post_args    = 100,
+  max_line_size    = 512,
+  max_file_uploads = 10
+}
+
 function getShortKindOfPost(kind)
   return shortKindOfPost[kind]
 end
@@ -218,6 +235,7 @@ function discoverPostType(props)
     elseif key == "name" then
       --TODO check valid value
       kindOfPost = 'article'
+      break
     else
       kindOfPost = 'note'
     end
@@ -225,14 +243,20 @@ function discoverPostType(props)
  return kindOfPost
 end
 
+-- local function extractCategory( cat )
+--   -- short urls https://gmack.nz/xxxxx
+
+--   return sCat
+-- end
+
 -- Main entry point
 
 function _M.processRequest()
   --  the methods this endpoint can handle
   local method =  acceptMethods({"POST","GET"})
   -- ngx.say(method)
-if method == "POST" then
-   processPost()
+  if method == "POST" then
+    processPost()
   else
     processGet()
   end
@@ -299,6 +323,7 @@ end
 
 function processPostArgs()
   -- ngx.say(' process POST arguments ' )
+ 
   local msg = ''
   ngx.req.read_body()
   local args, err = ngx.req.get_post_args()
@@ -320,21 +345,43 @@ function processPostArgs()
         msg )
     end
 
+
+    --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
     --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
 
     if hType == 'entry' then
       -- ngx.say( 'Create Entry ' )
-      local location, data = createEntry(hType, args) 
-      -- ngx.say(require('xml').dump(data))
-      -- ngx.say( location )
-      ngx.header.location = location
-      ngx.status = ngx.HTTP_CREATED
-      ngx.header.content_type = 'application/xml'
-      local reason =  require('mod.eXist').putXML( 'posts',  data )
-      if reason == 'Created' then
-        ngx.say(require('xml').dump(data))
-        ngx.exit(ngx.HTTP_CREATED)
+
+      local domain = ngx.var.site
+      local reqargs = require "resty.reqargs"
+      local get, post, files = reqargs( reqargsOptions )
+      if not get then
+        error(post)
       end
+
+      local properties = createMicroformatproperties( post )
+
+      -- serialise as mf2 object
+      local jData = { 
+        ['type']  =  'h-' ..  hType,
+        ['properties'] = properties
+      }
+    --  ngx.say( cjson.encode(jData) ) 
+      -- ngx.say( jData.type)
+      -- ngx.say( jData.properties.url[1] )
+      -- ngx.say( jData.properties.uid[1] )
+
+      local data = createXmlEntry( jData )
+      -- ngx.say(require('xml').dump( xData))
+     -- ngx.say( location )
+     ngx.header.location = jData.properties.url[1]
+     ngx.status = ngx.HTTP_CREATED
+     ngx.header.content_type = 'application/xml'
+     local reason =  require('mod.eXist').putXML( 'posts', data )
+     if reason == 'Created' then
+       ngx.say(require('xml').dump( xData))
+       ngx.exit(ngx.HTTP_CREATED)
+     end
     end
   elseif args['action'] then
    --  ngx.say( ' assume we are modifying a post item in some way'  )
@@ -349,61 +396,155 @@ function processPostArgs()
   end
 end
 
+function createMicroformatproperties( post )
 
-function createEntry( hType, args)
-  -- ngx.say( 'create ' .. hType  ..  ' entry item with args' )
-  local domain = ngx.var.site
-  local data = {} -- the xml based table to return
+  --[[
+    convert post data into a mf2 JSON  Serialization Formati
+
+    NOTE: could use simplified
+    JF2 Post Serialization Format  ref:  https://www.w3.org/TR/jf2/
+    instead
+
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
+  --
+  server added microformat properties
+  * published
+  * url
+  * uid
+
+   uid and url  https://indieweb.org/u-uid
+
+   uid an id to be used when deleting and undeleting posts
+   http://microformats.org/wiki/uid-brainstorming
+   A UID SHOULD be a URL rather than MUST
+   The UID microformat will ordinarily be a URL,
+   but it should be flexible enough to allow it to contain non-network resolvable URI
+
+   my uid is resolvable by base domain
+   https://{DOMAIN}/{UID}
+   https://gmack.nz/n
+
+  --  TODO! make url the expanded (human readable ) url
+  --  e.g. /2017/01/01/title
+
+  --]]
+
+  -- ' from the sent properties - discovery the kind of post '
+  local kindOfPost = discoverPostType( post )
   local properties = {}
-  -- ngx.say('expand entry properties and place in properties')
-  for key, val in pairs(args) do
-    if type(val) == "table" then
-      -- ngx.say(type(val))
-      -- ngx.say(type(key))
-      -- ngx.say(key, ": ", table.concat(val, ", "))
-      -- Note: Categories space delimited
-      local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
-      if pKey then
-        if postedEntryProperties[pKey] ~=  nil then
-          properties[pKey] = table.concat(val, " ")
+  local sID = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
+  local sURL = 'https://' .. ngx.var.site .. '/' .. sID  
+  local sPub, n, err =  ngx.re.sub(ngx.localtime(), " ", "T")
+
+  properties['published'] =  { sPub }
+  properties['uid'] =  { sID  }
+  properties['url'] = { sURL }
+
+  for key, val in pairs( post ) do
+    -- ngx.say( 'post key: '  .. key  )
+    -- ngx.say( type( val ) )
+    if key == 'content' then
+      if type(post['content'][1]) == "table" then
+        for k, v in pairs(post['content'][1]) do
+          ngx.say('TODO!')
+          --table.insert(data,1,{ xml = 'content',['type'] = k, v })
+        end 
+      elseif type(post['content'][1]) == "string" then
+        ngx.say('TODO!')
+      elseif type(post['content']) == "string" then
+        local content = {{
+            ['value'] = post['content']
+        }}
+        properties['content'] = content
+      end
+    elseif key == 'content[html]' then
+      if type(post['content[html]']) == "string" then
+        local content = {{
+            ['html'] = post['content[html]']
+        }}
+        properties['content'] = content
+      end
+    elseif key == 'content[value]' then
+      if type(post['content[value]']) == "string" then
+        local content = {{
+            ['value'] = post['content[value]']
+        }}
+        properties['content'] = content
+      end
+    elseif  type(val) == "string" then
+      local m, err = ngx.re.match(key, "\\[\\]")
+      if m then
+       local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
+        if pKey then
+          if postedEntryProperties[pKey] ~=  nil then
+            if properties[ pKey ] ~= nil then
+              -- ngx.say('key', ": ", pKey)
+              table.insert(properties[ pKey ],val)
+            else
+              properties[ pKey ] = { val }
+            end
+          end
+        end 
+      else
+        if err then
+          ngx.log(ngx.ERR, "error: ", err)
+          return
         end
-      end 
-    else
-      -- ngx.say(type(val))
-      -- ngx.say(key, ": ", val)
-      if postedEntryProperties[key] ~=  nil then
-        properties[key] = val
+        --  ngx.say("match not found")
+        if postedEntryProperties[key] ~=  nil then
+          properties[ key ] = { value }
+        end
+      end
+    elseif type(val) == "table" then
+      for k, v in pairs( val ) do
+        local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
+        if pKey then
+          if postedEntryProperties[pKey] ~=  nil then
+            if properties[ pKey ] ~= nil then
+              -- ngx.say('key', ": ", pKey)
+              table.insert(properties[ pKey ],v)
+            else
+              properties[ pKey ] = { v }
+            end
+          end
+        end 
       end
     end
   end
-  -- ' we have sent properties of an entry ' 
-  -- ' now add server generated properties '
-  -- ' from the sent properties - discovery the kind of post '
-  local kindOfPost = discoverPostType( properties )
-  -- ngx.say( ' add ' .. kindOfPost .. ' as an "type" attribute to documentElement: ' .. hType )
-  -- server added properties , published and id
-  properties['published'] = ngx.today()
-  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
-  properties['url'] = 'https://' .. domain .. '/' .. properties['id']
-  -- construct data table 
-  -- top level entry
-  data = { 
-    xml = hType, 
-    kind = kindOfPost
-  }
-  -- insert all properties into data table
-  -- if we have a content property add a type attribute
-  for key, val in pairs(properties) do
-    if key  == 'content' then
-      -- TODO! assumed posted content type is 'text'
-      table.insert(data,1,{ xml = key,['type'] = 'text', val })
-    else
-      table.insert(data,1,{ xml = key, val })
+ return properties
+ end
+
+ function createXmlEntry( jData )
+   local xml = require 'xml' 
+   local m, err = ngx.re.match( jData.type, "[^-]+$")
+
+   xData = { 
+     xml = m[0] 
+   }
+
+  for key, val in pairs( jData.properties ) do
+    -- ngx.say('key', ": ", key)
+    -- ngx.say( 'value type: ' ..  type(val))
+    for k, v in pairs( val ) do
+      if type(v) == "table" then
+        table.insert( xData,1,{ xml = key })
+        for ky, vl in pairs( v ) do
+          -- ngx.say('key', ": ", key)
+          -- ngx.say('key', ": ", ky)
+          --  ngx.say( 'value type: ' ..  type(vl))
+          -- local xContent = xml.find( xData, key )
+          -- NOTE: TODO! url escape vl
+          if type(vl) == "string" then
+            table.insert(xml.find( xData, key ) ,1,{ xml = ky, ngx.encode_base64(vl)})
+          end
+        end
+      else
+        table.insert( xData,1,{ xml = key, v })
+      end
     end
   end
-  return  properties['url'], data
+  return xData
 end
 
 function createEntryFromJson( hType , props)
@@ -412,15 +553,22 @@ function createEntryFromJson( hType , props)
 
   -- Post Properties
   -- https://www.w3.org/TR/jf2/#post-properties
+  local kindOfPost = discoverPostType( props )
+  -- top level entry
+  data = { 
+    xml = hType, 
+    kind = kindOfPost
+  }
   local properties = {}
   for key, val in pairs(props) do
     if type(val) == "table" then
-      -- ngx.say('key', ": ", key)
-      -- ngx.say( 'value type: ' ..  type(val))
       if key ~= 'content' then
         if postedEntryProperties[key] ~=  nil then
-          -- space delimited list
-          properties[key] = table.concat(val, " ")
+          if type(val) == "table" then
+           for k, v in pairs( val ) do
+             table.insert(data,1,{ xml = key, v })
+           end
+          end
         else
           return requestError(
             ngx.ngx.HTTP_BAD_REQUEST,
@@ -436,13 +584,7 @@ function createEntryFromJson( hType , props)
       'properties should be in an array') 
     end
   end
-  local kindOfPost = discoverPostType( properties )
 
-  -- top level entry
-  data = { 
-    xml = hType, 
-    kind = kindOfPost
-  }
 
   properties['published'] = ngx.today()
   properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
@@ -687,24 +829,17 @@ function processPost()
     -- ngx.say( contentType )
     processMultPartForm()
   elseif contentType  == 'application/json' then
-     processJsonBody()
+    processJsonBody()
   end
 end
 
 function processMultPartForm()
   local msg = ''
-  local options = {
-    timeout          = 1000,
-    chunk_size       = 4096,
-    max_get_args     = 100,
-    mas_post_args    = 100,
-    max_line_size    = 512,
-    max_file_uploads = 10
-  }
+
   -- ngx.say( 'process MultPart Form' )
 
   local reqargs = require "resty.reqargs"
-  local get, post, files = reqargs( options )
+  local get, post, files = reqargs( reqargsOptions )
    if not get then
     error(post)
   end

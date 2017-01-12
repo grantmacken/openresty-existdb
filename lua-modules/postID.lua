@@ -44,8 +44,8 @@ DESCRIPTION:  create a short id unique to the db
 
 
 function encodeDate()
-  local shortDate = os.date("%y") .. os.date("*t").yday
-  local integer = tonumber(shortDate )
+  local shortDate = os.date("%y") .. os.date("%j")
+  local integer = tonumber( shortDate )
   return b60Encode(integer)
 end
 

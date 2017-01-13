@@ -9,8 +9,6 @@ START_JAR := $(JAVA) \
  -Djetty.home=$(EXIST_HOME)/tools/jetty \
  -Dfile.encoding=UTF-8 \
  -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
- -Djava.net.preferIPv4Stack=true \
- -Djsse.enableSNIExtension=true \
  -jar $(EXIST_HOME)/start.jar
 
 # http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization
@@ -58,7 +56,9 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@cat $@
 	@echo '--------------------------------------'
 
-$(T)/eXist.expect: $(T)/wget-eXist.log
+#$(T)/wget-eXist.log
+
+$(T)/eXist.expect:
 	@echo "## $(notdir $@) ##"
 	@echo 'Create data dir'
 	@echo 'we have $(call EXIST_JAR)'
@@ -107,7 +107,7 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo "{{{## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
-	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
+	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 5 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)

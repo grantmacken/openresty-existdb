@@ -41,7 +41,6 @@ watch-nginx-conf:
 
 .PHONY:  watch-nginx-conf
 
-
 $(OPENRESTY_HOME)/nginx/conf/%.conf: nginx-config/%.conf
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
@@ -205,6 +204,7 @@ error_log logs/error.log;
 pid       logs/nginx.pid;
 
 events {
+
   worker_connections  1024;
 }
 
@@ -253,7 +253,4 @@ ngClean:
 	@find $(OPENRESTY_HOME)/nginx/conf -type f -name '*.conf' -delete
 	@find $(OPENRESTY_HOME)/nginx/conf -type f -name '*_params' -delete
 
-/etc/letsencrypt/dh-param.pem: 
-	@mkdir -p $(dir $@)
-	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
-	@openssl dhparam -out $@ 2048
+

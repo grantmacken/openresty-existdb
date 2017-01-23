@@ -366,22 +366,30 @@ function processPostArgs()
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
-    --  ngx.say( cjson.encode(jData) ) 
+     --  ngx.say( cjson.encode(jData) ) 
+      local ret = require('mod.eXist').restxqMicropubRequest( jData )
+
       -- ngx.say( jData.type)
       -- ngx.say( jData.properties.url[1] )
       -- ngx.say( jData.properties.uid[1] )
+      -- rewrite ^/?(.*)$ /exist/restxq/$host/$1 break;
 
-      local data = createXmlEntry( jData )
+      -- local data = createXmlEntry( jData )
       -- ngx.say(require('xml').dump( xData))
      -- ngx.say( location )
-     ngx.header.location = jData.properties.url[1]
-     ngx.status = ngx.HTTP_CREATED
-     ngx.header.content_type = 'application/xml'
-     local reason =  require('mod.eXist').putXML( 'posts', data )
-     if reason == 'Created' then
-       ngx.say(require('xml').dump( xData))
-       ngx.exit(ngx.HTTP_CREATED)
-     end
+     -- ngx.header.location = jData.properties.url[1]
+     -- ngx.status = ngx.HTTP_CREATED
+     -- ngx.header.content_type = 'application/xml'
+     -- local reason =  require('mod.eXist').postJSON( 'posts', jData )
+     -- if reason == 'Created' then
+
+     --   ngx.exit(ngx.HTTP_CREATED)
+     -- end
+     -- local reason =  require('mod.eXist').putXML( 'posts', data )
+     -- if reason == 'Created' then
+     --   ngx.say(require('xml').dump( xData))
+     --   ngx.exit(ngx.HTTP_CREATED)
+     -- end
     end
   elseif args['action'] then
    --  ngx.say( ' assume we are modifying a post item in some way'  )

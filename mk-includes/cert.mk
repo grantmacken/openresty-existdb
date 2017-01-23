@@ -85,3 +85,8 @@ syncCertsPerm:
 	@ls -al /etc/letsencrypt 
 
 ngDH: /etc/letsencrypt/dh-param.pem
+
+/etc/letsencrypt/dh-param.pem: 
+	@mkdir -p $(dir $@)
+	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
+	@openssl dhparam -out $@ 2048

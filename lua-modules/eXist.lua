@@ -696,6 +696,40 @@ function sendMicropubRequest( restPath, txt  )
   return res
 end
 
+function _M.restxqMicropubRequest( jData )
+  --ngx.say(' restxq Micropub Request ' )
+  local http = require "resty.http"
+  local authorization = cfg.auth
+  local contentType = 'application/json'
+  local restxqPath = '/exist/restxq/' .. cfg.domain .. '/_micropub'
+  --ngx.say(restxqPath)
+
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "POST",
+        path = restxqPath,
+        headers = {
+          ["Content-Type"] =contentType,
+          ["Authorization"] = authorization
+        },
+        body =  cjson.encode(jData),
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+ end
+
+
+
 function isMedia( )
   return xml.find(data,'media')
 end

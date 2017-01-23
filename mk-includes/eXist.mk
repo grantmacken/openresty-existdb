@@ -56,9 +56,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@cat $@
 	@echo '--------------------------------------'
 
-#$(T)/wget-eXist.log
-
-$(T)/eXist.expect:
+$(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
 	@echo 'Create data dir'
 	@echo 'we have $(call EXIST_JAR)'
@@ -107,7 +105,7 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo "{{{## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
-	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
+	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 5 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)

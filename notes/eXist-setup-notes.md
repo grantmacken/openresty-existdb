@@ -4,16 +4,15 @@
 
 #eXist setup notes
 
-Our eXist server is proxied behind OpenResty (nginx)
-
 Where we are heading for our remote production server:
 
- - eXist will proxied behind OpenResty (nginx)
- - the fire-walled (ufw) remote server will only have 3 ports open to the world
+ - Our eXist server is proxied behind OpenResty (nginx)
+ - OpenResty is the public facing server-
+ - ufw fire-walls remote server and leaves 3 ports open to the world
 
- 1. http:  port 80
- 2. https: port 443
- 3. ssh:   port 22
+    1. http:  port 80
+    2. https: port 443
+    3. ssh:   port 22
 
  - Additionally any www traffic on port 80 will be redirected to the secure port 433.
  - eXist (jetty) which serves on port 8080 will be closed to the world

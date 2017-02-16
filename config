@@ -1,10 +1,7 @@
-EXIST_HOME=/usr/local/eXist
-EXIST_DATA_DIR=webapp/WEB-INF/data
-ACCESS_TOKEN_PATH=../.access-token
-TEMP_DIR=.temp
-OPENRESTY_HOME=/usr/local/openresty
-WEBDAV=~/eXist
-DEPLOY=grantmacken/gmack.nz
-DOMAIN=gmack.nz
+NAME=openresty-install
+OWNER=grantmacken
+SHELL=/bin/bash
+ACCESS_TOKEN_PATH=../.github-access-token
 SERVER=featon
-
+DOMAIN=gmack.nz
+DOMAINS=gmack.nz www.gmack.nz

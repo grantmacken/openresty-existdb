@@ -110,7 +110,7 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@echo '---------}}}'
-	
+
 define existService
 [Unit]
 Description=The exist db application server

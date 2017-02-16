@@ -84,7 +84,7 @@ syncCertsPerm:
 	@$(call chownToUser, /tmp)
 	@ls -al /etc/letsencrypt 
 
-ngDH: /etc/letsencrypt/dh-param.pem
+dhparam: /etc/letsencrypt/dh-param.pem
 
 /etc/letsencrypt/dh-param.pem: 
 	@mkdir -p $(dir $@)

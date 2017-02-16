@@ -17,12 +17,15 @@ or local development environment.
 
 It assumes you 
 1. setup your VPS server with IP address, DNS zones and registered domain(s) etc
-2. setup git with configured global [user.name]( https://help.github.com/articles/setting-your-username-in-git/)
+2. setup git with configured global 
+[user.name]( https://help.github.com/articles/setting-your-username-in-git/)
  and user.email
-     `git config --global user.name` 
-     `git config --global user.email`
+```
+ git config --global user.name 
+ git config --global user.email
+ ```
 3. have your own github account and obtained github access token that can be used on the commandline
 
------------------------------------------------------0
+-----------------------------------------------------
 
  - notes/eXist-setup-notes.md

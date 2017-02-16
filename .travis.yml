@@ -6,7 +6,7 @@ addons:
         packages:
         - expect
 before_install:
-   - perlbrew list-modules
+   - pwd
 install:
   - sudo make exInstall
-  - sudo ./temp/eXist-run.sh
+  - sudo ./tmp/eXist-run.sh

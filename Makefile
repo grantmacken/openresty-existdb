@@ -42,6 +42,7 @@ MY_DOMAINS := $(subst $(space),$(comma)$(empty) $(empty),$(DOMAINS))
 export PATH := /sbin:$(PATH)
 
 T := tmp
+
 # Make sure we have the following apps installed:
 APP_LIST := wget curl
 assert-command-present = $(if $(shell which $1),,$(error '$1' missing and needed for this build))

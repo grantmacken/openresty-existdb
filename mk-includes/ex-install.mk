@@ -4,7 +4,8 @@ exLatestClean:
 exVer != [ -e $(T)/eXist-latest.version ] && cat $(T)/eXist-latest.version  || echo  -n ''
 
 $(T)/eXist-latest.version:
-	@echo " $(notdir $@)"
+	@echo "## $@ ##"
+	@mkdir -p $(@D)
 	@echo 'fetch the latest eXist version'
 	@echo $$( curl -s -L https://bintray.com/existdb/releases/exist/_latestVersion|\
  tr -d '\n\r' |\

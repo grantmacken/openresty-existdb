@@ -63,16 +63,13 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo ' wait'  >> $(@)
 	@echo ' exit'  >> $(@)
 	@echo '}'  >> $(@)
-	@ls -al $(@)
-	@cat $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@chmod +x $(@)
-	@echo '}}}'
+	@echo '---------------------------------------'
 
 $(T)/eXist-expect.log: $(T)/eXist.expect
-	@echo "{{{## $(notdir $@) ##"
+	@echo "## $(notdir $@) ##"
 	@echo "$(EXIST_HOME)"
-	@cat $(<)
 	@$(if $(shell curl -I -s -f 'http://localhost:8080/' ),\
  $(error detected eXist already running),)
 	@echo 'remove any exiting eXist instalation'
@@ -83,15 +80,15 @@ $(T)/eXist-expect.log: $(T)/eXist.expect
 	@echo "Install eXist via expect script. Be Patient! this can take a few minutes"
 	@$(<) | tee $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
-	@echo '}}}'
+	@echo '---------------------------------------'
 
 $(T)/eXist-run.sh: $(T)/eXist-expect.log
-	@echo "{{{## $(notdir $@) ##"
+	@echo "## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
 	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 5 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
-	@echo '---------}}}'
+	@echo '---------------------------------------'
 

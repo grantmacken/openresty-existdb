@@ -6,7 +6,6 @@ START_JAR := $(JAVA) \
  -Djetty.home=$(EXIST_HOME)/tools/jetty \
  -Dfile.encoding=UTF-8 \
  -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
- -Djava.log4j.configurationFile=$(EXIST_HOME)/tools/yajsw/conf/log4j2.xml \
  -Djava.awt.headless=true \
  -jar $(EXIST_HOME)/start.jar
 

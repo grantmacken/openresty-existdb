@@ -1,0 +1,12 @@
+sudo: required
+dist: trusty
+language: java
+addons:
+    apt:
+        packages:
+        - expect
+before_install:
+   - perlbrew list-modules
+install:
+  - sudo make exInstall
+  - sudo ./temp/eXist-run.sh

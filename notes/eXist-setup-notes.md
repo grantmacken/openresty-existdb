@@ -1,25 +1,22 @@
-<!--
-
--->
-
 #eXist setup notes
 
 Where we are heading for our remote production server:
 
  - Our eXist server is proxied behind OpenResty (nginx)
- - OpenResty is the public facing server-
+ - OpenResty is the public facing server
  - ufw fire-walls remote server and leaves 3 ports open to the world
 
     1. http:  port 80
     2. https: port 443
     3. ssh:   port 22
 
- - Additionally any www traffic on port 80 will be redirected to the secure port 433.
+ - Any www traffic on port 80 will be redirected to the secure port 433
  - eXist (jetty) which serves on port 8080 will be closed to the world
  - Any authentication will be done using JWT Bearer tokens over HTTPS 
- - All access to eXist is controlled via OpenResty. If location access is authorized then
- OpenResty will make a request to eXist using Basic Auth, to access an eXist protected location,
- or query the eXist server.
+ - All access to eXist is controlled via OpenResty. If location access requires 
+authorization then OpenResty will handle the Authorization, then make a request 
+to eXist using Basic Auth, to access an eXist protected location or query the eX
+ist server.
 
 #Make setup targets
 
@@ -28,15 +25,18 @@ make exInstall
 make exGhUser
 make exSrv
 make exStartService
+
+ascii
 ```
 
-1. make exInstall : fetch latest version and headless install of eXistDB
+1. make exInstall : automated fetch and install of latest eXist version
 2. make exGhUser : set up main administrator user account
  - will add a new eXist user as your github user account owner name.  `git config --get user.name`
  - the new eXist user will use the `access token`
  - the new eXist user will belong to the DBA
 3. make exSrv : establish eXistdb as a service under systemd
 
+--------------------------------------------------------------
 
 ```
 make exStop
@@ -45,15 +45,15 @@ make exStatus
 make exLog
 ```
 
+--------------------------------------------------------------
+
 ```
 make exRemoveService
 make exLatestClean
-
-
 ```
 
 
-
+--------------------------------------------------------------
 
 
 # Main user account notes:
@@ -76,6 +76,8 @@ Basic Authorization with eXist is user:password base64 combined.
 This sets up eXist to use my configured git account user.name
 with the password as my current GitHub access token.
 The pathway to the token is set in the config file in the projects root
+
+-------------------------------------------
 
 Access to eXist is controlled via openresty.
 

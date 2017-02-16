@@ -23,4 +23,6 @@ It assumes you
      `git config --global user.email`
 3. have your own github account and obtained github access token that can be used on the commandline
 
-------------------------------------------------------
+-----------------------------------------------------0
+
+ - notes/eXist-setup-notes.md

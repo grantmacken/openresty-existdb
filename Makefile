@@ -94,9 +94,22 @@ help:
 	@echo 'DOMAINS: $(DOMAINS)'
 	@echo 'MY_DOMAINS: $(MY_DOMAINS)'
 
-
 help-eXist:
-	@cat notes/eXist-setup-notes.md
+	@$(call cat,notes/eXist-setup-notes.md)
+
+# eXistdb setup
+###############################################
+
+exInstall: $(T)/eXist-run.sh
+
+exGhUser: ex-git-user-as-eXist-user
+
+exClean: 
+	@sudo $(MAKE) exStop
+	@rm -R $(EXIST_HOME)
+
+
+###############################################
 
 # OPENRESTY
 or:
@@ -118,18 +131,7 @@ orClean:
 	@rm -R -f $(OPENRESTY_HOME)
 	@ls -al /usr/local
 
-# eXistdb setup
-###############################################
 
-exInstall: $(T)/eXist-run.sh
-
-exGhUser: ex-git-user-as-eXist-user
-
-# exServ: $(SYSTEMD_PATH)/eXist.service
-
-exClean: @echo ToDO!
-
-###############################################
 
 opmGet:
 	@echo "install opm packages"

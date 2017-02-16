@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+source config
+REPO="$(echo ${DEPLOY} | cut -d/ -f2 )"
+OWNER="$(echo ${DEPLOY} | cut -d/ -f1 )"
+P=admin
+if [ -e ${ACCESS_TOKEN_PATH} ] ;then P="$(<${ACCESS_TOKEN_PATH})";fi
+
+cmdClient="java -jar ${EXIST_HOME}/start.jar client -sqx -u admin -P ${P}"
+
+TEST_MORE_PATH='test-more-bash'
+BASHLIB="$(
+ find $TEST_MORE_PATH -type d |
+ grep -E '/(bin|lib)$' |
+ xargs -n1 printf "%s:")"
+
+PATH="$BASHLIB$PATH"
+
+source bash+ :std

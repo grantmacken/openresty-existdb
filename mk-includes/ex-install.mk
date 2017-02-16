@@ -1,30 +1,16 @@
-# latest  versions
-ifeq ($(wildcard  $(T)/eXist-latest.version),)
-  $(shell echo '0.0.0' > $(T)/eXist-latest.version )
-endif
-
-# previous versions
-ifeq ($(wildcard $(T)/eXist-previous.version),)
-  $(shell echo '0.0.0' > $(T)/eXist-previous.version )
-endif
-
-exLatest: $(T)/eXist-latest.version
-
 exLatestClean:
 	@rm $(T)/eXist*
 
 exVer != [ -e $(T)/eXist-latest.version ] && cat $(T)/eXist-latest.version  || echo  -n ''
 
-$(T)/eXist-latest.version: $(T)/eXist-previous.version 
+$(T)/eXist-latest.version:
 	@echo " $(notdir $@)"
-	@cp -f $@ $(<)
 	@echo 'fetch the latest eXist version'
 	@echo $$( curl -s -L https://bintray.com/existdb/releases/exist/_latestVersion|\
  tr -d '\n\r' |\
  grep -oP 'eXist-db-setup-[0-9]+\.[0-9]+-[a-z0-9]+.jar' |\
  head -1) > $(@)
 	@echo "$(exVer)"
-	@touch  $(<)
 	@echo '-----------------------------------------------------'
 
 EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases

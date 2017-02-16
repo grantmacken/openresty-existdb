@@ -5,7 +5,7 @@ EXIST_HOME := /usr/local/eXist
 EXIST_DATA_DIR := webapp/WEB-INF/data
 # Derived
 OS_NAME      :=  $(shell cat /etc/*release | grep -oP '^NAME="\K\w+')
-SYSTEMD_PATH :=  $(dir $(shell  pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system 
+SYSTEMD_PATH :=  $(dir $(shell  pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system
 #this will evaluate when running as sudo
 # otherwise will be empty when running on remote
 # so if running as sudo on desktop we can change permissions back to $SUDO_USER
@@ -15,7 +15,7 @@ WHOAMI    := $(shell whoami)
 INSTALLER := $(if $(SUDO_USER),$(SUDO_USER),$(WHOAMI))
 
 ifeq ($(SUDO_USER),)
-  GIT_USER=$(shell git config --get user.name )
+	GIT_USER :=  $(shell git config --get user.name )
   GIT_EMAIL := $(shell git config --get user.email)
 else
   GIT_USER=$(shell su -c "git config --get user.name" $(INSTALLER) )
@@ -61,10 +61,10 @@ chownToUser = $(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $1,)
 #this will evaluate if we have a access token
 ACCESS_TOKEN := $(call cat,$(ACCESS_TOKEN_PATH))
 
-GIT_REMOTE_ORIGIN_URl="$(shell git config --get remote.origin.url )"
-GIT_REPO_FULL_NAME="$(shell echo $(GIT_REMOTE_ORIGIN_URl) | sed -e 's/git@github.com://g' | sed -e 's/\.git//g' )"
-GIT_REPO_NAME="$(shell echo $(GIT_REPO_FULL_NAME) |cut -d/ -f2 )"
-GIT_REPO_OWNER_LOGIN="$(shell echo $(GIT_REPO_FULL_NAME) |cut -d/ -f1 )"
+# GIT_REMOTE_ORIGIN_URl="$(shell git config --get remote.origin.url )"
+# GIT_REPO_FULL_NAME="$(shell echo $(GIT_REMOTE_ORIGIN_URl) | sed -e 's/git@github.com://g' | sed -e 's/\.git//g' )"
+# GIT_REPO_NAME="$(shell echo $(GIT_REPO_FULL_NAME) |cut -d/ -f2 )"
+# GIT_REPO_OWNER_LOGIN="$(shell echo $(GIT_REPO_FULL_NAME) |cut -d/ -f1 )"
 
 # $(info git user name established)
 #  $(info git user email established)
@@ -80,7 +80,7 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
 default: help
 
-include mk-includes/*
+include mk-includes/ex-* 
 
 help:
 	@echo 'Install openresty from source'
@@ -93,6 +93,10 @@ help:
 	@echo 'GIT_EMAIL: $(GIT_EMAIL)'
 	@echo 'DOMAINS: $(DOMAINS)'
 	@echo 'MY_DOMAINS: $(MY_DOMAINS)'
+
+
+help-eXist:
+	@cat notes/eXist-setup-notes.md
 
 # OPENRESTY
 or:
@@ -121,11 +125,9 @@ exInstall: $(T)/eXist-run.sh
 
 exGhUser: ex-git-user-as-eXist-user
 
-
 # exServ: $(SYSTEMD_PATH)/eXist.service
 
-exClean:
-	@echo ToDO!
+exClean: @echo ToDO!
 
 ###############################################
 

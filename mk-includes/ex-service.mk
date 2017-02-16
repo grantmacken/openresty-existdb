@@ -6,8 +6,9 @@ START_JAR := $(JAVA) \
  -Djetty.home=$(EXIST_HOME)/tools/jetty \
  -Dfile.encoding=UTF-8 \
  -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
+ -Djava.log4j.configurationFile=$(EXIST_HOME)/tools/yajsw/conf/log4j2.xml \
+ -Djava.awt.headless=true \
  -jar $(EXIST_HOME)/start.jar
-
 
 define eXistService
 [Unit]
@@ -29,18 +30,20 @@ ExecStop=$(START_JAR) shutdown -u admin -p $(P)
 WantedBy=multi-user.target
 endef
 
-
 exSrv:  export eXistService:=$(eXistService)
 exSrv: 
-	@echo "setup eXist as eXist.service under systemd"
 	@$(call assert-is-root)
-	@echo 'Check if service is enabled'
-	@echo "$(systemctl is-enabled eXist.service)"
-	@echo 'Check if service is active'
-	@echo "$(systemctl is-enabled eXist.service)"
-	@systemctl is-active eXist.service && systemctl stop  eXist.service || echo 'inactive'
+	@echo "setup eXist as eXist.service under systemd"
+	echo "$(SYSTEMD_PATH)/eXist.service"
 	@echo "$${eXistService}"
-	@echo "$${eXistService}" >  $(SYSTEMD_PATH)/eXist.service
+	@echo "$${eXistService}" > $(SYSTEMD_PATH)/eXist.service
+	@$(MAKE) exStartService
+
+exState:
+	@echo "Check if service is enabled: $$(systemctl is-enabled eXist.service)"
+	@echo "Check if service is active: $$(systemctl is-active eXist.service)"
+	@echo "Check if service is failed: $$(systemctl is-failed eXist.service)"
+# @systemctl is-active eXist.service && systemctl stop  eXist.service || echo 'inactive'
 
 exStartService:
 	@$(call assert-is-root)
@@ -53,20 +56,22 @@ exStartService:
 	@echo 'Check if service is failed'
 	@systemctl is-failed eXist.service || echo 'OK!'
 
-orNotActive = $(shell systemctl is-active eXist.service | grep -oP 'inactive|failed')
+exNotActive = $(shell echo "$$(systemctl is-active eXist.service | grep -oP 'inactive|failed')")
 
 exRemoveService:
 	@$(call assert-is-root)
+	@$(MAKE) exStop
+	@systemctl is-enabled eXist.service && systemctl disable eXist.service
 	@[ -e $(SYSTEMD_PATH)/eXist.service ] && rm $(SYSTEMD_PATH)/eXist.service || echo '' 
 
 exStop:
 	@$(call assert-is-root)
-	@$(if $(orNotActive),, systemctl stop eXist.service)
+	@$(if $(exNotActive),, systemctl stop eXist.service)
 	@echo 'eXist service is now' $$(systemctl is-active  eXist.service)
 
 exStart:
 	@$(call assert-is-root)
-	@$(if $(orNotActive),systemctl start eXist.service, )
+	@$(if $(exNotActive),systemctl start eXist.service, )
 	@echo 'eXist service is now' $$(systemctl is-active  eXist.service)
 
 exStatus:
@@ -74,7 +79,27 @@ exStatus:
 
 exLog:
 	@$(call assert-is-root)
+	@journalctl -u eXist.service -o cat
+
+exLogFollow:
+	@$(call assert-is-root)
 	@journalctl -f -u eXist.service -o cat
 
+exLogXmldb:
+	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/xmldb.log
 
+exLogXmldbClear:
+	@echo '' > /usr/local/eXist/webapp/WEB-INF/logs/xmldb.log
 
+exLogExist:
+	@ls /usr/local/eXist/webapp/WEB-INF/logs
+	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/exist.log
+
+exLogStats:
+	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/statistics.log
+
+exLogRestxq:
+	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/restxq.log
+
+exLogXmlrpc:
+	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/xmlrpc.log

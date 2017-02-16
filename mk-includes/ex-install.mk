@@ -13,7 +13,7 @@ exLatest: $(T)/eXist-latest.version
 exLatestClean:
 	@rm $(T)/eXist*
 
-exVer != [ -e $(T)/eXist-latest.version ] && cat $(T)/eXist-latest.version  || echo ''
+exVer != [ -e $(T)/eXist-latest.version ] && cat $(T)/eXist-latest.version  || echo  -n ''
 
 $(T)/eXist-latest.version: $(T)/eXist-previous.version 
 	@echo " $(notdir $@)"
@@ -25,7 +25,7 @@ $(T)/eXist-latest.version: $(T)/eXist-previous.version
  head -1) > $(@)
 	@echo "$(exVer)"
 	@touch  $(<)
-	@echo '----------------------------------------------------'
+	@echo '-----------------------------------------------------'
 
 EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases
 

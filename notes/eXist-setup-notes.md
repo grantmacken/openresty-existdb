@@ -22,12 +22,13 @@ Where we are heading for our remote production server:
  OpenResty will make a request to eXist using Basic Auth, to access an eXist protected location,
  or query the eXist server.
 
-#Make targets
+#Make setup targets
 
 ```
 make exInstall
 make exGhUser
 make exSrv
+make exStartService
 ```
 
 1. make exInstall : fetch latest version and headless install of eXistDB
@@ -36,6 +37,22 @@ make exSrv
  - the new eXist user will use the `access token`
  - the new eXist user will belong to the DBA
 3. make exSrv : establish eXistdb as a service under systemd
+
+
+```
+make exStop
+make exStart
+make exStatus
+make exLog
+```
+
+```
+make exRemoveService
+make exLatestClean
+
+
+```
+
 
 
 

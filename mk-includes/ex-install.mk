@@ -1,7 +1,8 @@
-exLatestClean:
-	@rm $(T)/eXist*
 
-exVer != [ -e $(T)/eXist-latest.version ] && cat $(T)/eXist-latest.version  || echo  -n ''
+EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases
+
+exLatestClean:
+	@rm $(T)/eXist-latest.version
 
 $(T)/eXist-latest.version:
 	@echo "## $@ ##"
@@ -11,31 +12,31 @@ $(T)/eXist-latest.version:
  tr -d '\n\r' |\
  grep -oP 'eXist-db-setup-[0-9]+\.[0-9]+-[a-z0-9]+.jar' |\
  head -1) > $(@)
-	@echo "$(exVer)"
 	@echo '-----------------------------------------------------'
 
-EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases
 
 $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo "## $(notdir $@) ##"
+	@echo "$(call cat,$<)"
 	echo '# because we use wget with no clobber, if we have source then just touch log'
-	@$(if $(wildcard $(T)/$(exVer)),\
+	@$(if $(wildcard $(T)/$(call cat,$<)),\
  touch $@,\
- wget -o $@ -O "$(T)/$(exVer)" \
+ wget -o $@ -O "$(T)/$(call cat,$<)" \
  --trust-server-name  --progress=dot$(:)mega -nc \
- "$(EXIST_DOWNLOAD_SOURCE)/$(exVer)" )
+ "$(EXIST_DOWNLOAD_SOURCE)/$(call cat,$<)" )
 	@cat $@
 	@echo '----------------------------------------------------'
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
+	@false
 	@echo 'Create data dir'
-	@echo 'we have $(call EXIST_JAR)'
+	@echo 'we have $(call cat,$(T)/eXist-latest.version)'
 	@echo 'creating expect file'
 	@echo '#!$(shell which expect) -f' > $(@)
 	$(if $(SUDO_USER),\
- echo 'spawn su -c "java -jar $(T)/$(exVer) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
- echo 'spawn java -jar $(T)/$(exVer) -console' >> $(@))
+ echo 'spawn su -c "java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
+ echo 'spawn java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console' >> $(@))
 	@echo 'expect "Select target" { send "$(EXIST_HOME)\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)

@@ -7,7 +7,7 @@ if [ -e ${ACCESS_TOKEN_PATH} ] ;then P="$(<${ACCESS_TOKEN_PATH})";fi
 
 cmdClient="java -jar ${EXIST_HOME}/start.jar client -sqx -u admin -P ${P}"
 
-TEST_MORE_PATH='test-more-bash'
+TEST_MORE_PATH='bin/test-more-bash'
 BASHLIB="$(
  find $TEST_MORE_PATH -type d |
  grep -E '/(bin|lib)$' |

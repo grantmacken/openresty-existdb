@@ -26,6 +26,10 @@ It assumes you
  ```
 3. have your own github account and obtained github access token that can be used on the commandline
 
------------------------------------------------------
+----------------------------------------------------
 
- - notes/eXist-setup-notes.md
+## eXist: a document store in a jetty container
+
+ - [eXist setup notes](notes/eXist-setup.md)
+ - [eXist git user](notes/eXist-git-user.md)
+

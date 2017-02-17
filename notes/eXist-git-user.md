@@ -66,7 +66,11 @@ Once set the enviroment var can be accessed use in lua modules to interact with 
 ``` 
 local existAuth = os.getenv("EXIST_AUTH")
 ```
+ 
+On the port 443 (HTTPS) we let OpenResty handle the process of Authentication and Authorisation 
 
-In this way OpenResty can act as access Authorization router gateway to eXist locations and eXist API calls
+Once Authorised, OpenResty can talk to eXist, using  Basic Authorization with  'os.getenv("EXIST_AUTH")',
+to access protected eXist locations and eXist API calls
 
+In this way OpenResty can act as access Authorization router gateway
 

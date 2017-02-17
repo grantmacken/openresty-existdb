@@ -29,7 +29,6 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@false
 	@echo 'Create data dir'
 	@echo 'we have $(call cat,$(T)/eXist-latest.version)'
 	@echo 'creating expect file'

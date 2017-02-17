@@ -99,11 +99,10 @@ help-eXist:
 	@$(call cat,notes/eXist-setup-notes.md)
 
 # eXistdb setup
+# notes/eXist-setup-notes.md
 ###############################################
 
 exInstall: $(T)/eXist-run.sh
-
-exGhUser: ex-git-user-as-eXist-user
 
 exClean: 
 	@sudo $(MAKE) exStop

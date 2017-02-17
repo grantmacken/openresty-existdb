@@ -10,3 +10,5 @@ before_install:
 install:
   - sudo make exInstall
   - sudo ./tmp/eXist-run.sh
+script:
+  - prove -v - < t/travis.txt

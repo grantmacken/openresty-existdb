@@ -6,15 +6,16 @@ with the password as my current GitHub access token.
 The pathway to the token is set in the config file in the projects root
 
 ```
-make eXGitAdminCheck
+make exGitAdminCheck
 make exGitUserAdd
 make exGitUserRemove
-
 ```
+
+[![asciicast](https://asciinema.org/a/103652.png)](https://asciinema.org/a/103652)
 
 - eXGitAdminCheck: check who belongs to dba group
 - exGitUserAdd:   set eXist to use my configured git account user.name and access token as password then check
-- exGitUserRemove check who belongs to dba group
+- exGitUserRemove  remove eXist user and group
 
 ## Obtaining a access token
 
@@ -73,4 +74,12 @@ Once Authorised, OpenResty can talk to eXist, using  Basic Authorization with  '
 to access protected eXist locations and eXist API calls
 
 In this way OpenResty can act as access Authorization router gateway
+
+```
+asciinema rec demo.json -w 1 -t 'eXist git user' -c 'make --silent exGitUserTest'
+asciinema play demo.json
+asciinema upload demo.json
+rm demo.json
+```
+
 

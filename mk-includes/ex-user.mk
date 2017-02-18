@@ -1,14 +1,11 @@
 #
-# git-user-as-eXist-user
+# eXist user
 #
 # requires a running instance of eXist
-# usees the client jar
-#
-#
+# uses the client jar
 #
 # ########################
 
-.PHONY: git-user-as-eXist-user
 
 CLIENT := java -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(P) | tail -1
 
@@ -39,6 +36,7 @@ exRemoveGroupMember = $(shell cd $(EXIST_HOME) && echo 'sm:remove-group-member("
 exLogOut = $(shell cd $(EXIST_HOME) && echo 'util:log-system-out("$(1)")' | $(CLIENT))
 
 exGitAdminCheck:
+	@echo 'Admin groups and dba members check' 
 	@echo "admin groups: $(call exGroups,admin)"
 	@echo "dba group members: $(call exGroupMembers,dba)"
 
@@ -51,25 +49,28 @@ exGitUserCheck:
 	@echo "$(GIT_USER) user groups: $(call exGroups,$(GIT_USER))"
 
 exGitUserRemove:
-	@echo "$(GIT_USER) is eXist user: $(call exUserExists,$(GIT_USER))"
-	@echo "$(GIT_USER) is eXist group: $(call exGroupExists,$(GIT_USER))"
 	@$(if $(findstring true,$(call exUserExists,$(GIT_USER))), \
  cd  $(EXIST_HOME) && echo 'sm:remove-group("$(GIT_USER)")' | $(CLIENT),)
 	@$(if $(findstring true,$(call exUserExists,$(GIT_USER))), \
  cd $(EXIST_HOME) && echo 'sm:remove-account("$(GIT_USER)")' | $(CLIENT),)
 	@$(MAKE) exGitAdminCheck
-	@echo "$(GIT_USER) is eXist user: $(call exUserExists,$(GIT_USER))"
-	@echo "$(GIT_USER) is eXist group: $(call exGroupExists,$(GIT_USER))"
 
 exGitUserAdd:
 	$(if $(ACCESS_TOKEN),true,false)
 	@$(if $(findstring false,$(call exUserExists,$(GIT_USER))), \
- cd $(EXIST_HOME) && echo 'sm:create-account("$(GIT_USER)","$(P)","dba")' | $(CLIENT) , echo 'already user' )
-	@$(if $(findstring true,$(call exUserExists,$(GIT_USER))),$(MAKE) exGitUserCheck, )
+ cd $(EXIST_HOME) && echo 'sm:create-account("$(GIT_USER)","$(P)","dba")' | $(CLIENT) ,false )
+	@$(MAKE) exGitUserCheck
 	@$(MAKE) exGitAdminCheck
 
 
-
+exGitUserTest:
+	@echo 'check who belongs to dba group '
+	@$(MAKE) exGitAdminCheck
+	@echo 'set eXist to use my configured git account user.name and access'
+	@echo ' token as password then check'
+	@$(MAKE) exGitUserAdd
+	@echo 'remove eXist user and group'
+	@$(MAKE) exGitUserRemove
 
 
 exLogger:

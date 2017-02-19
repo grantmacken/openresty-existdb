@@ -32,4 +32,5 @@ It assumes you
 
  - [eXist setup notes](notes/eXist-setup.md)
  - [eXist git user notes](notes/eXist-git-user.md)
+ - [eXist systemd service notes](notes/eXist-service.md)
 

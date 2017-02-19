@@ -12,11 +12,13 @@ running 'make exService' is pretty much all you need to do. The service should l
 
 In `mk-includes/ex-service` can redefine the systemd  eXist.service.
 In the service I have added 
-- an environment var
-- working directory
-- user and group 
+- an environment var 'SERVER'
+- working directory 
+- user and group   eXist runs as Installer
 
 The START_JAR also defines some -D vars that you can play with.
+
+[![asciicast](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb.png)](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb)
 
 ```
 make --silent exServiceStop

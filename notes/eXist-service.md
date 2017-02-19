@@ -13,7 +13,7 @@ make --silent exServiceRemove
 running 'make exService' is pretty much all you need to do. The service should load on os boot, reboot etc.
 
 
-# Start, Stop, View State  targets
+# Start, Stop, State Targets
 
 ```
 make --silent exServiceStop
@@ -26,9 +26,11 @@ When stopping or starting the service we follow the output of the systemd log.
 When the appropriate log entry is logged we know we have successfully stopped 
 or started the service. Doing it this way we should get as graceful shutdown.
 
-- exServiceState : should provide a view of the state of the service. It is called after you stop or start the service.
+- exServiceState : should provide a view of the state of the service. It is 
+called after you stop or start the service. This call also uses nmap to see if 
+port 8080 is open or closed
 
-## Modifying init parameters
+## Modifying Init Parameters
 
 In `mk-includes/ex-service.mk` can redefine the systemd eXist.service.
 In the service I have added 
@@ -74,7 +76,7 @@ START_JAR := $(JAVA) \
  -jar $(EXIST_HOME)/start.jar
 ```
 
-##  Service Status and journalctl service logs
+##  Service Status and journalctl Service Logs
 
 ```
 make exServiceStatus
@@ -88,7 +90,7 @@ Make exServiceLogFollow
 
 --------------------------------------------------------------
 
-# developing using  exServiceLogFollow 
+## Developing Using  exServiceLogFollow 
 
 When developing you can log to journald by calling in a xQuery script
 

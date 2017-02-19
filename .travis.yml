@@ -5,6 +5,7 @@ addons:
     apt:
         packages:
         - expect
+        - nmap
 before_install:
    - pwd
 install:

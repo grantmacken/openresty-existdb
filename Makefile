@@ -5,7 +5,12 @@ EXIST_HOME := /usr/local/eXist
 EXIST_DATA_DIR := webapp/WEB-INF/data
 # Derived
 OS_NAME      :=  $(shell cat /etc/*release | grep -oP '^NAME="\K\w+')
-SYSTEMD_PATH :=  $(dir $(shell  pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system
+SYSTEMD_PATH :=  $(dir $(shell pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system
+
+ifeq ($(wildcard $(SYSTEMD_PATH) ),)
+ $(error 'could not establish systemd path')
+endif
+
 #this will evaluate when running as sudo
 # otherwise will be empty when running on remote
 # so if running as sudo on desktop we can change permissions back to $SUDO_USER
@@ -51,9 +56,12 @@ $(foreach src,$(APP_LIST),$(call assert-command-present,$(src)))
 
 assert-file-present = $(if $(wildcard $1),,$(error '$1' missing and needed for this build))
 
-assert-is-root = $(if $(shell id -u | grep -oP '^0$$'),\
- $(info OK! root user, so we can change some system files),\
+
+assert-is-root = $(if $(shell id -u | grep -oP '^0$$'),,\
  $(error changing system files so need to sudo) )
+# assert-is-root = $(if $(shell id -u | grep -oP '^0$$'),\
+#  $(info OK! root user, so we can change some system files),\
+#  $(error changing system files so need to sudo) )
 
 cat = $(shell if [ -e $(1) ] ;then echo "$$(<$(1))";fi )
 

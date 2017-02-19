@@ -54,6 +54,9 @@ $(SYSTEMD_PATH)/eXist.service:
 	@echo "$${eXistService}" > $@
 
 exServiceState:
+	@echo ''
+	@echo ' ========================================================='
+	@echo ''
 	@echo "Check if service is enabled: $(call exServiceIs,enabled)"
 	@echo "Check if service is active: $(call exServiceIs,active)"
 	@echo "Check if service is failed: $(call exServiceIs,failed)"
@@ -66,7 +69,6 @@ exServiceState:
 	@echo ''
 	@echo ' ========================================================='
 	@echo ''
-	@$(MAKE) exServiceLog
 
 exServiceRemove:
 	@$(call assert-is-root)
@@ -110,9 +112,12 @@ exServiceLog:
 	@$(call assert-is-root)
 	@journalctl -u eXist.service -o cat | tail -n 8
 
-exLogFollow:
+exServiceLogFollow:
 	@$(call assert-is-root)
 	@journalctl -f -u eXist.service -o cat
+
+exServiceLogFollowTest:
+	$(call exLogOut,'out you go' )
 
 exLogXmldb:
 	@tail /usr/local/eXist/webapp/WEB-INF/logs/xmldb.log

@@ -1,7 +1,6 @@
 
 # Defining an eXist Service to run on boot
 
-
 ```
 make --silent exService
 make --silent exServiceRemove
@@ -27,7 +26,8 @@ make --silent exServiceState
 The above should be self evident.
 
 When stopping or starting the service we follow the output of the systemd log. 
-When the appropriate log entry is logged we know we have successfully stopped or started the service. Doing it this way we should get as graceful shutdown.
+When the appropriate log entry is logged we know we have successfully stopped 
+or started the service. Doing it this way we should get as graceful shutdown.
 
 - exServiceState : should provide a view of the state of the service. It is called after you stop or start the service.
 
@@ -43,11 +43,21 @@ Make exServiceLogFollow
 
 --------------------------------------------------------------
 
-make exLogger
+# developing using  exServiceLogFollow 
 
-note: when developing you can log to journald by calling
+When developing you can log to journald by calling in a xQuery script
 
 ```
 util:log-system-out("out you go")
 ```
 
+In a open terminal you can follow the output by using `sudo make exServiceLogFollow`
+I do this in tmux in a split window
+
+`make exServiceLogFollowTest` : you should see  the log entry
+
+```
+asciinema rec demo.json -w 1 -t 'eXist systemd service'
+asciinema play demo.json
+asciinema upload demo.json && rm demo.json
+```

@@ -49,13 +49,12 @@ export PATH := /sbin:$(PATH)
 T := tmp
 
 # Make sure we have the following apps installed:
-APP_LIST := wget curl
+APP_LIST := wget curl nmap
 assert-command-present = $(if $(shell which $1),,$(error '$1' missing and needed for this build))
 
 $(foreach src,$(APP_LIST),$(call assert-command-present,$(src)))
 
 assert-file-present = $(if $(wildcard $1),,$(error '$1' missing and needed for this build))
-
 
 assert-is-root = $(if $(shell id -u | grep -oP '^0$$'),,\
  $(error changing system files so need to sudo) )

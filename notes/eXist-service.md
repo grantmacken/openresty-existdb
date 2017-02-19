@@ -1,6 +1,8 @@
 
 # Defining an eXist Service to run on boot
 
+[![asciicast](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb.png)](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb)
+
 ```
 make --silent exService
 make --silent exServiceRemove
@@ -10,15 +12,8 @@ make --silent exServiceRemove
 
 running 'make exService' is pretty much all you need to do. The service should load on os boot, reboot etc.
 
-In `mk-includes/ex-service` can redefine the systemd  eXist.service.
-In the service I have added 
-- an environment var 'SERVER'
-- working directory 
-- user and group   eXist runs as Installer
 
-The START_JAR also defines some -D vars that you can play with.
-
-[![asciicast](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb.png)](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb)
+# Start, Stop, View State  targets
 
 ```
 make --silent exServiceStop
@@ -32,6 +27,54 @@ When the appropriate log entry is logged we know we have successfully stopped
 or started the service. Doing it this way we should get as graceful shutdown.
 
 - exServiceState : should provide a view of the state of the service. It is called after you stop or start the service.
+
+## Modifying init parameters
+
+In `mk-includes/ex-service.mk` can redefine the systemd eXist.service.
+In the service I have added 
+- an environment var 'SERVER'
+- working directory is set 
+- user and group   eXist runs as Installer
+
+Alter this if you need something differant
+
+```
+define eXistService
+[Unit]
+Description=The exist db application server
+After=network.target
+
+[Service]
+Environment="EXIST_HOME=$(EXIST_HOME)"
+$(if $(SUDO_USER),
+Environment="SERVER=development",
+Environment="SERVER=production")
+WorkingDirectory=$(EXIST_HOME)
+User=$(INSTALLER)
+Group=$(INSTALLER)
+ExecStart=$(START_JAR) jetty
+ExecStop=$(START_JAR) shutdown -u admin -p $(P)
+
+[Install]
+WantedBy=multi-user.target
+endef
+```
+
+Also the START_JAR also defines some -D vars that you can play with.
+
+```
+JAVA := $(shell which java)
+
+START_JAR := $(JAVA) \
+ -Dexist.home=$(EXIST_HOME) \
+ -Djetty.home=$(EXIST_HOME)/tools/jetty \
+ -Dfile.encoding=UTF-8 \
+ -Djava.endorsed.dirs=$(EXIST_HOME)/lib/endorsed \
+ -Djava.awt.headless=true \
+ -jar $(EXIST_HOME)/start.jar
+```
+
+##  Service Status and journalctl service logs
 
 ```
 make exServiceStatus

@@ -30,7 +30,7 @@ It assumes you
 
 ## eXist: a document store in a jetty container
 
- - [eXist setup notes](notes/eXist-setup.md)
+ - [eXist install notes](notes/eXist-install.md)
  - [eXist git user notes](notes/eXist-git-user.md)
  - [eXist systemd service notes](notes/eXist-service.md)
 

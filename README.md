@@ -31,5 +31,5 @@ It assumes you
 ## eXist: a document store in a jetty container
 
  - [eXist setup notes](notes/eXist-setup.md)
- - [eXist git user](notes/eXist-git-user.md)
+ - [eXist git user notes](notes/eXist-git-user.md)
 

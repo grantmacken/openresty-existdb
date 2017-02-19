@@ -22,8 +22,6 @@ eXist server.
 
 ```
 make exInstall
-make exGhUser
-make exSrv
 make exStartService
 
 ```
@@ -39,39 +37,4 @@ make exStartService
 note: when the service is enabled then the service will start when the os boots 
 up.
 
---------------------------------------------------------------
-
-
-## targets for starting and stopping the eXist service
-
-```
-make exStop
-make exStart
-make exStatus
-make exState
-make exLog
-make exLogFollow
-```
-
-1. exStart: start the service
-2. exStop: stop the service
-3. exStatus: view service status
-4. exState view service state (enabled, active, failed)
-5. exLog: view journalctl service log
-6. exLogFollow: follow journalctl service log
-
-make exLogger
-
-note: when developing you can log to journald by calling
-
-```
-util:log-system-out("out you go")
-```
---------------------------------------------------------------
-
-```
-make exRemoveService
-make exLatestClean
-```
---------------------------------------------------------------
 

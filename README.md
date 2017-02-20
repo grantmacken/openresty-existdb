@@ -34,3 +34,10 @@ It assumes you
  - [eXist git user notes](notes/eXist-git-user.md)
  - [eXist systemd service notes](notes/eXist-service.md)
 
+ - [OpenResty TLS certificates](notes/tls.certs.md)
+
+## Misc: hosts, www
+ - [ edit host notes](notes/hosts.md)
+
+
+

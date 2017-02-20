@@ -1,11 +1,28 @@
 
+$(T)/davfs2-latest.version:
+	@echo "## $(notdir $@) ##"
+	@echo 'fetch the latest davfs2 version '
+	@echo $$( curl -s -L http://download.savannah.gnu.org/releases/davfs2/  |\
+ tr -d '\n\r' |\
+ grep -oP 'davfs2-([0-9]+\.){2}[0-9]+\.tar.gz' |\
+ tail -1) > $(@)
+	@echo "$(call cat,$(@))"
+
+dlDavfs2: $(T)/davfs2-latest.version
+	@echo "$(T)/$(call cat,$(<))" | sed s/\.tar\.gz//g 
+	@[ -d  $$(echo "$(T)/$(call cat,$(<))" | sed s/\.tar\.gz//g)  ] || \
+ curl -L http://download.savannah.gnu.org/releases/davfs2/$(call cat,$(<)) | \
+ tar xz --directory $(T)
+	cd  "$$(echo '$(T)/$(call cat,$(<))' | sed s/\.tar\.gz//g )" && \
+ ./configure && make && sudo make install
+# echo '------------------------------------------------'
+
 $(T)/webdav.log:
-	@echo '{{{ $(notdir $@) '
+	@echo '## $(notdir $@) ##'
 	@$(call assert-is-root)
 	@$(info CHECK -  mount.davfs suid flag set for user, allowing user to mount webdav)
-	@$(if $(TRAVIS),,\
- test -u /usr/sbin/mount.davfs || \
- $(EXPECT) -c "spawn  dpkg-reconfigure davfs2 -freadline; expect \"Should\"; send \"y\\n\"; interact" )
+	@test -u /usr/sbin/mount.davfs || \
+ $(shell which expect) -c "spawn dpkg-reconfigure davfs2 -freadline; expect \"Should\"; send \"y\\n\"; interact" 
 	@$(info CHECK -  if there is a davfs group )
 	@$(if $(shell echo "$$(groups davfs2 2>/dev/null)"),\
  $(info OK! there is davfs2 group),\
@@ -29,8 +46,6 @@ $(T)/webdav.log:
 	@cp /etc/davfs2/davfs2.conf $(HOME)/.davfs2/davfs2.conf
 	@cp /etc/davfs2/secrets $(HOME)/.davfs2/secrets
 	@chown -v $(SUDO_USER):davfs2 $(HOME)/.davfs2/*
-	@$(if $(TRAVIS),\
- mount $(HOME)/eXist,\
- su -c "mount $(HOME)/eXist" -s /bin/sh $(INSTALLER))
-	@echo '-------------}}} '
+	su -c "mount $(HOME)/eXist" -s /bin/sh $(INSTALLER)
+	@echo '-------------------------------------------------'
 

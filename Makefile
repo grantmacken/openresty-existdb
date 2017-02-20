@@ -89,6 +89,7 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 default: help
 
 include mk-includes/ex-* 
+include mk-includes/or-* 
 
 help:
 	@echo 'Install openresty from source'

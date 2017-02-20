@@ -82,8 +82,8 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo "## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
-	@echo  '$(START_JAR) &' >> $(@)
-	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 5 ; done' >> $(@)
+	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
+	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@echo '---------------------------------------'

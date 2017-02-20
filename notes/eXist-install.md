@@ -7,7 +7,8 @@ make exClean
 - exInstall :
  automated fetch and install of latest eXist version
 
-
+- exClean :
+ 
 ------------------------------------------------------------
 
 Where we are heading for our remote production server:

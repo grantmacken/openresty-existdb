@@ -47,6 +47,9 @@ MY_DOMAINS := $(subst $(space),$(comma)$(empty) $(empty),$(DOMAINS))
 export PATH := /sbin:$(PATH)
 
 T := tmp
+ifeq ($(wildcard $(T)),)
+ $(shell  mkdir $(T))
+endif
 
 # Make sure we have the following apps installed:
 APP_LIST := wget curl nmap

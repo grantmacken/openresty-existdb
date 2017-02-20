@@ -29,20 +29,20 @@ endef
 
 /etc/letsencrypt/cli.ini: export certbotConfig:=$(certbotConfig)
 /etc/letsencrypt/cli.ini:
-	@[ -d  $(dir $@)] || mkdir $(dir $@)
+	@[ -d  $(dir $@) ] || mkdir $(dir $@)
 	@echo "create cli config file"
 	@echo "$${certbotConfig}"
 	@echo "$${certbotConfig}" >  $@
 
 $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
-	@[ -d  $(dir $@)] || mkdir $(dir $@)
+	@[ -d  $(dir $@) ] || mkdir $(dir $@)
 	@[ -e $@ ] || curl https://dl.eff.org/certbot-auto -o $@ 
 	@$(call chownToUser,$@)
 	@chmod +x $@
 	@$(@) --help
 
 /etc/letsencrypt/dh-param.pem: $(T)/certbot/certbot-auto
-	@mkdir -p $(dir $@)
+	@[ -d  $(dir $@) ] || mkdir -p $(dir $@)
 	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
 	@[ -e $@ ] || openssl dhparam -out $@ 2048
 

@@ -92,10 +92,9 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 default: help
 
 include mk-includes/ex-* 
-include mk-includes/or-* 
+include mk-includes/or-cert* 
 
 help:
-	@echo 'Install openresty from source'
 	@echo 'OS NAME: $(OS_NAME) '
 	@echo 'SYSTEMD_PATH: $(SYSTEMD_PATH) '
 	@echo 'SUDO_USER : $(SUDO_USER)'
@@ -103,6 +102,7 @@ help:
 	@echo 'INSTALLER : $(INSTALLER)'
 	@echo 'GIT_USER : $(GIT_USER)'
 	@echo 'GIT_EMAIL: $(GIT_EMAIL)'
+	@echo 'DOMAIN: $(DOMAIN)'
 	@echo 'DOMAINS: $(DOMAINS)'
 	@echo 'MY_DOMAINS: $(MY_DOMAINS)'
 

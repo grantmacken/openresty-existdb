@@ -57,7 +57,7 @@ certRenew:
 	@$(MAKE) ngReload:
 
 certConfig: config
-	@touch /etc/letsencrypt/cli.ini
+	@rm /etc/letsencrypt/cli.ini
 	@$(MAKE) certInit
 	@touch config
 

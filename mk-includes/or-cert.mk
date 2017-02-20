@@ -59,6 +59,7 @@ certRenew:
 certConfig: config
 	@touch /etc/letsencrypt/cli.ini
 	@$(MAKE) certInit
+	@touch config
 
 # NOTE: SERVER is named in config file
 #       It is the VPS server host that can be connected to via ssh

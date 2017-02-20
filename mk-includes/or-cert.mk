@@ -1,18 +1,9 @@
 
 #########################################################
-# 
 # SSL CONFIGERATION note  
-#
 # can not be done on local dev server 
-#
-# use cerbot-auto with configuration file
-# 
-# testing
-# https://www.ssllabs.com/ssltest/analyze.html?d=gmack.nz
-# https://certlogik.com/ssl-checker/gmack.nz/summary
-# https://certlogik.com/ssl-checker/gmack.nz/
-#
 #########################################################
+
 define certbotConfig
 
 rsa-key-size = 2048
@@ -36,7 +27,6 @@ agree-tos = true
 
 endef
 
-
 /etc/letsencrypt/cli.ini: export certbotConfig:=$(certbotConfig)
 /etc/letsencrypt/cli.ini:
 	@[ -d  $(dir $@)] || mkdir $(dir $@)
@@ -56,8 +46,6 @@ $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
 	@[ -e $@ ] || openssl dhparam -out $@ 2048
 
-
-
 # NOTE: SERVER is named in config file
 #       It is the VPS server host that can be connected to via ssh
 #       and will be
@@ -74,7 +62,10 @@ certRenew:
 	@$(T)/certbot/certbot-auto certonly
 	@$(MAKE) ngReload:
 
-certConfig: /etc/letsencrypt/cli.ini
+certConfig:
+	@touch /etc/letsencrypt/cli.ini
+	@$(MAKE) certInit
+
 
 
 dhParam: /etc/letsencrypt/dh-param.pem

@@ -94,11 +94,19 @@ domains = $(MY_DOMAINS)
 
 the full set of ini options are in the
 [certbot docs]( https://certbot.eff.org/docs/using.html#command-line)
+
 ### RSA key size:
 
- https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices
- using RSA keys stronger than 2,048 bits  and ECDSA keys stronger than
- 256 bits is a waste of CPU power and might impair user experience
+```
+rsa-key-size = 2048
+```
+
+We leave to RSA key size to 2048 as suggested by 
+[ssllaabs SSL-and-TLS-Deployment-Best-Practices](https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices) 
+
+
+    using RSA keys stronger than 2,048 bits  and ECDSA keys stronger than 256 bits 
+    is a waste of CPU power and might impair user experience
 
 
  https://www.ssllabs.com/ssltest/analyze.html?d=gmack.nz

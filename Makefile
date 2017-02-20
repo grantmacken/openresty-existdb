@@ -105,9 +105,18 @@ help:
 	@echo 'DOMAIN: $(DOMAIN)'
 	@echo 'DOMAINS: $(DOMAINS)'
 	@echo 'MY_DOMAINS: $(MY_DOMAINS)'
+	@echo '-----------------------------'
+	@echo '-----    NOTES          -----'
+	@echo '-----------------------------'
+	@echo 'make help-tls-certs'
+	@echo 'make help-eXist-install'
 
-help-eXist:
-	@$(call cat,notes/eXist-setup-notes.md)
+help-eXist-install:
+	@$(call cat,notes/eXist-install.md)
+
+help-tls-certs:
+	@cat notes/tls-certs.md | head -n 18
+
 
 # eXistdb setup
 # notes/eXist-setup-notes.md

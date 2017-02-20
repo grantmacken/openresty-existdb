@@ -3,7 +3,6 @@ make certInit
 make certRenew
 make certConfig
 ```
-
 - certInit
  - creates a configuration file.
  - This downloads and install certbot 
@@ -14,7 +13,8 @@ make certConfig
  - Restarts openresty so it can pick up the renewed certs
 
 - certConfig 
- - This remakes the command line ini file that certbot uses. It saves it to the default dir ```/etc/letsencrypt```
+ - This remakes the command line ini file that certbot uses. It saves it to the 
+default dir ```/etc/letsencrypt```
 
 The certbot cli.ini is defined in ```mk-includes/or-certs.mk``` , it should work as is, but feel free to alter as you see fit.
 

@@ -36,15 +36,29 @@ endef
 
 $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 	@[ -d  $(dir $@) ] || mkdir $(dir $@)
-	@[ -e $@ ] || curl https://dl.eff.org/certbot-auto -o $@ 
+	@[ -e $@ ] && \
+ echo 'Certbot installed ... ' || \
+ curl https://dl.eff.org/certbot-auto -o $@ 
 	@$(call chownToUser,$@)
 	@chmod +x $@
-	@$(@) --help
 
 /etc/letsencrypt/dh-param.pem: $(T)/certbot/certbot-auto
 	@[ -d  $(dir $@) ] || mkdir -p $(dir $@)
-	@echo 'create a 2048-bits Diffie-Hellman parameter file that nginx can use'
-	@[ -e $@ ] || openssl dhparam -out $@ 2048
+	@echo 'Create a 2048-bits Diffie-Hellman parameter file that nginx can use'
+	@[ -e $@ ] && \
+ echo ' Diffie-Hellman parameter created ... '  ||\
+ openssl dhparam -out $@ 2048
+
+certInit: /etc/letsencrypt/dh-param.pem
+
+certRenew:
+	@echo "renew my certs"
+	@$(T)/certbot/certbot-auto certonly
+	@$(MAKE) ngReload:
+
+certConfig: config
+	@touch /etc/letsencrypt/cli.ini
+	@$(MAKE) certInit
 
 # NOTE: SERVER is named in config file
 #       It is the VPS server host that can be connected to via ssh
@@ -54,21 +68,6 @@ $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 #       A distro upgrade will destroy /etc/letsencrypt
 #       on local dev use sudo to remake and set permissions for dir
 #       then secure copy certs from remote
-
-certInit: /etc/letsencrypt/dh-param.pem
-
-certRenew:
-	@echo "renew my certs"
-	@$(T)/certbot/certbot-auto certonly
-	@$(MAKE) ngReload:
-
-certConfig:
-	@touch /etc/letsencrypt/cli.ini
-	@$(MAKE) certInit
-
-
-
-dhParam: /etc/letsencrypt/dh-param.pem
 
 
 syncCerts:

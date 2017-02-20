@@ -110,23 +110,16 @@ help:
 	@echo '-----------------------------'
 	@echo 'make help-tls-certs'
 	@echo 'make help-eXist-install'
+	@echo 'make help-eXist-service'
 
 help-eXist-install:
-	@$(call cat,notes/eXist-install.md)
+	@cat notes/eXist-install.md | head -n 10
+
+help-eXist-service:
+	@cat notes/eXist-service.md | head -n 26
 
 help-tls-certs:
 	@cat notes/tls-certs.md | head -n 18
-
-
-# eXistdb setup
-# notes/eXist-setup-notes.md
-###############################################
-
-exInstall: $(T)/eXist-run.sh
-
-exClean: 
-	@sudo $(MAKE) exStop
-	@rm -R $(EXIST_HOME)
 
 
 ###############################################

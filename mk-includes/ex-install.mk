@@ -1,8 +1,18 @@
 
-EXIST_DOWNLOAD_SOURCE=https://bintray.com/artifact/download/existdb/releases
+#MAIN TARGETS
 
-exLatestClean:
-	@rm $(T)/eXist-latest.version
+exInstall: $(T)/eXist-run.sh
+
+exClean: 
+	@echo 'stop eXist'
+	@sudo $(MAKE) exStop
+	@echo 'remove eXist dir'
+	@rm -R $(EXIST_HOME)
+
+exBackup:
+	@echo 'TODO!'
+
+# dependency chain
 
 $(T)/eXist-latest.version:
 	@echo "## $@ ##"
@@ -14,7 +24,6 @@ $(T)/eXist-latest.version:
  head -1) > $(@)
 	@echo '-----------------------------------------------------'
 
-
 $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo "## $(notdir $@) ##"
 	@echo "$(call cat,$<)"
@@ -23,7 +32,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
  touch $@,\
  wget -o $@ -O "$(T)/$(call cat,$<)" \
  --trust-server-name  --progress=dot$(:)mega -nc \
- "$(EXIST_DOWNLOAD_SOURCE)/$(call cat,$<)" )
+ "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
 	@cat $@
 	@echo '----------------------------------------------------'
 
@@ -73,7 +82,7 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo "## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
-	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
+	@echo  '$(START_JAR) &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 5 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)

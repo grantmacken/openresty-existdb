@@ -41,6 +41,7 @@ endef
 /etc/letsencrypt/cli.ini:
 	@[ -d  $(dir $@)] || mkdir $(dir $@)
 	@echo "create cli config file"
+	@echo "$${certbotConfig}"
 	@echo "$${certbotConfig}" >  $@
 
 $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
@@ -66,12 +67,15 @@ $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 #       on local dev use sudo to remake and set permissions for dir
 #       then secure copy certs from remote
 
-certbotInit: /etc/letsencrypt/dh-param.pem
+certInit: /etc/letsencrypt/dh-param.pem
 
-certbotRenew:
+certRenew:
 	@echo "renew my certs"
 	@$(T)/certbot/certbot-auto certonly
 	@$(MAKE) ngReload:
+
+certConfig: /etc/letsencrypt/cli.ini
+
 
 dhParam: /etc/letsencrypt/dh-param.pem
 

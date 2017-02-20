@@ -44,7 +44,6 @@ $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 
 /etc/letsencrypt/dh-param.pem: $(T)/certbot/certbot-auto
 	@[ -d  $(dir $@) ] || mkdir -p $(dir $@)
-	@echo 'Create a 2048-bits Diffie-Hellman parameter file that nginx can use'
 	@[ -e $@ ] && \
  echo ' Diffie-Hellman parameter created ... '  ||\
  openssl dhparam -out $@ 2048

@@ -7,18 +7,22 @@
 make --silent exService
 make --silent exServiceRemove
 ```
-1. exService :  create eXist.service in SYSTEMD PATH, enable and start and check if running by looking at the systemd journal log output, then view service state, whether port 8080 is open using nmap.  
-2. exServiceRemove : stop and disable the service, then remove eXist.service in SYSTEMD PATH
+-  exService :  create eXist.service in SYSTEMD PATH, enable and start and 
+check if running by looking at the systemd journal log output, then view 
+service state, whether port 8080 is open using nmap.  
+-  exServiceRemove : stop and disable the service, then remove eXist.service in 
+SYSTEMD PATH
 
-running 'make exService' is pretty much all you need to do. The service should load on os boot, reboot etc.
+running 'make exService' is pretty much all you need to do. The service should 
+load on os boot, reboot etc.
 
-
-# Start, Stop, State Targets
+# Start, Stop, State and Log Targets
 
 ```
 make --silent exServiceStop
 make --silent exServiceStart
 make --silent exServiceState
+make --silent exServiceLog
 ```
 The above should be self evident.
 

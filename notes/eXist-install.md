@@ -1,10 +1,12 @@
-# eXist install target
+# eXist Install Target
 
 ```
 make exInstall
+make exClean
 ```
+- exInstall :
+ automated fetch and install of latest eXist version
 
-1. make exInstall : automated fetch and install of latest eXist version
 
 ------------------------------------------------------------
 
@@ -26,7 +28,8 @@ authorization then OpenResty will handle the Authorization, then make a request
 to eXist using Basic Auth, to access an eXist protected location or query the 
 eXist server.
 
+------------------------------------------------------------
 
-
+mk-includes/ex-install.mk
 
 

@@ -5,11 +5,12 @@ EXIST_HOME := /usr/local/eXist
 EXIST_DATA_DIR := webapp/WEB-INF/data
 # Derived
 OS_NAME      :=  $(shell cat /etc/*release | grep -oP '^NAME="\K\w+')
-SYSTEMD_PATH :=  $(dir $(shell pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system
+SYSTEMD_PATH := $(if $(shell id -u | grep -oP '^0$$'),\
+$(dir $(shell pgrep -fau $$(whoami) systemd | head -n 1 | cut -d ' ' -f 2))system,)
 
-ifeq ($(wildcard $(SYSTEMD_PATH) ),)
- $(error 'could not establish systemd path')
-endif
+# ifeq ($(wildcard $(SYSTEMD_PATH) ),)
+#  $(error 'could not establish systemd path')
+# endif
 
 #this will evaluate when running as sudo
 # otherwise will be empty when running on remote
@@ -93,6 +94,7 @@ default: help
 
 include mk-includes/ex-* 
 include mk-includes/or-cert* 
+include mk-includes/or-install* 
 
 help:
 	@echo 'OS NAME: $(OS_NAME) '

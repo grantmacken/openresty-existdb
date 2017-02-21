@@ -73,18 +73,22 @@ orInstallDownload:
 orInstall: orInstallDownload
 orInstall:
 	@echo "configure and install $(shell cat $(T)/openresty-latest.version) "
-	@[ -d $(T)/$(shell cat $(T)/pcre-latest.version) ] &&  echo " $(shell cat $(T)/pcre-latest.version) "
-	@[ -d $(T)/$(shell cat $(T)/zlib-latest.version) ] &&  echo " $(shell cat $(T)/zlib-latest.version) "
-	@[ -d $(T)/openssl-$(shell cat $(T)/openssl-latest.version) ] &&  echo " $(shell cat $(T)/openssl-latest.version) "
-	@[ -d $(T)/$(shell cat $(T)/openresty-latest.version) ] &&  cd $(T)/$(shell cat $(T)/openresty-latest.version);\
+	@[ -d $(T)/$(shell cat $(T)/pcre-latest.version) ] && \
+ echo " $(shell cat $(T)/pcre-latest.version) "
+	@[ -d $(T)/$(shell cat $(T)/zlib-latest.version) ] && \
+ echo " $(shell cat $(T)/zlib-latest.version) "
+	@[ -d $(T)/openssl-$(shell cat $(T)/openssl-latest.version) ] && \
+ echo " $(shell cat $(T)/openssl-latest.version) "
+	@[ -d $(T)/$(shell cat $(T)/openresty-latest.version) ] && \
+ cd $(T)/$(shell cat $(T)/openresty-latest.version);\
  ./configure \
  --user=$(INSTALLER) \
  --group=$(INSTALLER) \
- --with-select_module \
  --with-pcre="../$(shell cat $(T)/pcre-latest.version)" \
  --with-pcre-jit \
  --with-zlib="../$(shell cat $(T)/zlib-latest.version)" \
  --with-openssl="../openssl-$(shell cat $(T)/openssl-latest.version)" \
+ --with-select_module \
  --with-ipv6 \
  --with-file-aio \
  --with-http_v2_module \

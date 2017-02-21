@@ -95,6 +95,7 @@ default: help
 include mk-includes/ex-* 
 include mk-includes/or-cert* 
 include mk-includes/or-install* 
+include mk-includes/or-hosts* 
 
 help:
 	@echo 'OS NAME: $(OS_NAME) '
@@ -122,7 +123,6 @@ help-eXist-service:
 
 help-tls-certs:
 	@cat notes/tls-certs.md | head -n 18
-
 
 ###############################################
 

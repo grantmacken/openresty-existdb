@@ -126,12 +126,7 @@ help-tls-certs:
 
 ###############################################
 
-# OPENRESTY
-or:
-	@echo 'check if current versions up to date'
-	@$(MAKE) checkLatest
-	@echo 'install openresty'
-	@$(MAKE) orInstall
+build: exInstall orInstall
 
 #orServ: $(SYSTEMD_PATH)/openresty.service
 

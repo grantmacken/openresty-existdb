@@ -9,7 +9,7 @@ addons:
 before_install:
    - pwd
 install:
-  - sudo make exInstall
+  - sudo make --jobs=2 build
   - sudo ./tmp/eXist-run.sh
 script:
   - prove -v - < t/travis.txt

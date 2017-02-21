@@ -1,8 +1,4 @@
 
-
-
-
-
 $(T)/openresty-latest.version:
 	@echo " $(notdir $@)"
 	@echo 'fetch the latest openresty version'
@@ -67,9 +63,15 @@ downloadZlib: $(T)/zlib-latest.version
 
 
 #rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
+orInstallDownload: 
+	@$(MAKE) --silent downloadOpenresty
+	@$(MAKE) --silent downloadOpenssl
+	@$(MAKE) --silent downloadPcre
+	@$(MAKE) --silent downloadZlib
 
+orInstall: orInstallDownload
 orInstall:
-	@$(MAKE) --silent --jobs=4  downloadPcre downloadZlib downloadOpenresty downloadOpenssl
+	rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
 	@echo "configure and install $(shell cat $(T)/openresty-latest.version) "
 	@[ -d $(T)/$(shell cat $(T)/pcre-latest.version) ] &&  echo " $(shell cat $(T)/pcre-latest.version) "
 	@[ -d $(T)/$(shell cat $(T)/zlib-latest.version) ] &&  echo " $(shell cat $(T)/zlib-latest.version) "

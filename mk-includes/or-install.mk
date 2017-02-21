@@ -1,159 +1,88 @@
 
-# latest  versions
-ifeq ($(wildcard $(T)/openresty-latest.version),)
-$(shell echo '0.0.0' > $(T)/openresty-latest.version )
-endif
-ifeq ($(wildcard $(T)/openssl-latest.version ),)
-$(shell echo '0.0.0' > $(T)/openssl-latest.version )
-endif
-ifeq ($(wildcard $(T)/pcre-latest.version ),)
-$(shell echo '0.0.0' > $(T)/pcre-latest.version)
-endif
-ifeq ($(wildcard $(T)/zlib-latest.version ),)
-$(shell echo '0.0.0' > $(T)/zlib-latest.version)
-endif
-
-ifeq ($(wildcard $(T)/luarocks-latest.version),)
-$(shell echo '0.0.0' > $(T)/luarocks-latest.version )
-endif
-
-# previous versions
-ifeq ($(wildcard $(T)/openresty-previous.version),)
-$(shell echo '0.0.0' > $(T)/openresty-previous.version )
-endif
-ifeq ($(wildcard $(T)/openssl-previous.version ),)
-$(shell echo '0.0.0' > $(T)/openssl-previous.version )
-endif
-ifeq ($(wildcard $(T)/pcre-previous.version ),)
-$(shell echo '0.0.0' > $(T)/pcre-previous.version)
-endif
-ifeq ($(wildcard $(T)/zlib-previous.version ),)
-$(shell echo '0.0.0' > $(T)/zlib-previous.version)
-endif
-ifeq ($(wildcard $(T)/luarocks-previous.version),)
-$(shell echo '0.0.0' > $(T)/luarocks-previous.version )
-endif
-
-orLatest: $(T)/openresty-latest.version
-opensslLatest: $(T)/openssl-latest.version
-pcreLatest: $(T)/pcre-latest.version
-zlibLatest: $(T)/zlib-latest.version
-luarocksLatest: $(T)/luarocks-latest.version
-
-checkLatest:
-	@$(MAKE) orLatest
-	@$(MAKE) opensslLatest
-	@$(MAKE) pcreLatest
-	@$(MAKE) zlibLatest
 
 
-orVer != [ -e $(T)/openresty-latest.version ] && cat $(T)/openresty-latest.version || echo ''
-pcreVer != [ -e $(T)/pcre-latest.version ] && cat $(T)/pcre-latest.version || echo ''
-zlibVer != [ -e $(T)/zlib-latest.version ] && cat $(T)/zlib-latest.version || echo ''
-opensslVer != [ -e $(T)/openssl-latest.version ] && cat $(T)/openssl-latest.version || echo ''
-luarocksVer != [ -e $(T)/luarocks-latest.version ] && cat $(T)/luarocks-latest.version || echo ''
 
-.PHONY:  orInstall luarocksInstall ngReload \
- dl downloadOpenresty downloadOpenssl downloadPcre downloadZlib downloadRedis\
- incLetsEncrypt orInitConf openrestyService  orConf orGenSelfSigned certbotConf \
- rocks
 
-$(T)/openresty-latest.version: $(T)/openresty-previous.version 
+$(T)/openresty-latest.version:
 	@echo " $(notdir $@)"
-	@[ -e $(T)/newVerAvailable.txt ] && rm $(T)/newVerAvailable.txt || echo ''
-	@cp -f $@ $(<)
 	@echo 'fetch the latest openresty version'
 	@echo $$( curl -s -L https://openresty.org/en/download.html |\
  tr -d '\n\r' |\
- grep -oP 'openresty-\K([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)' |\
+ grep -oP 'openresty-([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)' |\
  head -1) > $(@)
-	@[ "$$(<$@)" = "$$(<$(<))" ]  || echo "New $(notdir $(@)) $$(<$@) available" > $(T)/newVerAvailable.txt  && \
-echo "Latest Ver: $$(<$@) is the same as Previous Ver: $$(<$(<))"
-	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadOpenresty
-	@touch  $(<)
-	@echo '------------------------------------------------'
+	@cat $@
 
 downloadOpenresty: $(T)/openresty-latest.version
-	@echo https://openresty.org/download/openresty-$(orVer).tar.gz
-	@curl -L https://openresty.org/download/openresty-$(orVer).tar.gz | \
+	@[ -d $(T)/$(shell cat $<) ] && echo '$(shell cat $<) downloaded ...' || echo  'download ... $(shell cat $<)'
+	@[ -d $(T)/$(shell cat $<) ] || \
+ curl -L https://openresty.org/download/$(shell cat $<).tar.gz | \
  tar xz --directory $(T)
-	@echo '------------------------------------------------'
 
-$(T)/openssl-latest.version: $(T)/openssl-previous.version
+$(T)/openssl-latest.version: 
 	@echo " $(notdir $@) "
 	@echo 'fetch the latest opensll version'
-	@cp -f $@ $(<)
 	@echo $$( curl -s -L https://github.com/openssl/openssl/releases | \
  tr -d '\n\r' | \
- grep -oP 'OpenSSL_\K(\d_\d_[2-9]{1}[a-z]{1})(?=\.tar\.gz)' | \
+ grep -oP 'OpenSSL_(\d_\d_[2-9]{1}[a-z]{1})(?=\.tar\.gz)' | \
  head -1) > $(@)
-	@[ "$$(<$@)" = "$$(<$(<))" ] || echo "New $(notdir $(@)) $$(<$@) available" >> $(T)/newVerAvailable.txt  && \
-echo "Latest Ver: $$(<$@) is the same as Previous Ver: $$(<$(<))"
-	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadOpenssl
-	@touch  $(<)
-	@echo '------------------------------------------------'
+	@cat $@
+
+#note the prefix 'openssl-'
 
 downloadOpenssl: $(T)/openssl-latest.version
-	@echo  "$$(<$(<))" 
-	@echo https://github.com/openssl/openssl/archive/OpenSSL_$(opensslVer).tar.gz 
-	@curl -L https://github.com/openssl/openssl/archive/OpenSSL_$(opensslVer).tar.gz | \
+	@[ -d $(T)/openssl-$(shell cat $<) ] && echo '$(shell cat $<) downloaded ...' || echo  'download ... $(shell cat $<)'
+	@[ -d $(T)/openssl-$(shell cat $<) ] || \
+ curl -L https://github.com/openssl/openssl/archive/$(shell cat $<).tar.gz | \
  tar xz --directory $(T)
-	@echo '------------------------------------------------'
 
-$(T)/pcre-latest.version: $(T)/pcre-previous.version
+$(T)/pcre-latest.version:
 	@echo "$(notdir $@) "
 	@echo 'fetch the latest pcre version'
-	@cp -f $@ $(<)
 	@echo $$( curl -s -L ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/ | tr -d '\n\r' |\
- grep -oP 'pcre-\K([0-9\.]+)(?=\.tar\.gz)' |\
+ grep -oP 'pcre-[0-9\.]+(?=\.tar\.gz)' |\
  head -1) > $(@)
-	@[ "$$(<$@)" = "$$(<$(<))" ] || echo "New $(notdir $(@)) $$(<$@) available" >> $(T)/newVerAvailable.txt  && \
-echo "Latest Ver: $$(<$@) is the same as Previous Ver: $$(<$(<))"
-	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadPcre
-	@touch  $(<)
+	@cat $@
 	@echo '------------------------------------------------'
 
 downloadPcre: $(T)/pcre-latest.version
-	@echo 'download the latest pcre  version'
-	@echo  "$$(<$(<))" 
-	curl ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$(shell echo "$$(<$(<))").tar.gz | \
+	@[ -d $(T)/$(shell cat $<) ] && echo '$(shell cat $<) downloaded ...' || echo  'download ... $(shell cat $<)'
+	@[ -d $(T)/$(shell cat $<) ] || \
+ curl ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/$(shell cat $<).tar.gz | \
  tar xz --directory $(T)
-	@echo '------------------------------------------------'
+# @echo '------------------------------------------------'
 
-$(T)/zlib-latest.version: $(T)/zlib-previous.version
-	@echo " $(notdir $@) "
+$(T)/zlib-latest.version:
 	@echo 'fetch the latest zlib version'
-	@cp -f $@ $(<)
 	@echo $$( curl -s -L http://zlib.net/ | tr -d '\n\r' |\
- grep -oP 'zlib-\K([0-9\.]+)(?=\.tar\.gz)' |\
+ grep -oP 'zlib-[0-9\.]+(?=\.tar\.gz)' |\
  head -1) > $(@)
-	@[ "$$(<$@)" = "$$(<$(<))" ] || echo "New $(notdir $(@)) $$(<$@) available" >> $(T)/newVerAvailable.txt  && \
-echo "Latest Ver: $$(<$@) is the same as Previous Ver: $$(<$(<))"
-	@[ "$$(<$@)" = "$$(<$(<))" ]  || $(MAKE) downloadZlib
-	@touch  $(<)
+	@cat $@
 	@echo '------------------------------------------------'
 
 downloadZlib: $(T)/zlib-latest.version
-	@echo 'download the latest  version'
-	@echo  "$$(<$(<))" 
-	curl http://zlib.net/zlib-$(shell echo "$$(<$(<))").tar.gz | \
+	@[ -d $(T)/$(shell cat $<) ] && echo '$(shell cat $<) downloaded ...' || echo  'download ... $(shell cat $<)'
+	@[ -d $(T)/$(shell cat $<) ] || \
+ curl -L http://zlib.net/$(shell cat $<).tar.gz | \
  tar xz --directory $(T)
-	@echo '------------------------------------------------'
 
-orInstall: $(T)/openresty-latest.version 
-	@echo "configure and install openresty $$(<$(<))"
-	@echo "$(pcreVer)"
-	@echo "$(zlibVer)"
-	@echo "$(opensslVer)"
-	@cd $(T)/openresty-$$(<$(<));\
+
+#rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
+
+orInstall:
+	@$(MAKE) --silent --jobs=4  downloadPcre downloadZlib downloadOpenresty downloadOpenssl
+	@echo "configure and install $(shell cat $(T)/openresty-latest.version) "
+	@[ -d $(T)/$(shell cat $(T)/pcre-latest.version) ] &&  echo " $(shell cat $(T)/pcre-latest.version) "
+	@[ -d $(T)/$(shell cat $(T)/zlib-latest.version) ] &&  echo " $(shell cat $(T)/zlib-latest.version) "
+	@[ -d $(T)/openssl-$(shell cat $(T)/openssl-latest.version) ] &&  echo " $(shell cat $(T)/openssl-latest.version) "
+	@[ -d $(T)/$(shell cat $(T)/openresty-latest.version) ] &&  cd $(T)/$(shell cat $(T)/openresty-latest.version);\
  ./configure \
  --user=$(INSTALLER) \
  --group=$(INSTALLER) \
  --with-select_module \
- --with-pcre="../pcre-$(pcreVer)" \
+ --with-pcre="../$(shell cat $(T)/pcre-latest.version)" \
  --with-pcre-jit \
- --with-zlib="../zlib-$(zlibVer)" \
- --with-openssl="../openssl-OpenSSL_$(opensslVer)" \
+ --with-zlib="../$(shell cat $(T)/zlib-latest.version)" \
+ --with-openssl="../openssl-$(shell cat $(T)/openssl-latest.version)" \
  --with-ipv6 \
  --with-file-aio \
  --with-http_v2_module \

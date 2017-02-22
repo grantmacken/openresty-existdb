@@ -27,9 +27,11 @@ It assumes you
 3. have your own github account and obtained github access token that can be used on the commandline
 
 ----------------------------------------------------
+
 ## openresty: a curated nginx build with lua modules
 
- - [openresty install ](notes/openresty-install.md)
+ - [OpenResty install ](notes/openresty-install.md)
+ - [OpenResty systemd service notes](notes/openresty-service.md)
  - [OpenResty TLS certificates](notes/tls.certs.md)
 
 ## eXist: a document store in a jetty container

@@ -47,7 +47,6 @@ http {
   # nginx-config/http-opt.conf
   include http-opt.conf;
 
-
  #  HTTP server
  server {
   root html;
@@ -89,7 +88,7 @@ http {
   #  HTTP server
   #  nginx-config/server-port80.conf
   include server-port80.conf;
-  #  nginx-config/server-port433.conf
+  #  nginx-config/server-port443.conf
   include server-port443.conf;
 }
 
@@ -110,9 +109,11 @@ ngTLS:
 	@test -e /etc/letsencrypt/live/$(DOMAIN)/privkey.pem
 	@ls -al /etc/letsencrypt/live/$(DOMAIN)
 	@echo 'create basic TLS nginx config'
-	@$(MAKE) orStop
+	@$(MAKE) orServiceStop
 	@echo "$${cnfTLS}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
-	@$(MAKE) orStart
+	@$(MAKE) orServiceStart
+	@nmap $(DOMAIN)
+	w3m -dump $(DOMAIN)
 
 ################################################################
 
@@ -192,10 +193,11 @@ endef
 ngBasic: export cnfBasic:=$(cnfBasic)
 ngBasic:
 	@echo 'create basic nginx config'
-	@$(MAKE) orStop
+	@$(MAKE) orServiceStop
 	@echo "$${cnfBasic}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
-	@$(MAKE) orStart
-
+	@$(MAKE) orServiceStart
+	@nmap $(DOMAIN)
+	w3m -dump $(DOMAIN)
 
 ngReload:
 	@sudo $(OPENRESTY_HOME)/bin/openresty -t

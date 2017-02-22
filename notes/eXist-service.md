@@ -4,8 +4,8 @@
 [![asciicast](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb.png)](https://asciinema.org/a/cx7v4u2nh84b34ad9ywsen2cb)
 
 ```
-make --silent exService
-make --silent exServiceRemove
+sudo make --silent exService
+sudo make --silent exServiceRemove
 ```
 -  exService :  create eXist.service in SYSTEMD PATH, enable and start and 
 check if running by looking at the systemd journal log output, then view 
@@ -106,6 +106,16 @@ In a open terminal you can follow the output by using `sudo make exServiceLogFol
 I do this in tmux in a split window
 
 `make exServiceLogFollowTest` : you should see  the log entry
+
+------------------------------------------------------------------
+
+
+## Why the systemd eXist.service active state will be failed rather that inactive
+
+Using the method oulined we rely on the built in shutdown process in eXist and check the success of the shutdown by looking at the logs. 
+
+ ref: [gracefully-killing-a-java-process-managed-by-systemd](https://stegard.net/2016/08/gracefully-killing-a-java-process-managed-by-systemd )
+
 
 ```
 asciinema rec demo.json -w 1 -t 'eXist systemd service'

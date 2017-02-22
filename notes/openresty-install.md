@@ -5,19 +5,21 @@
  make orInstall
 ```
 
-Automates the openresty installl 
+Automates the OpenResty install 
  
-Established latest version of sources,
+Establishes latest version of sources,
 then if required downloads the  source archive.
 
-- openresty
+- OpenResty
 - zlib : zip libarary
 - pcre : perl reg ex  
 - openssl 
 
-Installs and compliles from latest sources.
+Installs and compiles from latest sources.
 
-Alter to fit your requirements the configurable options target. `mk-includes/or-install.mk
+the configurable OpenResty configure install options are in the target. 
+`mk-includes/or-install.mk`.  Alter the configure options to fit your 
+requirements. 
 
 ```
 orInstall:
@@ -51,7 +53,6 @@ orInstall:
  --without-http_uwsgi_module \
  --without-http_scgi_module \
  && make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
-
 ```
 
 

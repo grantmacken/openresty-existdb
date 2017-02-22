@@ -1,4 +1,8 @@
 
+ # https://stegard.net/2016/08/gracefully-killing-a-java-process-managed-by-systemd/
+# using the method oulined below
+# the systemd active state will be failed rather that inactive
+
 JAVA := $(shell which java)
 
 START_JAR := $(JAVA) \
@@ -28,6 +32,10 @@ ExecStop=$(START_JAR) shutdown -u admin -p $(P)
 [Install]
 WantedBy=multi-user.target
 endef
+
+# SuccessExitStatus=143
+# Type=forking
+# PIDFile=$(EXIST_HOME)/$(EXIST_LOGS_DIR)/eXist.pid
 
 exServiceIs = $(shell systemctl is-$(1) eXist.service )
 
@@ -72,7 +80,7 @@ exServiceState:
 
 exServiceRemove:
 	@$(call assert-is-root)
-	@$(MAKE) exServiceStop
+	@systemctl is-active eXist.service >/dev/null && systemctl stop eXist.service || true
 	@systemctl is-enabled eXist.service >/dev/null && systemctl disable eXist.service
 	@[ -e $(SYSTEMD_PATH)/eXist.service ] && rm $(SYSTEMD_PATH)/eXist.service
 	@systemctl daemon-reload
@@ -105,7 +113,7 @@ exServiceStart:
 	@$(MAKE) exServiceState
 
 
-exStatus:
+exServiceStatus:
 	@systemctl status  eXist.service
 
 exServiceLog:

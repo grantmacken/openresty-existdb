@@ -3,6 +3,7 @@ include config
 OPENRESTY_HOME := /usr/local/openresty
 EXIST_HOME := /usr/local/eXist
 EXIST_DATA_DIR := webapp/WEB-INF/data
+EXIST_LOGS_DIR := webapp/WEB-INF/logs
 # Derived
 OS_NAME      :=  $(shell cat /etc/*release | grep -oP '^NAME="\K\w+')
 SYSTEMD_PATH := $(if $(shell id -u | grep -oP '^0$$'),\
@@ -93,9 +94,8 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 default: help
 
 include mk-includes/ex-* 
-include mk-includes/or-cert* 
-include mk-includes/or-install* 
-include mk-includes/or-hosts* 
+include mk-includes/or-* 
+
 
 help:
 	@echo 'OS NAME: $(OS_NAME) '
@@ -114,6 +114,9 @@ help:
 	@echo 'make help-tls-certs'
 	@echo 'make help-eXist-install'
 	@echo 'make help-eXist-service'
+
+help-OpenResty-install:
+	@cat notes/openresty-install.md | head -n 10
 
 help-eXist-install:
 	@cat notes/eXist-install.md | head -n 10
@@ -140,7 +143,6 @@ orClean:
 	@echo 'remove openresty'
 	@rm -R -f $(OPENRESTY_HOME)
 	@ls -al /usr/local
-
 
 
 opmGet:

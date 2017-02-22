@@ -11,10 +11,10 @@
 #  OPENRESTY HOME  file path to openresty
 #  EXIST_AUTH      basic access authentication for exist admin account-
 #  this is a base64 encoded string that can  be used for HTTP Basic Athentication 
-#  with eXistdb proxied behind openresty
+#  with openrestydb proxied behind openresty
 #  Any Nginx auth will be done using JWT Bearer tokens over HTTPS
 #    if Authorised then
-#    use Basic Auth to access eXist protected location
+#    use Basic Auth to access openresty protected location
 #
 # @see  https://tools.ietf.org/html/rfc2617
 #
@@ -46,59 +46,88 @@ PrivateTmp=true
 WantedBy=multi-user.target
 endef
 
-# Environment="LUA_CPATH='/usr/local/openresty/luajit/lib/lua/5.1/?.so;'"
-# SYSTEMD_PATH=/usr/lib/systemd/system
+orServiceIs = $(shell systemctl is-$(1) openresty.service )
 
-$(SYSTEMD_PATH)/openresty.service:
-	@echo "setup openresty as openresty.service under systemd"
-	@$(call assert-is-root)
-	@echo 'Check if service is enabled'
-	@echo "$(systemctl is-enabled openresty.service)"
-	@echo 'Check if service is active'
-	@echo "$(systemctl is-enabled openresty.service)"
-	@systemctl is-active openresty.service && systemctl stop  openresty.service || echo 'inactive'
-	@$(MAKE) orService
-
-
-orService: export openrestyService:=$(openrestyService)
-orService:
-	@echo "$${openrestyService}"
-	@echo "$${openrestyService}" > $(SYSTEMD_PATH)/openresty.service
-
-# @echo '--------------------------------------------------------------'	
-orStartService:
+orService: $(SYSTEMD_PATH)/openresty.service
 	@systemctl is-enabled openresty.service || systemctl enable openresty.service
-	@systemctl start openresty.service
-	@echo 'Check if service is enabled'
-	@systemctl is-enabled openresty.service
-	@echo 'Check if service is active'
-	@systemctl is-active openresty.service
-	@echo 'Check if service is failed'
-	@systemctl is-failed openresty.service || echo 'OK!'
-	@journalctl -f -u openresty.service -o cat
+	@systemctl is-active openresty.service ||  systemctl start openresty.service
+	@$(MAKE) orServiceState
 
-orNotActive = $(shell systemctl is-active openresty.service | grep -oP 'inactive|failed')
-
-orRemoveService:
+$(SYSTEMD_PATH)/openresty.service: export openrestyService:=$(openrestyService)
+$(SYSTEMD_PATH)/openresty.service:
 	@$(call assert-is-root)
-	@[ -e $(SYSTEMD_PATH)/openresty.service ] && rm $(SYSTEMD_PATH)/openresty.service || echo '' 
+	@echo "Setup OpenResty as openresty.service under systemd"
+	@echo "$${openrestyService}" > $@
 
-orStop:
-	@$(if $(orNotActive),, systemctl stop openresty.service)
-	@echo 'openresty service is now' $$(systemctl is-active  openresty.service)
+orServiceState:
+	@echo ''
+	@echo ' ========================================================='
+	@echo ''
+	@echo "Check if service is enabled: $(call orServiceIs,enabled)"
+	@echo "Check if service is active: $(call orServiceIs,active)"
+	@echo "Check if service is failed: $(call orServiceIs,failed)"
+	@sleep 1
+	@echo ''
+	@echo ' ========================================================='
+	@echo ''
+	nmap --reason -p 80 127.0.0.1 
+	nmap --reason -p 443 127.0.0.1 
+	sleep 1
+	@echo ''
+	@echo ' ========================================================='
+	@echo ''
 
-orStart:
-	@$(if $(orNotActive),systemctl start openresty.service, )
-	@echo 'openresty service is now' $$(systemctl is-active  openresty.service)
+orServiceRemove:
+	@$(call assert-is-root)
+	@$(MAKE) orServiceStop
+	@systemctl is-enabled openresty.service >/dev/null && systemctl disable openresty.service
+	@[ -e $(SYSTEMD_PATH)/openresty.service ] && rm $(SYSTEMD_PATH)/openresty.service
+	@systemctl daemon-reload
 
-orStatus:
+orServiceStart:
+	@$(call assert-is-root)
+	@systemctl is-enabled  openresty.service >/dev/null
+	@systemctl is-active openresty.service  >/dev/null && true || systemctl start openresty.service
+	@systemctl is-failed openresty.service  >/dev/null && systemctl start openresty.service || true
+	@$(MAKE) --silent orServiceState
+	@$(MAKE) --silent orLoggedErrors
+
+orServiceStartDev:
+	@$(call assert-is-root)
+	@systemctl is-enabled  openresty.service >/dev/null
+	@systemctl is-active openresty.service  >/dev/null && true || systemctl start openresty.service
+	@systemctl is-failed openresty.service  >/dev/null && systemctl start openresty.service || true
+	@$(MAKE) --silent orServiceState
+	@$(MAKE) --silent orLoggedErrorFollow
+
+orServiceStop:
+	@$(call assert-is-root)
+	@systemctl is-enabled  openresty.service  >/dev/null
+	@systemctl is-active openresty.service >/dev/null && \
+ systemctl stop openresty.service >/dev/null || \
+ echo 'already $(call orServiceIs,active)'
+	@$(MAKE) --silent orLoggedErrors
+	@$(MAKE) --silent exServiceState
+
+orServiceStatus:
 	@systemctl status  openresty.service
 
+orServiceLogFollow:
+	@$(call assert-is-root)
+	@journalctl -f -u openresty.service -o cat
 
-daemonReload:
-	@echo 'Check if service is enabled'
-	@systemd-analyze verify openresty.service
-	@systemctl is-enabled openresty.service && systemctl disable openresty.service || echo 'disabled'
-	@systemctl daemon-reload
-	@systemctl reset-failed
+orServiceLog:
+	@$(call assert-is-root)
+	@journalctl -u openresty.service -o cat | tail -n 4
 
+orLoggedErrors:
+	@echo 'openresty home : $(OPENRESTY_HOME)'
+	tail -n 20 $(OPENRESTY_HOME)/nginx/logs/error.log
+
+orLoggedErrorFollow:
+	@echo 'openresty home : $(OPENRESTY_HOME)'
+	tail -n -1 -f  $(OPENRESTY_HOME)/nginx/logs/error.log
+
+scpAccessToken:
+	@echo 'copy current access token over to remote'
+	@scp $(ACCESS_TOKEN) $(SERVER):~/$(GIT_USER)

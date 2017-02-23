@@ -29,6 +29,9 @@ The above should be self evident.
 When stopping or starting the service we follow the output of the systemd log. 
 When the appropriate log entry is logged we know we have successfully stopped 
 or started the service. Doing it this way we should get as graceful shutdown.
+However because systemd does not recognise java exist codes as a successful 
+exist, systemd will output a 'failed' state rather than an 'inactive' state. This 
+state does not effect our ability to start or stop the service...
 
 - exServiceState : should provide a view of the state of the service. It is 
 called after you stop or start the service. This call also uses nmap to see if 

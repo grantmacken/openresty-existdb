@@ -93,8 +93,7 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
 default: help
 
-include mk-includes/ex-* 
-include mk-includes/or-* 
+include mk-includes/*
 
 
 help:
@@ -131,24 +130,8 @@ help-tls-certs:
 
 build: exInstall orInstall
 
-#orServ: $(SYSTEMD_PATH)/openresty.service
-
-orPaths: $(HOME)/.config/bash/openresty.sh
-
-orPathsClean:
-	@echo 'remove openresty bash script' 
-	@rm  $(HOME)/.config/bash/openresty.sh
-
-orClean:
-	@echo 'remove openresty'
-	@rm -R -f $(OPENRESTY_HOME)
-	@ls -al /usr/local
 
 
-opmGet:
-	@echo "install opm packages"
-	<@opm get pintsized/lua-resty-http
-	@opm get SkyLothar/lua-resty-jwt
-	@opm get bungle/lua-resty-reqargs
+
 
 

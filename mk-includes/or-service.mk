@@ -1,28 +1,4 @@
-
-
-##################################
-# 
-# To set up openresty as a service
-#
-# `make orService'
-#
-#  note: openresty now symlinked to usr/local/openresty/bin
-#  note: system environment variables
-#  OPENRESTY HOME  file path to openresty
-#  EXIST_AUTH      basic access authentication for exist admin account-
-#  this is a base64 encoded string that can  be used for HTTP Basic Athentication 
-#  with openrestydb proxied behind openresty
-#  Any Nginx auth will be done using JWT Bearer tokens over HTTPS
-#    if Authorised then
-#    use Basic Auth to access openresty protected location
-#
-# @see  https://tools.ietf.org/html/rfc2617
-#
-# the env var must be set in openresty.conf
-# env EXIST_AUTH;
-# an then can be accessed use in lua modules
-# local existAuth = os.getenv("EXIST_AUTH") 
-#syslog.target network.target remote-fs.target nss-lookup.target
+# Set Up OpenResty as a Service
 ##################################
 
 define openrestyService
@@ -60,22 +36,21 @@ $(SYSTEMD_PATH)/openresty.service:
 	@echo "$${openrestyService}" > $@
 
 orServiceState:
-	@echo ''
-	@echo ' ========================================================='
-	@echo ''
-	@echo "Check if service is enabled: $(call orServiceIs,enabled)"
-	@echo "Check if service is active: $(call orServiceIs,active)"
-	@echo "Check if service is failed: $(call orServiceIs,failed)"
-	@sleep 1
-	@echo ''
-	@echo ' ========================================================='
-	@echo ''
-	nmap --reason -p 80 127.0.0.1 
-	nmap --reason -p 443 127.0.0.1 
 	sleep 1
 	@echo ''
 	@echo ' ========================================================='
 	@echo ''
+	nmap --reason -sT 127.0.0.1 | grep  open
+	sleep 1
+	@echo ''
+	@echo ' ========================================================='
+	@echo ''
+	@echo ''
+	@echo "Service is enabled: $(call orServiceIs,enabled)"
+	@echo "service is active: $(call orServiceIs,active)"
+	@echo "Service is failed: $(call orServiceIs,failed)"
+	@echo ''
+	@echo ' ========================================================='
 
 orServiceRemove:
 	@$(call assert-is-root)
@@ -87,8 +62,10 @@ orServiceRemove:
 orServiceStart:
 	@$(call assert-is-root)
 	@systemctl is-enabled  openresty.service >/dev/null
-	@systemctl is-active openresty.service  >/dev/null && true || systemctl start openresty.service
-	@systemctl is-failed openresty.service  >/dev/null && systemctl start openresty.service || true
+	@systemctl is-active openresty.service  >/dev/null \
+ && true || systemctl start openresty.service
+	@systemctl is-failed openresty.service  >/dev/null \
+ && systemctl start openresty.service;wait || true
 	@$(MAKE) --silent orServiceState
 	@$(MAKE) --silent orLoggedErrors
 
@@ -104,7 +81,7 @@ orServiceStop:
 	@$(call assert-is-root)
 	@systemctl is-enabled  openresty.service  >/dev/null
 	@systemctl is-active openresty.service >/dev/null && \
- systemctl stop openresty.service >/dev/null || \
+ systemctl stop openresty.service;wait || \
  echo 'already $(call orServiceIs,active)'
 	@$(MAKE) --silent orLoggedErrors
 	@$(MAKE) --silent exServiceState
@@ -122,12 +99,8 @@ orServiceLog:
 
 orLoggedErrors:
 	@echo 'openresty home : $(OPENRESTY_HOME)'
-	tail -n 20 $(OPENRESTY_HOME)/nginx/logs/error.log
+	tail $(OPENRESTY_HOME)/nginx/logs/error.log
 
 orLoggedErrorFollow:
 	@echo 'openresty home : $(OPENRESTY_HOME)'
 	tail -n -1 -f  $(OPENRESTY_HOME)/nginx/logs/error.log
-
-scpAccessToken:
-	@echo 'copy current access token over to remote'
-	@scp $(ACCESS_TOKEN) $(SERVER):~/$(GIT_USER)

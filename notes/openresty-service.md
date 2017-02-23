@@ -20,6 +20,7 @@ sudo make orServiceStart
 sudo make orServiceStartDev
 make orServiceState
 sudo make orServiceLog
+sudo make orServiceLogFollow
 make orServiceStatus
 make orLoggedErrors
 make orLoggedErrorFollow

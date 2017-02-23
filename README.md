@@ -32,6 +32,7 @@ It assumes you
 
  - [OpenResty install ](notes/openresty-install.md)
  - [OpenResty systemd service notes](notes/openresty-service.md)
+ - [OpenResty nginx configuration notes](notes/nginx-config.md)
  - [OpenResty TLS certificates](notes/tls.certs.md)
 
 ## eXist: a document store in a jetty container

@@ -1,8 +1,3 @@
-opmGet:
-	@echo "install opm packages"
-	<@opm get pintsized/lua-resty-http
-	@opm get SkyLothar/lua-resty-jwt
-	@opm get bungle/lua-resty-reqargs
 
 $(T)/luarocks-latest.version: $(T)/luarocks-previous.version
 	@echo "{{{ $(notdir $@) "

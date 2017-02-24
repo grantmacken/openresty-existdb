@@ -43,27 +43,31 @@ pid       logs/nginx.pid;
 
 The service is defined in `mk-includes/or-service.mk`
 
-Of Note: 
-We create 2 Environment Vars 
+## Using Systemd Enviroment var to talk to backend server
 
-1. OPENRESTY HOME  file path to openresty
-2. EXIST_AUTH      basic access authentication for exist dba
+The same method can be used for any backend server ( eXist, redis, etc. )
+ - Place OpenResty in front of the backend server. 
+ - Set an Environment var in Systend service file   [ `Environment="API_KEY=keyValue"` ]
+ - Capture the var in nginx.conf directive. [ ` env API_KEY;` ]
+ - Use in lua block [ os.getenv("API_KEY")';] to talk to backend
 
-In our final setup eXist is proxied behind OpenResty
+For eXist we create 2 Environment Vars 
 
-Access control will be done by OpenResty (JWT tokens over https)
-If authorised then OpenResty can use Basic Authorisation to access the eXist protected locations or make APIs  calls
+1. `OPENRESTY HOME`  file path to openresty
+2. `EXIST_AUTH`       basic access authentication for exist dba
 
 ```
 Environment="OPENRESTY_HOME=$(OPENRESTY_HOME)"
 Environment="EXIST_AUTH=$(shell echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )" 
 ```
 
-this is a base64 encoded string that can  be used for HTTP Basic Athentication 
-with openrestydb proxied behind openresty
-Any Nginx auth will be done using JWT Bearer tokens over HTTPS
-  if Authorised then
-  use Basic Auth to access openresty protected location
+In our final setup eXist is proxied behind OpenResty. Access control will be 
+done by OpenResty (JWT tokens over https). Only If Authorised by OpenResty, 
+then OpenResty will use Basic Authorization provided in the Enviroment var to 
+access eXist.
+
+
+## define OpenResty Service
 
 ```
 define openrestyService

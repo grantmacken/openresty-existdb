@@ -1,12 +1,15 @@
-exDeploy:
-	@$(make) $(t)/deploy.sh
-	$(t)/deploy.sh
-	@rm $(t)/deploy.sh
+# 
+#  Deploy an eXist app from Repo
+#################################
+exDeploy: $(T)/deploy.sh
+	@$(make) $(T)/deploy.sh
+	@$(T)/deploy.sh
+	@rm $(T)/deploy.sh
 
 exUndeploy:
-	@$(make) $(t)/undeploy.sh
-	$(t)/undeploy.sh
-	@rm $(t)/undeploy.sh
+	@$(make) $(T)/undeploy.sh
+	@$(T)/undeploy.sh
+	@rm $(T)/undeploy.sh
 
 $(T)/download_url.txt:
 	@echo "## $(notdir $@) ##"

@@ -9,6 +9,8 @@ After=network.target
 [Service]
 Type=forking
 Environment="OPENRESTY_HOME=$(OPENRESTY_HOME)"
+Environment="EXIST_HOME=$(EXIST_HOME)"
+Environment="EXIST_DATA_DIR=$(EXIST_DATA_DIR)"
 Environment="EXIST_AUTH=$(shell echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )"
 WorkingDirectory=$(OPENRESTY_HOME)
 PIDFile=$(OPENRESTY_HOME)/nginx/logs/nginx.pid
@@ -25,9 +27,14 @@ endef
 orServiceIs = $(shell systemctl is-$(1) openresty.service )
 
 orService: $(SYSTEMD_PATH)/openresty.service
-	@systemctl is-enabled openresty.service || systemctl enable openresty.service
-	@systemctl is-active openresty.service ||  systemctl start openresty.service
-	@$(MAKE) orServiceState
+	@cat $<
+	@systemctl is-enabled openresty.service  || systemctl enable openresty.service
+	@echo "Service is: $(call orServiceIs,enabled)"
+	@systemctl is-active openresty.service  || systemctl start openresty.service
+	@echo "Service is: $(call orServiceIs,active)"
+	@echo "Service is: $(call orServiceIs,failed)"
+	@systemctl is-failed openresty.service && $(MAKE) --silent orServiceStateDiag || \
+ $(MAKE) --silent orServiceState
 
 $(SYSTEMD_PATH)/openresty.service: export openrestyService:=$(openrestyService)
 $(SYSTEMD_PATH)/openresty.service:
@@ -35,13 +42,20 @@ $(SYSTEMD_PATH)/openresty.service:
 	@echo "Setup OpenResty as openresty.service under systemd"
 	@echo "$${openrestyService}" > $@
 
+orServiceStateDiag:
+	@echo ' ========================================================='
+	systemctl status openresty.service
+	@echo ' ========================================================='
+	journalctl -xe 
+	false
+
 orServiceState:
-	sleep 1
+	@sleep 1
 	@echo ''
 	@echo ' ========================================================='
 	@echo ''
-	nmap --reason -sT 127.0.0.1 | grep  open
-	sleep 1
+	@nmap --reason -sT 127.0.0.1 | grep  open
+	@sleep 1
 	@echo ''
 	@echo ' ========================================================='
 	@echo ''
@@ -83,6 +97,7 @@ orServiceStop:
 	@systemctl is-active openresty.service >/dev/null && \
  systemctl stop openresty.service;wait || \
  echo 'already $(call orServiceIs,active)'
+	@systemctl daemon-reload
 	@$(MAKE) --silent orLoggedErrors
 	@$(MAKE) --silent exServiceState
 

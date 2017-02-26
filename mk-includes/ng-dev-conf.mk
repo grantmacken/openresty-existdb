@@ -1,4 +1,4 @@
-# cmd: ` make nfDev` to create this nginx.conf
+# cmd: sudo make ngDev to create this nginx.conf
 # features
 # main context
 # - error log set to debug
@@ -16,6 +16,8 @@ worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 
 # Note: set env declaration to access backend db
 env EXIST_AUTH;
+env EXIST_HOME;
+env EXIST_DATA_DIR;
 
 # Note: error log with debug used during development
 error_log logs/error.log debug;  #only during development
@@ -38,12 +40,11 @@ http {
   #  nginx-config/server-port80-redirect.conf
   include server-port80-redirect.conf;
 
-  #  nginx-config/server-port443.conf
-  include dev-server-port443.conf;
+  #  nginx-config/dev-server-port443.conf
+  include dev-server.conf;
 }
 
 endef
-
 
 ngDev: export cnfDev:=$(cnfDev)
 ngDev:
@@ -59,12 +60,14 @@ ngDev:
 	@$(MAKE) --silent ngInc
 	@echo '#  recreate dev nginx config'
 	@echo '===================================================='
+	@echo "$${cnfDev}"
 	@echo "$${cnfDev}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
 	@echo '# test conf and reload'
 	@echo '===================================================='
 	@$(OPENRESTY_HOME)/bin/openresty -t
 	@$(OPENRESTY_HOME)/bin/openresty -s reload
-	@echo '#  recreate dev nginx config'
+	@echo '#  run our tests '
+	@echo '===================================================='
 	@prove -v - < t/dev.txt
 
 # #@$(MAKE) orServiceStop

@@ -1,16 +1,16 @@
 
 
 SRC_LUA := $(shell find lua-modules -name '*.lua' )
-LUA_MODULES  := $(patsubst lua-modules/%.lua,$(OPENRESTY_HOME)/site/lualib/mod/%.lua,$(SRC_LUA))
+LUA_MODULES  := $(patsubst lua-modules/%.lua,$(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua,$(SRC_LUA))
 
-lua-modules: $(LUA_MODULES)
+orModules: $(LUA_MODULES)
 
-watch-lua-modules:
+watch-luaModules:
 	@watch -q $(MAKE) lua-modules
 
-.PHONY:  watch-lua-modules 
+.PHONY:  watch-luaModules 
 
-$(OPENRESTY_HOME)/site/lualib/mod/%.lua: lua-modules/%.lua 
+$(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua: lua-modules/%.lua 
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
 	@echo "SRC: $<" >/dev/null
@@ -21,6 +21,6 @@ $(OPENRESTY_HOME)/site/lualib/mod/%.lua: lua-modules/%.lua
 
 opmGet:
 	@echo "install opm packages"
-	<@opm get pintsized/lua-resty-http
+	@opm get pintsized/lua-resty-http
 	@opm get SkyLothar/lua-resty-jwt
 	@opm get bungle/lua-resty-reqargs

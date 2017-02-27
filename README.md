@@ -20,6 +20,7 @@ It assumes you
 2. setup git with configured global 
 [user.name]( https://help.github.com/articles/setting-your-username-in-git/)
  and user.email
+
 ```
  git config --global user.name 
  git config --global user.email
@@ -34,6 +35,7 @@ It assumes you
  - [OpenResty systemd service notes](notes/openresty-service.md)
  - [OpenResty nginx configuration notes](notes/nginx-config.md)
  - [OpenResty TLS certificates](notes/tls.certs.md)
+ - [OpenResty lua modules](notes/lua-modules.md)
 
 ## eXist: a document store in a jetty container
 

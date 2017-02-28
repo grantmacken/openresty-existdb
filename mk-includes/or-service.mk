@@ -106,16 +106,19 @@ orServiceStatus:
 
 orServiceLogFollow:
 	@$(call assert-is-root)
-	@journalctl -f -u openresty.service -o cat
+	@journalctl -f -u openresty.service -o cat |\
+ grep --line-buffered -oP '^.+\K\[.+\].+$$'
 
 orServiceLog:
 	@$(call assert-is-root)
-	@journalctl -u openresty.service -o cat | tail -n 4
+	@journalctl -u openresty.service -o cat  |\
+ grep --line-buffered -oP '^.+\K\[.+\].+$$'
 
 orLoggedErrors:
 	@echo 'openresty home : $(OPENRESTY_HOME)'
 	tail $(OPENRESTY_HOME)/nginx/logs/error.log
 
-orLoggedErrorFollow:
-	@echo 'openresty home : $(OPENRESTY_HOME)'
-	tail -n -1 -f  $(OPENRESTY_HOME)/nginx/logs/error.log
+orLoggedErrorFollow: $(OPENRESTY_HOME)/nginx/logs/error.log
+	@tail -f  $(OPENRESTY_HOME)/nginx/logs/error.log |\
+ grep --line-buffered -oP '^.+\K\[\w+\].+$$' |\
+ cut -d ',' -f1

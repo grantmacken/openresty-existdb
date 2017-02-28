@@ -31,7 +31,8 @@ worker_rlimit_nofile 8000;
 include events.conf;
 
 http {
-  lua_code_cache off; #only during development
+  include http-lua.conf;
+  # nginx-config/http-lua.conf
   include mime.types;
   # nginx-config/http-opt.conf
   include http-opt.conf;

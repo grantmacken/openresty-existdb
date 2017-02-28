@@ -103,3 +103,14 @@ orInstall:
  --without-http_scgi_module \
  && make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
 
+orCheck:
+	@ls $(OPENRESTY_HOME)/bin
+	@$(OPENRESTY_HOME)/bin/openresty -v
+	@$(OPENRESTY_HOME)/nginx/sbin/nginx -v
+	@$(OPENRESTY_HOME)/bin/openresty -V
+	@ls $(T)/$(shell cat $(T)/openresty-latest.version)
+
+orCheckConfigureOptions:
+	@cd $(T)/$(shell cat $(T)/openresty-latest.version) && ./configure --help
+
+

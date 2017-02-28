@@ -6,7 +6,7 @@ LUA_MODULES  := $(patsubst lua-modules/%.lua,$(OPENRESTY_HOME)/site/lualib/$(GIT
 orModules: $(LUA_MODULES)
 
 watch-luaModules:
-	@watch -q $(MAKE) lua-modules
+	@watch -q $(MAKE) orModules 
 
 .PHONY:  watch-luaModules 
 

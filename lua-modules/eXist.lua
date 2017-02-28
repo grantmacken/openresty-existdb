@@ -26,7 +26,16 @@ domain = ngx.var.site
 }
 --
 --UTILITY TODO move to utility.lua
-function requestError( status, msg ,description)
+local function contains(tab, val)
+  for index, value in ipairs (tab) do
+    if value == val then
+      return true
+    end
+  end
+  return false
+end
+
+local function requestError( status, msg ,description)
   ngx.status = status
   ngx.header.content_type = 'application/json'
   local json = cjson.encode({
@@ -37,1009 +46,152 @@ function requestError( status, msg ,description)
   ngx.exit(status)
 end
 
-function extractID( url )
-  -- short urls https://gmack.nz/xxxxx
-  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
-  if err then 
+local function acceptMethods(methods)
+  --  the methods this endpoint can handle
+  local method = ngx.req.get_method()
+  if not contains( methods, method )  then
     return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+      ngx.HTTP_METHOD_NOT_IMPLEMENTED,
+      method .. ' method not implemented',
+      'endpoint only implements POST and GET methods') 
   end
-  return sID
+ return method  
 end
 
+function acceptContentTypes(contentTypes)
+  --  the content-types this endpoint can handle
+  local contentType = ngx.var.http_content_type
+  local from, to, err = ngx.re.find(contentType ,"(multipart/form-data)")
+  if from then
+    contentType =  'multipart/form-data'
+  end
 
-
-function getPostsPath()
-  return '/db/data/' ..  ngx.var.domain .. '/docs/posts/'
+  if not contains(contentTypes,contentType)  then
+    local msg = 'endpoint does not accept' .. contentType
+    return requestError(
+      ngx.HTTP_NOT_ACCEPTABLE,
+      'not accepted',
+      msg )
+  end
+  return contentType
 end
 
-
-
-function getRequest2( query )
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local host = '127.0.0.1'
-  local port = 8080
-
-  local url = require "net.url"
-  local http = require "resty.http"
-  local httpc = http.new()
-  httpc:set_timeout(6000) 
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-  httpc:set_timeout(2000)
-  httpc:proxy_response( httpc:request({
-        version = 1.1,
-        method = "GET",
-        path = query,
-        headers = {
-          ["Authorization"] = authorization 
-        },
-        ssl_verify = false
-    }))
-  httpc:set_keepalive()
-end
-
-function pathQuery( path )
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local domain = ngx.var.http_Host
-  local appPath  = "/exist/rest/db/apps/" .. domain
-  local reqPath = appPath .. '/' .. path
-  local http = require "resty.http"
-  local host = '127.0.0.1'
-  local port = 8080
-  local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "GET",
-      path = reqPath,
-      headers = {
-        ["Authorization"] = authorization 
-      },
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
-  end
-
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-  ngx.say("has body: ", res.has_body)
-
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
-    end
-  end
-    ngx.say(body)
-  end
-
-function getQuery( query )
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local domain = ngx.var.http_Host
-  local appPath  = "/exist/rest/db/apps/" .. domain
-  local queryString = '_wrap=no&_query=' ..  query 
-  local reqPath = appPath .. '?' .. queryString
-  local http = require "resty.http"
-  local host = '127.0.0.1'
-  local port = 8080
-  local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "GET",
-      path = reqPath,
-      headers = {
-        ["Authorization"] = authorization 
-      },
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
-  end
-
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-  ngx.say("has body: ", res.has_body)
-
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
-    end
-  end
-  ngx.say(body)
-end
-
-function postQuery( query )
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local domain = ngx.var.http_Host
-  local appPath  = "/exist/rest/db/apps/" .. domain 
-  local  xml = require 'xml'
-  local txt  =   [[
-xquery version "3.1";
-import module namespace archive = "http://gmack.nz/#archive" at "xmldb:exist://db/apps/]] .. domain .. [[/modules/lib/archive.xqm";
-let $x := format-date(current-date(), "[Y0001]-[M01]-[D01]")
-
-return (
-]] .. query .. [[
-)
-]]
-
-    -- local properties = {
-    --   xml = 'properties',{
-    --     xml = 'property', name = 'method', value = 'json'
-    --   }
-    -- }
-  local  data = { 
-  xml = 'query' , 
-  xmlns = 'http://exist.sourceforge.net/NS/exist',
-  wrap = 'no', {
-    xml = 'text', txt
-    }
-  } 
-  ngx.say(xml.dump(data))
-
-  local http = require "resty.http"
-  local host = '127.0.0.1'
-  local port = 8080
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "POST",
-      path = appPath,
-      headers = {
-        ["Authorization"] = authorization 
-      },
-      body =  xml.dump(data),
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
-  end
-
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-  ngx.say("has body: ", res.has_body)
-
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
-    end
-  end
-    ngx.say(body)
-end
-
---[[
-
-function _M.createXML( data )
-  local xml = require 'xml'
-  local http = require "resty.http"
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local contentType = 'application/xml'
-  local domain   = ngx.var.http_Host
-  local resource = xml.find(data, 'id')[1]
-  local kindOfPost = xml.find(data, 'entry').kind
-  local appPath  = "/exist/restxq/db/apps/" .. domain  
-  local endpoint  = "micropub"
-  local endpointPath  = appPath .. '/' .. colPath
-  local host = '127.0.0.1'
-  local port = 8080
-
-  --  ngx.say(putPath)
-  --  ngx.say(xml.dump(data))
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "POST",
-      path = endpointPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = contentType
-      },
-      body =  xml.dump(data),
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
-  end
- --  ngx.say("status: ", res.status)
- --  ngx.say("reason: ", res.reason)
- --  ngx.say("has body: ", res.has_body)
-
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
-    end
-  end
-  ngx.status = ngx.HTTP_CREATED
-  --ngx.header.content_type = 'text/plain'
-  ngx.header.location = 'http://' .. domain .. '/' .. resource 
-  
-end
-
---   if res.has_body then
---     body, err = res:read_body()
---     if not body then
---       ngx.say("failed to read body: ", err)
---       return
---     end
---   -- ngx.say(type(body))
---   -- ngx.say(body)
---   end
---]]
-
-function _M.replaceProperty( uri, property, item )
-  local domain      = ngx.var.site
-  local resource    = extractID( uri)
-  local xml = require 'xml'
-  local contentType = 'application/xml'
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
-  local xmlNode = {} 
-  -- TODO only allow certain properties
-  -- ngx.say( uri )
-  -- ngx.say( property )
-  -- ngx.say( item )
-  if property == 'content' then
-    xmlNode = { xml = property, type = 'text', item } 
+function _M.processRequest()
+  ngx.log(ngx.INFO, "Process Request" )
+  ngx.log(ngx.INFO, "" )
+  local method =  acceptMethods({"POST","GET"})
+  ngx.log(ngx.INFO, "Accepted Method [ " .. method  .. ' ]')
+  if method == "POST" then
+     processPost()
   else
-    xmlNode = { xml = property, item } 
+     processGet()
   end
-
-  -- ngx.say(xml.dump(xmlNode))
-
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $path := "]] .. docPath .. [["
-    let $document := doc($path)
-    let $node := ]] .. xml.dump(xmlNode) .. [[
-
-    let $item := ']] .. item .. [['
-    return
-    if ( exists( $document/entry/]] .. property .. [[)) then (
-      update replace $document/entry/]] .. property .. [[ with $node )
-    else (
-      update insert $node into $document/entry
-    )
-
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-  --  ngx.say(txt)
-  local response =  sendMicropubRequest( restPath, txt )
-  ngx.exit(response.status)
-  ngx.say("status: ", response.status)
-  ngx.say("reason: ", response.reason)
-  ngx.exit(response.status)
 end
 
-function _M.addProperty( uri, property, item )
-  local domain      = ngx.var.site
-  local resource    = extractID( uri) 
-  local xml = require 'xml'
-  local contentType = 'application/xml'
-  -- TODO only allow certain properties
-  ngx.say( uri )
-  ngx.say( property )
-  ngx.say( item )
-  local xmlNode = { xml = property, item }
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
-  ngx.say(xml.dump(xmlNode))
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $path := "]] .. docPath .. [["
-    let $document := doc($path)
-    let $node := ]] .. xml.dump(xmlNode) .. [[
-
-    let $item := ']] .. item .. [['
-    return
-    if ($document/entry/]] .. property .. [[  = $node ) then (
-      update replace $document/entry/]] .. property .. [[[./string() eq $item]  with $node )
-    else (
-      update insert $node into $document/entry
-    )
-
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-  ngx.say(txt)
-  local response =  sendMicropubRequest( restPath, txt )
-  ngx.say("status: ", response.status)
-  ngx.say("reason: ", response.reason)
-
-  ngx.status = ngx.HTTP_OK
-end
-
-function _M.removeProperty( uri, property)
-  local domain      = ngx.var.site
-  local resource    = extractID( uri) 
-  local xml = require 'xml'
-  local contentType = 'application/xml'
-  -- TODO only allow certain properties
-  -- ngx.say( uri )
-  -- ngx.say( property )
-  -- ngx.say( domain )
-  -- local xmlNode = { xml = property }
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
-  -- ngx.say(xml.dump(xmlNode))
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $path := "]] .. docPath .. [["
-    let $document := doc($path)
-    return
-    if ( exists($document//]] .. property .. [[ )) 
-      then ( update delete $document//]] .. property .. [[ )
-    else ( )
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-  -- ngx.say(txt)
-  local response =  sendMicropubRequest( restPath, txt )
-  return response.reason
-end
-
-function _M.removePropertyItem( uri, property, item )
-  local contentType = 'application/xml'
-  local domain      = ngx.var.site
-  local resource    = extractID( uri) 
-  -- TODO only allow certain properties
-  -- ngx.say( resource )
-  -- ngx.say( property )
-  -- ngx.say( item )
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $path := "]] .. docPath .. [["
-    let $document := doc($path)
-    let $item := ']] .. item .. [['
-    let $oldString := if($document/entry/]] .. property .. [[/text()) then (
-       $document/entry/]] .. property .. [[/string())
-    else ( )
-    let $newString := if ( empty( $oldString )) then ( )
-    else(
-        let $tokens := tokenize( $oldString, ' ' ) 
-        let $filtered := filter( $tokens , function($token){not( $token eq $item )})
-        return
-        string-join($filtered,' ')
-    )
-    return
-    if ( empty( $oldString )) then ( )
-    else ( update value $document/entry/]] .. property .. [[ with $newString )
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-  -- ngx.say(txt)
-
-  local response =  sendMicropubRequest( restPath, txt )
-  return response.reason
-end
-
---[[
-deleting and undeleting posts
-moves posts to and from a recycle collection ( like a trash/recycle bin )
-on windows
---]]
-
-function _M.deletePost( uri)
-  local contentType = 'application/xml'
-  local domain      = ngx.var.site
-  local resource    = extractID( uri) 
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local sourceCollection = '/db/data/' .. domain .. '/docs/posts'
-  local targetCollection = '/db/data/' .. domain .. '/docs/recycle'
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $sourceCollection := "]] .. sourceCollection .. [["
-    let $targetCollection := "]] .. targetCollection .. [["
-    let $resource         := "]] .. resource .. [["
-    let $docPath          := $sourceCollection || '/' || $resource
-    return
-    if (exists($docPath)) then (
-     xmldb:move( $sourceCollection, $targetCollection, $resource)
-    )
-    else ( )
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-  -- ngx.say(txt)
-  local response =  sendMicropubRequest( restPath, txt )
-  -- ngx.say("status: ", response.status)
-  -- ngx.say("reason: ", response.reason)
-  return response.reason
-end
-
-function _M.undeletePost( uri )
-  local contentType = 'application/xml'
-  local domain      = ngx.var.site
-  local resource    = extractID( uri) 
-  -- ngx.say( uri )
-  local restPath  = '/exist/rest/db/apps/' .. domain 
-  local sourceCollection = '/db/data/' .. domain .. '/docs/recycle'
-  local targetCollection = '/db/data/' .. domain .. '/docs/posts'
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    let $sourceCollection := "]] .. sourceCollection .. [["
-    let $targetCollection := "]] .. targetCollection .. [["
-    let $resource         := "]] .. resource .. [["
-    let $docPath          := $sourceCollection || '/' || $resource
-    return
-    if (exists($docPath)) then (
-     xmldb:move( $sourceCollection, $targetCollection, $resource)
-    )
-    else ( )
-
-    ]] ..']]>' .. [[ 
-    </text>
-  </query>
-]]
-   --  ngx.say(txt)
-   local response =  sendMicropubRequest( restPath, txt )
-   return response.reason
-end
-
-function _M.fetchMediaLinkDoc( )
-  -- ngx.say( 'Fetch Media Link Doc' )
-  local http = require "resty.http"
-  local authorization = cfg.auth 
-  local domain        = ngx.var.site
-  -- ngx.say( ngx.var.uri )
-  -- ngx.say( ngx.var.request_uri )
-  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs' ..  ngx.var.uri
-  -- ngx.say( docPath )
-  local httpc = http.new()
-  -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+function processGet()
+  ngx.log(ngx.INFO, "Process GET query to eXist endpoint")
+  ngx.log(ngx.INFO, ngx.var.uri)
+  local response = {}
+  local msg = ''
+  local args = ngx.req.get_uri_args()
+  if not args[1] then
+    -- TODO!
+    ngx.log(ngx.INFO, "Look for path")
+    msg =  "No arguments in URL"
+    ngx.log(ngx.WARN, msg)
+    requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
   end
-  httpc:set_timeout(2000)
-  httpc:proxy_response( httpc:request({
-        version = 1.1,
-        method = "GET",
-        path = docPath,
-        headers = {
-          ["Content-Type"] = "application/xml",
-          ["Authorization"] = authorization 
-        },
-        ssl_verify = false
-    }))
-  httpc:set_keepalive()
-end
-
-function _M.fetchPostsDoc( uri )
-  -- ngx.say( 'Fetch Posts Doc' )
-  local domain      = ngx.var.site
-  local resource    = extractID( uri)
-  local http = require "resty.http"
-  local authorization = cfg.auth 
-  local domain        = ngx.var.site
-  -- ngx.say( ngx.var.uri )
-  -- ngx.say( ngx.var.request_uri )
-  local docPath  = "/exist/rest/db/data/" .. domain .. '/docs/posts/' .. resource
-  -- ngx.say( docPath )
-  local httpc = http.new()
-  -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-  httpc:set_timeout(2000)
-  httpc:proxy_response( httpc:request({
-        version = 1.1,
-        method = "GET",
-        path = docPath,
-        headers = {
-          ["Content-Type"] = "application/xml",
-          ["Authorization"] = authorization 
-        },
-        ssl_verify = false
-    }))
-  httpc:set_keepalive()
-end
-
-function _M.putMedia( part_body, resource, mime  )
-  local http = require "resty.http"
-  local authorization = cfg.auth 
-  local domain        = ngx.var.site
-  -- ngx.say( contentType )
-  local dataPath = "/exist/rest/db/data/" .. domain
-  local colPath  = "media"
-  local putPath  = dataPath .. '/' .. colPath .. '/' .. resource
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "PUT",
-      path = putPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = mime
-      },
-      body = part_body ,
-      ssl_verify = false
-    })
-  if not res then
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'request failure')
-  end
-  -- ngx.say("status: ", res.status)
-  -- ngx.say("reason: ", res.reason)
-  -- ngx.say("has body: ", res.has_body)
-
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-      ngx.say("failed to read body: ", err)
-      return
+    -- TODO!
+    ngx.log(ngx.INFO, "Look for path")
+    for key, val in pairs(args) do
+      if type(val) == "table" then
+        ngx.say(key, ": ", table.concat(val, ", "))
+      else
+        ngx.say(key, ": ", val)
+      end
     end
-  end
-  return res.reason
- -- ngx.header.location = 'http://' .. domain .. '/_media/' .. resource 
- --  ngx.status = ngx.HTTP_CREATED
- -- ngx.header.content_type = 'text/plain'
-end 
+    
+end
 
-function sendMicropubRequest( restPath, txt  )
-  local http = require "resty.http"
-  local authorization = cfg.auth
-  local contentType = 'application/xml'
-  -- ngx.say( txt )
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "POST",
-      path = restPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = contentType
-      },
-      body =  txt,
-      ssl_verify = false
+function processPost()
+  ngx.log(ngx.INFO, "Process the content-types this endpoint can handle")
+  local contentType = acceptContentTypes({
+      'application/xml',
+      'application/json',
+      'application/x-www-form-urlencoded',
+      'multipart/form-data'
     })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+  ngx.log(ngx.INFO, "Accepted Content Type [ " .. contentType  .. ' ]')
+  --  ngx.say( contentType )
+  if contentType  == 'application/x-www-form-urlencoded' then
+    --processPostArgs()
+  elseif contentType  == 'multipart/form-data' then
+    -- ngx.say( contentType )
+    --processMultPartForm()
+  elseif contentType  == 'application/json' then
+    -- processJsonBody()
   end
-  return res
 end
 
-function _M.restxqMicropubRequest( jData )
-  --ngx.say(' restxq Micropub Request ' )
-  local http = require "resty.http"
-  local authorization = cfg.auth
-  local contentType = 'application/json'
-  local restxqPath = '/exist/restxq/' .. cfg.domain .. '/_micropub'
-  --ngx.say(restxqPath)
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-
-  httpc:set_timeout(2000)
-  httpc:proxy_response( httpc:request({
-        version = 1.1,
-        method = "POST",
-        path = restxqPath,
-        headers = {
-          ["Content-Type"] =contentType,
-          ["Authorization"] = authorization
-        },
-        body =  cjson.encode(jData),
-        ssl_verify = false
-    }))
-  httpc:set_keepalive()
- end
-
-
-
-function isMedia( )
-  return xml.find(data,'media')
-end
-
-function _M.putJSON( collection, resource,  data )
-  local http = require "resty.http"
-  local authorization = cfg.auth
-  local contentType = 'application/json'
-  local domain   = cfg.domain
-  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
-   -- ngx.say( domain )
-   -- ngx.say( authorization )
-   -- ngx.say( collection )
-   -- ngx.say( resource  )
-   -- ngx.say( cjson.encode( data ))
-  -- store without extension
-  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "PUT",
-      path = putPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = contentType
-      },
-      body =   cjson.encode( data ),
-      ssl_verify = false
-    })
-
-  if not res then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'no response' )
-  end
-  --  ngx.say( res.reason )
-  return res.reason
-end
-
-function _M.putXML( collection,  data )
-  local xml = require 'xml'
-  local http = require "resty.http"
-  local authorization = cfg.auth
-  local contentType = 'application/xml'
-  local domain   = cfg.domain 
-  local resource = xml.find(data, 'uid')[1]
-  --local kindOfPost = xml.find(data, 'entry').kind
-  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
-  -- store without extension
-  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "PUT",
-      path = putPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = contentType
-      },
-      body =  xml.dump(data),
-      ssl_verify = false
-    })
-
-  if not res then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'no response' )
-  end
-
- --  ngx.say("status: ", res.status)
- --  ngx.say("reason: ", res.reason)
- --  ngx.say("has body: ", res.has_body)
-
-  -- if res.has_body then
-  --   body, err = res:read_body()
-  --   if not body then
-  --     ngx.say("failed to read body: ", err)
-  --     return
-  --   end
-  -- end
-  --
-  -- ok, err = http:close()
-  -- if not ok then 
-  --   return requestError(
-  --     ngx.HTTP_SERVICE_UNAVAILABLE,
-  --     'HTTP service unavailable',
-  --     'failure on closing connection' )
-  -- end
-
-  return res.reason
-end
-
-function deleteRequest( path )
-  local http = require "resty.http"
-  local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
-  local domain = ngx.var.http_Host
-  local appPath  = "/exist/rest/db/apps/" .. domain
-  local deletePath = appPath .. '/' .. path 
-  local host = '127.0.0.1'
-  local port = 8080
-  ngx.say(deletePath)
-
-  local httpc = http.new()
-  local ok, err = httpc:connect(host, port)
-  if not ok then
-    ngx.say("failed to connect to ",host ," ",  err)
-    return
-  end
-
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "DELETE",
-      path = deletePath,
-      headers = {
-        ["Authorization"] = authorization 
-      },
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return
-  end
-  ngx.say("status: ", res.status)
-  ngx.say("reason: ", res.reason)
-end
-
--- function store( query )
---   local authorization = 'Basic ' .. os.getenv("EXIST_AUTH") 
---   local domain = ngx.var.http_Host
---   local restPath  = '/exist/rest/db/apps/' .. domain
---   local colPath  = "/db/apps/" .. domain .. '/data/posts'
---   local resource = 'test.xml'
---   local xml = require 'xml'
---   local txt = [[
--- <query xmlns='http://exist.sourceforge.net/NS/exist' wrap='no'>
---   <text><![CDATA[
--- xquery version "3.1";
--- xmldb:store(']] .. colPath .. [[',']]  .. resource .. [[',<entry/> )
--- ]] .. ']]></text></query>'
-
---   ngx.say(txt)
---   -- local data = xml.load(txt)
---   -- ngx.say(xml.dump(data))
---     -- local properties = {
---     --   xml = 'properties',{
---     --     xml = 'property', name = 'method', value = 'json'
---     --   }
---     -- }
--- -- local  data = { 
--- -- xml = 'query' , 
--- -- xmlns = 'http://exist.sourceforge.net/NS/exist',
--- -- wrap = 'no', {
--- --   xml = 'text', txt
--- --     }
--- --   } 
---   -- return
---   local http = require "resty.http"
---   local host = '127.0.0.1'
---   local port = 8080
-
---   local httpc = http.new()
---   local ok, err = httpc:connect(host, port)
---   if not ok then
---     ngx.say("failed to connect to ",host ," ",  err)
---     return
---   end
-
---   local res, err = httpc:request({
---       version = 1.1,
---       method = "POST",
---       path = restPath,
---       headers = {
---         ["Authorization"] = authorization 
---       },
---       body =  txt,
---       ssl_verify = false
---     })
---   if not res then
---     ngx.say("failed to request: ", err)
---     return
---   end
-
---   ngx.say("status: ", res.status)
---   ngx.say("reason: ", res.reason)
---   ngx.say("has body: ", res.has_body)
-
---   if res.has_body then
---     body, err = res:read_body()
---     if not body then
---       ngx.say("failed to read body: ", err)
---       return
---     end
---   end
---     ngx.say(body)
--- end
 
  -- +++++++++++++++++++++++++++++++++++++++++++++++++++
  -- generic exist endpoint for talking to eXistdb 
 
- function _M.processRequest()
-   local method = ngx.req.get_method()
-   local contentType =  ngx.req.get_headers()["Content-Type"]
+ -- function _M.processRequest()
+ --   local msg = ''
+ --   local method = ngx.req.get_method()
+ --   local contentType =  ngx.req.get_headers()["Content-Type"]
+ --   ngx.log(ngx.INFO, "Method: " .. method)
+ --   if contentType ~= nil then
+ --     msg = "content negotiation for: " .. contentType
+ --     ngx.log(ngx.INFO, msg)
+ --   else
+ --     ngx.status = ngx.HTTP_BAD_REQUEST
+ --     ngx.log(ngx.INFO, 'No content type ... exiting')
+ --     ngx.eof()
+ --   end
+ --    ngx.say( method )
+
+    -- local h = ngx.req.get_headers()
+ -- for k, v in pairs(h) do
+    --  ngx.log(ngx.INFO,  k ..  ' : ' .. v )
+   -- end
+   -- ngx.log(ngx.INFO, "Content-Type" .. contentType)
    -- ngx.say( method )
    -- ngx.say( contentType )
    -- ngx.say( ngx.var.resources )
    -- ngx.say( ngx.var.media)
-   ngx.req.read_body()
-   local data = ngx.req.get_body_data()
-   local http = require "resty.http"
-   local authorization = cfg.auth 
-   local domain        = ngx.var.site
-   -- ngx.say( ngx.var.uri )
-   -- ngx.say( ngx.var.request_uri )
-   local restPath  = "/exist/rest/db/apps/" .. domain 
-   -- ngx.say( docPath )
-   local httpc = http.new()
-   -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
-   local ok, err = httpc:connect(cfg.host, cfg.port)
-   if not ok then 
-     return requestError(
-       ngx.HTTP_SERVICE_UNAVAILABLE,
-       'HTTP service unavailable',
-       'connection failure')
-   end
-   httpc:set_timeout(2000)
-   httpc:proxy_response( httpc:request({
-         version = 1.1,
-         method = "POST",
-         path = restPath,
-         headers = {
-           ["Content-Type"] = "application/xml",
-           ["Authorization"] = authorization 
-         },
-         body =  data,
-         ssl_verify = false
-     }))
-   httpc:set_keepalive()
- end
-
-function _M.exist()
-  -- proccess application 'application/x-www-form-urlencoded' requests
-  local method = ngx.req.get_method()
-  local contentType = ngx.req.get_headers()["Content-Type"]
-  local acceptContentType = {}
-  acceptContentType['application/x-www-form-urlencoded'] = true
-  acceptContentType['application/json'] = true
-  acceptContentType['application/xml'] = true
-  -- local acceptContentType = {
-  --   'x-www-form-urlencoded' = true,
-  --   'json' = true, 
-  --   'xml' = true 
-  -- }
-
-   ngx.say(contentType)
-   ngx.say(method)
-   
-
-   if not acceptContentType[contentType]  then
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      'endpoint only accepts content-type of either xml, json or x-www-form-urlencoded')
-   end
-
-  ngx.req.read_body()
-  local args, err = ngx.req.get_post_args()
-  if not args then
-    local args = ngx.req.get_uri_args()
-    return
-  end
-  for key, val in pairs(args) do
-    if type(val) == "table" then
-      ngx.say(key, ": ", table.concat(val, ", "))
-    else
-      ngx.say(key, ": ", val)
-    end
-  end
-  -- see intro
-  if args['path'] then
-    pathQuery( args['path'])
-  elseif args['gq'] then
-    getQuery( args['gq'])
-  elseif args['pq'] then
-    postQuery( args['pq'] )
-  elseif args['h'] then
-    putRequest()
-  elseif args['delete'] then
-    deleteRequest(args['delete'])
-  elseif args['store'] then
-    store()
-  end
-end
+   -- ngx.req.read_body()
+   -- local data = ngx.req.get_body_data()
+   -- local http = require "resty.http"
+   -- local authorization = cfg.auth 
+   -- local domain        = ngx.var.site
+   -- -- ngx.say( ngx.var.uri )
+   -- -- ngx.say( ngx.var.request_uri )
+   -- local restPath  = "/exist/rest/db/apps/" .. domain 
+   -- -- ngx.say( docPath )
+   -- local httpc = http.new()
+   -- -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
+   -- local ok, err = httpc:connect(cfg.host, cfg.port)
+   -- if not ok then 
+   --   return requestError(
+   --     ngx.HTTP_SERVICE_UNAVAILABLE,
+   --     'HTTP service unavailable',
+   --     'connection failure')
+   -- end
+   -- httpc:set_timeout(2000)
+   -- httpc:proxy_response( httpc:request({
+   --       version = 1.1,
+   --       method = "POST",
+   --       path = restPath,
+   --       headers = {
+   --         ["Content-Type"] = "application/xml",
+   --         ["Authorization"] = authorization 
+   --       },
+   --       body =  data,
+   --       ssl_verify = false
+   --   }))
+   -- httpc:set_keepalive()
+ -- end
 
 return _M

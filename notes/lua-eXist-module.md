@@ -20,6 +20,45 @@ curl \
  -H "Authorization: Bearer $(<../.site-access-token)" \
  https://gmack.nz/exist
 
+
+Multipart Form Data
+
+OpenRest cant handle upload with http/2 yet
+
+curl -X POST \
+ --http1.1 \
+-H "Authorization: Bearer $(<../.site-access-token)" \
+-F 'file=@../gmack.nz/resources/images/opt/gmack.png' \
+ https://gmack.nz/exist
+
+curl -X POST \
+ -F 'file=@/path/to/data.xml \
+ https://gmack.nz/exist/data
+
+ resolves /db/data/{domain}
+
+  
+ resolves /db/apps/{domain}/resources/styles/maia.css
+
+curl \
+ -X GET \
+ -H 'Accept: application/xml' \
+ -H "Authorization: Bearer $(<../.site-access-token)" \
+ https://gmack.nz/exist/data/{id}
+
+/db/apps/{domain}/
+
+
+#  a GET request : data sent in the query part of the URL
+
+curl \
+ -GsS \
+ -H 'Accept: application/xml' \
+ -H "Authorization: Bearer $(<../.site-access-token)" \
+ -d "_query="/"
+ https://gmack.nz/exist/app/
+ 
+
 query PATHS
 
 app vs data prefixed paths
@@ -43,43 +82,6 @@ curl \
  https://gmack.nz/exist/app/resources/styles/main.css
 
  resolves /db/apps/{domain}/resources/styles/main.css
-
-
-Multipart Form
-
-curl -X POST \
- -F 'image=@/path/to/image.jpg' \
- https://gmack.nz/exist/app
-
- resolves /db/apps/{domain}
-
-curl -X POST \
- -F 'file=@/path/to/data.xml \
- https://gmack.nz/exist/data
-
- resolves /db/data/{domain}
-
-  
- resolves /db/apps/{domain}/resources/styles/main.css
-
-curl \
- -X GET \
- -H 'Accept: application/xml' \
- -H "Authorization: Bearer $(<../.site-access-token)" \
- https://gmack.nz/exist/data/{id}
-
-/db/apps/{domain}/
-
-
-#  a GET request : data sent in the query part of the URL
-
-curl \
- -GsS \
- -H 'Accept: application/xml' \
- -H "Authorization: Bearer $(<../.site-access-token)" \
- -d "_query="/"
- https://gmack.nz/exist/app/
- 
 
 
 

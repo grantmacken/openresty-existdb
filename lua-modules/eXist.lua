@@ -1,20 +1,13 @@
 local _M = {}
 
 --[[
- my module for interacting with eXist database
- conveniance queries
-  GET requests
-   path path to xml collection or a resource contained in apps/myApp dir
-       eg path=repo.xml
-       returns xml string
-   gq  simple function  _query to db 
-       returns a string
-   xq  execute a xquery script located apps/myApp/modules/xq dir 
-   TODO!
 
-   POST requests
-
-   pq  a post query
+jump to:
+_M.processRequest : main entry point
+  processPost
+    processMultiPartForm
+    _M.putMedia
+  processGet()
 
 --]]
 
@@ -22,8 +15,44 @@ local cfg = {
 port = 8080,
 host = '127.0.0.1',
 auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
-domain = ngx.var.site 
+domain = ngx.var.domain 
 }
+
+local reqargsOptions = {
+  timeout          = 1000,
+  chunk_size       = 4096,
+  max_get_args     = 100,
+  mas_post_args    = 100,
+  max_line_size    = 512,
+  max_file_uploads = 10
+}
+
+local extensions = {
+png = 'image/png',
+jpg = 'image/jpeg',
+jpeg = 'image/jpeg',
+gif = 'image/gif'
+}
+
+local assetRoute = {
+image  =   'resources/images',
+scripts  = 'resources/styles',
+styles  =  'resources/styles',
+icons  =   'resources/icons'
+}
+
+-- ++++++++++++++++++++++++++++++++++++++++++
+
+function read(f)
+  local open     = io.open
+  local f, e = open(f, "rb")
+  if not f then
+    return nil, e
+  end
+  local c = f:read "*a"
+  f:close()
+  return c
+end
 --
 --UTILITY TODO move to utility.lua
 local function contains(tab, val)
@@ -76,9 +105,35 @@ function acceptContentTypes(contentTypes)
   return contentType
 end
 
+function acceptFormFields(fields , field)
+  --  the multpart form fields  this endpoint can handle
+  if not contains( fields, field )  then
+    return requestError(
+      ngx.HTTP_NOT_ACCEPTABLE,
+      'not accepted',
+      'endpoint only doesnt accept' .. field )
+  end
+ return method  
+end
+
+function getMimeType( filename )
+  -- get file extension Only handle 
+  local ext, err = ngx.re.match(filename, "[^.]+$")
+  if ext then
+   return ext[0], extensions[ext[0]]
+  else
+    if err then
+      ngx.log(ngx.ERR, "error: ", err)
+      return
+    end
+    ngx.say("match not found")
+  end
+end
+
+-- ++++++++++++++++++++++++++++++++++++++++++
+
 function _M.processRequest()
   ngx.log(ngx.INFO, "Process Request" )
-  ngx.log(ngx.INFO, "" )
   local method =  acceptMethods({"POST","GET"})
   ngx.log(ngx.INFO, "Accepted Method [ " .. method  .. ' ]')
   if method == "POST" then
@@ -110,11 +165,10 @@ function processGet()
         ngx.say(key, ": ", val)
       end
     end
-    
 end
 
 function processPost()
-  ngx.log(ngx.INFO, "Process the content-types this endpoint can handle")
+  -- ngx.log(ngx.INFO, "Process the content-types this endpoint can handle")
   local contentType = acceptContentTypes({
       'application/xml',
       'application/json',
@@ -126,72 +180,185 @@ function processPost()
   if contentType  == 'application/x-www-form-urlencoded' then
     --processPostArgs()
   elseif contentType  == 'multipart/form-data' then
-    -- ngx.say( contentType )
-    --processMultPartForm()
+    processMultiPartForm()
   elseif contentType  == 'application/json' then
     -- processJsonBody()
+  elseif contentType  == 'application/xml' then
+         processXquery()
   end
 end
 
+function processXquery()
+  ngx.log(ngx.INFO, "Process xQuery ")
+  ngx.req.read_body()
+  local data = ngx.req.get_body_data()
+  -- ngx.log(ngx.INFO, type(data))
+  -- ngx.log(ngx.INFO, data)
+  local restPath =  '/exist/rest/db/apps/' ..  ngx.var.domain
+  local http = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "POST",
+        path = restPath,
+        headers = {
+          ["Content-Type"] =  ngx.header.content_type,
+          ["Authorization"] = cfg.auth 
+        },
+        body =  data,
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+end
 
- -- +++++++++++++++++++++++++++++++++++++++++++++++++++
- -- generic exist endpoint for talking to eXistdb 
+function processMultiPartForm()
+  ngx.log(ngx.INFO, 'process Multi Part Form')
+  if ngx.var.http2 ~= 'h2' then
+    msg = 'Upload only done with HTTP1.1'
+    ngx.log(ngx.INFO, msg)
+  else
+    ngx.log(ngx.INFO,  'http version 2 ' .. ngx.var.http2)
+    msg = 'Upload only done with HTTP1.1'
+    ngx.log(ngx.WARN, msg)
+    requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+  end
+ 
+  local msg = ''
 
- -- function _M.processRequest()
- --   local msg = ''
- --   local method = ngx.req.get_method()
- --   local contentType =  ngx.req.get_headers()["Content-Type"]
- --   ngx.log(ngx.INFO, "Method: " .. method)
- --   if contentType ~= nil then
- --     msg = "content negotiation for: " .. contentType
- --     ngx.log(ngx.INFO, msg)
- --   else
- --     ngx.status = ngx.HTTP_BAD_REQUEST
- --     ngx.log(ngx.INFO, 'No content type ... exiting')
- --     ngx.eof()
- --   end
- --    ngx.say( method )
+  -- https://github.com/bungle/lua-resty-reqargs 
+  local split = require( "ngx.re" ).split
+  local reqargs = require "resty.reqargs"
+  local get, post, files = reqargs( reqargsOptions )
+   if not get then
+    error(post)
+  end
 
-    -- local h = ngx.req.get_headers()
- -- for k, v in pairs(h) do
-    --  ngx.log(ngx.INFO,  k ..  ' : ' .. v )
-   -- end
-   -- ngx.log(ngx.INFO, "Content-Type" .. contentType)
-   -- ngx.say( method )
-   -- ngx.say( contentType )
-   -- ngx.say( ngx.var.resources )
-   -- ngx.say( ngx.var.media)
-   -- ngx.req.read_body()
-   -- local data = ngx.req.get_body_data()
-   -- local http = require "resty.http"
-   -- local authorization = cfg.auth 
-   -- local domain        = ngx.var.site
-   -- -- ngx.say( ngx.var.uri )
-   -- -- ngx.say( ngx.var.request_uri )
-   -- local restPath  = "/exist/rest/db/apps/" .. domain 
-   -- -- ngx.say( docPath )
-   -- local httpc = http.new()
-   -- -- local scheme, host, port, path, query? = unpack(httpc:parse_uri(uri, false))
-   -- local ok, err = httpc:connect(cfg.host, cfg.port)
-   -- if not ok then 
-   --   return requestError(
-   --     ngx.HTTP_SERVICE_UNAVAILABLE,
-   --     'HTTP service unavailable',
-   --     'connection failure')
-   -- end
-   -- httpc:set_timeout(2000)
-   -- httpc:proxy_response( httpc:request({
-   --       version = 1.1,
-   --       method = "POST",
-   --       path = restPath,
-   --       headers = {
-   --         ["Content-Type"] = "application/xml",
-   --         ["Authorization"] = authorization 
-   --       },
-   --       body =  data,
-   --       ssl_verify = false
-   --   }))
-   -- httpc:set_keepalive()
- -- end
+  ngx.log(ngx.INFO, 'FILES')
+  for key, val in pairs(files) do
+    if type(val) == "table" then
+      ngx.log(ngx.INFO,'key', ": ", key)
+      ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+      for k, v in pairs( val ) do
+        ngx.log(ngx.INFO,'key', ": ", k)
+        ngx.log(ngx.INFO, 'value type: ' ..  v)
+      end
+    else
+      ngx.log(ngx.INFO,'key', ": ", key)
+    end
+  end
+
+  local properties = {}
+
+  for key, val in pairs(files) do
+    if type(val) == "table" then
+      local ext, mimeType = getMimeType( val.file )
+      local properties = {}
+      properties[ 'mimeType' ] =  mimeType
+      -- ngx.log(ngx.INFO,'key', ": ", key)
+      -- ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+      properties['name']      = val.file
+      properties['size']      = val.size
+      properties['temp']      = val.temp
+      properties['uploaded']  = ngx.today()
+      properties['signature'] = ngx.md5(part_body)
+      properties['mime']      = mimeType
+      properties['extension'] = ext
+
+      ngx.log(ngx.INFO,     'name [ ' ..  properties.name      .. ' ]')
+      ngx.log(ngx.INFO,     'mime [ ' ..  properties.mime      .. ' ]')
+      ngx.log(ngx.INFO,     'temp [ ' ..  properties.temp      .. ' ]')
+      ngx.log(ngx.INFO,     'size [ ' ..  properties.size      .. ' ]')
+      ngx.log(ngx.INFO, 'uploaded [ ' ..  properties.uploaded  .. ' ]')
+      ngx.log(ngx.INFO,'signature [ ' ..  properties.signature .. ' ]')
+      ngx.log(ngx.INFO,'extension [ ' ..  properties.extension .. ' ]')
+
+      local whereToType = 'data'
+      if  split( ngx.var.uri , '/')[3] == 'app' then
+        whereToType = 'apps'
+      end
+
+      if whereToType == 'apps' then
+
+        -- get aset route
+        local assetType = split( mimeType, '/')[1] 
+        ngx.log(ngx.INFO,'assetType [ ' ..  assetType .. ' ]')
+        if assetType ~= 'image' then
+          assetType = split( mimeType, '/')[2] 
+        end
+
+        -- TODO!
+        properties['path'] =  '/exist/rest/db/' ..  whereToType  .. 
+        '/'  .. ngx.var.domain  .. '/' ..  assetRoute[assetType] .. '/' .. properties.name
+
+        properties['location'] = 'https://' .. ngx.var.domain ..  '/' ..
+        assetRoute[assetType] .. '/' .. properties.name
+
+        if  assetType == 'image' then
+          ngx.log(ngx.INFO, 'REST :path [ '  ..  properties.path .. ' ]'   )
+          ngx.log(ngx.INFO, 'mime: [ '  ..  properties.mime .. ' ]'   )
+          ngx.log(ngx.INFO, 'temp: [ '  ..  properties.temp .. ' ]'   )
+          ngx.log(ngx.INFO, 'location: [ '  ..  properties.location .. ' ]'   )
+          if putAsset(properties) ~= 'Created' then
+            return requestError(
+              ngx.HTTP_SERVICE_UNAVAILABLE,
+              'HTTP service unavailable',
+              'request failure')
+          end
+        end
+      end
+    end
+  end
+end
+
+function putAsset( properties )
+  ngx.log(ngx.INFO, 'PUT APP ASSET')
+  local http          = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = properties.path,
+      headers = {
+        ["Authorization"] =  cfg.auth,
+        ["Content-Type"] = properties.mime
+      },
+      body = read( properties.temp ),
+      ssl_verify = false
+    })
+
+  if not res then
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'request failure')
+  end
+  ngx.log(ngx.INFO, 'Response status: [ '  .. res.status ..   ' '  .. res.reason .. ' ]'   )
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+      ngx.say("failed to read body: ", err)
+      return
+    end
+  end
+   return res.reason
+end 
 
 return _M

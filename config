@@ -2,6 +2,7 @@ NAME=openresty-install
 OWNER=grantmacken
 SHELL=/bin/bash
 ACCESS_TOKEN_PATH=../.github-access-token
+SITE_TOKEN_PATH=../.site-access-token
 SERVER=featon
 DOMAIN=gmack.nz
 DOMAINS=gmack.nz www.gmack.nz

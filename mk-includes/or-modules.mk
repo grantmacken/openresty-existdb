@@ -1,14 +1,12 @@
-
-
 SRC_LUA := $(shell find lua-modules -name '*.lua' )
 LUA_MODULES  := $(patsubst lua-modules/%.lua,$(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua,$(SRC_LUA))
 
 orModules: $(LUA_MODULES)
 
-watch-luaModules:
-	@watch -q $(MAKE) orModules 
+watch-orModules:
+	@watch -q  $(MAKE) orModules 
 
-.PHONY:  watch-luaModules 
+.PHONY: watch-orModules 
 
 $(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua: lua-modules/%.lua 
 	@echo "## $@ ##"
@@ -16,8 +14,10 @@ $(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua: lua-modules/%.lua
 	@echo "SRC: $<" >/dev/null
 	@echo 'copied files into openresty  directory' >/dev/null
 	@cp $< $@
+	@echo '#  run our tests '
+	@echo '===================================================='
+	@prove -v - < t/dev.txt
 	@echo '-----------------------------------------------------------------'
-
 
 opmGet:
 	@echo "install opm packages"

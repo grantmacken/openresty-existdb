@@ -4,7 +4,11 @@ REPO="$(echo ${DEPLOY} | cut -d/ -f2 )"
 OWNER="$(echo ${DEPLOY} | cut -d/ -f1 )"
 EXIST_HOME='/usr/local/eXist'
 P=admin
+TOKEN=
 if [ -e ${ACCESS_TOKEN_PATH} ] ;then P="$(<${ACCESS_TOKEN_PATH})";fi
+if [ -e ${SITE_TOKEN_PATH} ] ;then TOKEN="$(<${SITE_TOKEN_PATH})";fi
+USER=$(whoami)
+if [ -n ${SUDO_USER} ] ;then USER="${SUDO_USER}";fi
 
 cmdClient="java -jar ${EXIST_HOME}/start.jar client -sqx -u admin -P ${P}"
 

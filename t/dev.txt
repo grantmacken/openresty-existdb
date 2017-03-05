@@ -1,5 +1,2 @@
 t/tls.t
 t/headers.t
-t/multiPartFormPost.t
-t/xQuery.t
-t/compile.t

@@ -8,9 +8,9 @@ contentType='content-type: application/xml'
 max='1'
 
 importMods=
-moduleLoadPath="xmldb:exist:///db/apps/${DOMAIN}/modules"
+storePath="xmldb:exist:///db/apps/${DOMAIN}"
 fixturesPath="/home/${USER}/projects/${OWNER}/openresty-existdb/t/fixtures"
-file='simple.xq'
+file='simple.xml'
 
 postData=$(
 cat <<EOF
@@ -49,5 +49,6 @@ is "$(echo $page | grep -oP '200 OK')" '200 OK' 'status indicate 200 OK '
 is "$(echo $page | grep -oP 'Content-Type: application/xml')" 'Content-Type: application/xml' \
  'Content-Type should be  application/xml' 
 ok "$(echo $page | tail -n -1 | grep -q 'pass')" "should  grep pass"
+
 
 

@@ -96,6 +96,7 @@ orInstall:
  --with-http_stub_status_module \
  --with-http_sub_module \
  --with-http_gzip_static_module \
+ --with-http_gunzip_module \
  --with-http_realip_module \
  --without-http_empty_gif_module \
  --without-http_fastcgi_module \

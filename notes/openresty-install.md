@@ -11,7 +11,7 @@ Establishes latest version of sources,
 then if required downloads the  source archive.
 
 - OpenResty
-- zlib : zip libarary
+- zlib : zip library
 - pcre : perl reg ex  
 - openssl 
 

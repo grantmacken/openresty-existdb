@@ -19,7 +19,6 @@ It assumes you
 1. setup your VPS server with IP address, DNS zones and registered domain(s) etc
 2. setup git with configured global 
 [user.name]( https://help.github.com/articles/setting-your-username-in-git/)
- and user.email
 
 ```
  git config --global user.name 

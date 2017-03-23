@@ -3,9 +3,14 @@
 
 exInstall: $(T)/eXist-run.sh
 
+exLatest:
+	@$(MAKE) $(T)/eXist-latest.version
+
+
+
 exClean: 
 	@echo 'stop eXist'
-	@sudo $(MAKE) exStop
+	@sudo $(MAKE) exServiceStop
 	@echo 'remove eXist dir'
 	@rm -R $(EXIST_HOME)
 
@@ -18,9 +23,9 @@ $(T)/eXist-latest.version:
 	@echo "## $@ ##"
 	@mkdir -p $(@D)
 	@echo 'fetch the latest eXist version'
-	@echo $$( curl -s -L https://bintray.com/existdb/releases/exist/_latestVersion|\
+	@echo $$( curl -s -L https://bintray.com/existdb/releases/exist/_latestVersion |\
  tr -d '\n\r' |\
- grep -oP 'eXist-db-setup-[0-9]+\.[0-9]+-[a-z0-9]+.jar' |\
+ grep -oP 'eXist-db-setup-([0-9]+\.){2}([0-9]+)\.jar' |\
  head -1) > $(@)
 	@echo '-----------------------------------------------------'
 

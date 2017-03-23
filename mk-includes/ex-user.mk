@@ -5,11 +5,14 @@
 # uses the client jar
 #
 # ########################
+$(info $(ACCESS_TOKEN))
 
 
-CLIENT := java -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(P) | tail -1
+ClIENT := $(EXIST_HOME)/bin/client.sh -u admin -P $(ACCESS_TOKEN) -s
 
-exUserExists = $(shell cd $(EXIST_HOME) && echo 'sm:user-exists("$1")' | $(CLIENT))
+# CLIENT := java -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(P) | tail -1
+
+exUserExists = $(shell cd $(EXIST_HOME) && echo 'sm:user-exists("$1")' | $(ClIENT) )
 
 exGroupExists = $(shell cd $(EXIST_HOME) && echo 'sm:group-exists("$1")'  | $(CLIENT))
 
@@ -35,8 +38,10 @@ exRemoveGroupMember = $(shell cd $(EXIST_HOME) && echo 'sm:remove-group-member("
 
 exLogOut = $(shell cd $(EXIST_HOME) && echo 'util:log-system-out("$(1)")' | $(CLIENT))
 
+exClient:
+	$(ClIENT)
+
 exGitAdminCheck:
-	@echo 'Admin groups and dba members check' 
 	@echo "admin groups: $(call exGroups,admin)"
 	@echo "dba group members: $(call exGroupMembers,dba)"
 
@@ -58,10 +63,9 @@ exGitUserRemove:
 exGitUserAdd:
 	$(if $(ACCESS_TOKEN),true,false)
 	@$(if $(findstring false,$(call exUserExists,$(GIT_USER))), \
- cd $(EXIST_HOME) && echo 'sm:create-account("$(GIT_USER)","$(P)","dba")' | $(CLIENT) ,false )
+ cd $(EXIST_HOME) && echo 'sm:create-account("$(GIT_USER)","$(P)","dba")' | $(CLIENT) , echo 'already user' )
 	@$(MAKE) exGitUserCheck
 	@$(MAKE) exGitAdminCheck
-
 
 exGitUserTest:
 	@echo 'check who belongs to dba group '
@@ -71,7 +75,6 @@ exGitUserTest:
 	@$(MAKE) exGitUserAdd
 	@echo 'remove eXist user and group'
 	@$(MAKE) exGitUserRemove
-
 
 exLogger:
 	$(if $(ACCESS_TOKEN),true,false)

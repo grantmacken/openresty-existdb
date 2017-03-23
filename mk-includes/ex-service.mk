@@ -13,6 +13,7 @@ START_JAR := $(JAVA) \
  -Djava.awt.headless=true \
  -jar $(EXIST_HOME)/start.jar
 
+
 define eXistService
 [Unit]
 Description=The exist db application server
@@ -112,7 +113,6 @@ exServiceStart:
  done
 	@$(MAKE) exServiceState
 
-
 exServiceStatus:
 	@systemctl status  eXist.service
 
@@ -145,3 +145,6 @@ exLogRestxq:
 
 exLogXmlrpc:
 	@tail -n 10 /usr/local/eXist/webapp/WEB-INF/logs/xmlrpc.log
+
+
+

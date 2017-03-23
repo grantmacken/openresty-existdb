@@ -6,8 +6,6 @@ exInstall: $(T)/eXist-run.sh
 exLatest:
 	@$(MAKE) $(T)/eXist-latest.version
 
-
-
 exClean: 
 	@echo 'stop eXist'
 	@sudo $(MAKE) exServiceStop

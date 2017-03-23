@@ -85,4 +85,7 @@ syncCertsPerm:
 
 scpAccessToken:
 	@echo 'copy current access token over to remote'
-	@scp $(ACCESS_TOKEN) $(SERVER):~/$(GIT_USER)
+	@echo '$(SERVER):~/$(GIT_USER)'
+	@echo '$(abspath  $(ACCESS_TOKEN_PATH))'
+	@scp $(abspath  $(ACCESS_TOKEN_PATH)) $(SERVER):~/$(GIT_USER)/
+	@scp $(abspath  $(SITE_TOKEN_PATH)) $(SERVER):~/$(GIT_USER)/

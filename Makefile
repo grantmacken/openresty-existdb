@@ -93,7 +93,7 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
 default: help
 
-include mk-includes/*
+# include mk-includes/*
 
 
 help:

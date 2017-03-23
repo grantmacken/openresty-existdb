@@ -5,8 +5,6 @@
 # uses the client jar
 #
 # ########################
-$(info $(ACCESS_TOKEN))
-
 
 ClIENT := $(EXIST_HOME)/bin/client.sh -u admin -P $(ACCESS_TOKEN) -s
 

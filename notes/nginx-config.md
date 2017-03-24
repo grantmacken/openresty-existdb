@@ -14,7 +14,7 @@ ngInc
 make ngBasic
 make ngTLS
 make ngDev
-make ngProp
+make ngProd
 ```
 
 The above replaces the main nginx.conf file.

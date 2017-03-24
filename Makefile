@@ -91,10 +91,11 @@ $(if $(GIT_EMAIL),,$(error no git user email ))
 
 P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
+.SECONDARY:
+
 default: help
 
 include mk-includes/*
-
 
 help:
 	@echo 'OS NAME: $(OS_NAME) '

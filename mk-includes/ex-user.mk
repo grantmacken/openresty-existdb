@@ -6,9 +6,9 @@
 #
 # ########################
 
-ClIENT := $(EXIST_HOME)/bin/client.sh -u admin -P $(ACCESS_TOKEN) -s
+ClIENT_REPL := $(EXIST_HOME)/bin/client.sh -u admin -P $(ACCESS_TOKEN) -s
 
-# CLIENT := java -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(P) | tail -1
+CLIENT := $(shell which java) -jar $(EXIST_HOME)/start.jar client -sqx -u admin -P $(ACCESS_TOKEN)
 
 exUserExists = $(shell cd $(EXIST_HOME) && echo 'sm:user-exists("$1")' | $(ClIENT) )
 
@@ -37,7 +37,12 @@ exRemoveGroupMember = $(shell cd $(EXIST_HOME) && echo 'sm:remove-group-member("
 exLogOut = $(shell cd $(EXIST_HOME) && echo 'util:log-system-out("$(1)")' | $(CLIENT))
 
 exClient:
-	$(ClIENT)
+	@$(ClIENT_REPL)
+
+exClientTest:
+	@cd $(EXIST_HOME) &&  pwd
+	@cd $(EXIST_HOME) && $(shell which java) -jar $(EXIST_HOME)/start.jar client -sq -u admin -P $(ACCESS_TOKEN) -x 'util:uuid()'
+
 
 exGitAdminCheck:
 	@echo "admin groups: $(call exGroups,admin)"

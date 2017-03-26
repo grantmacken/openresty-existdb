@@ -47,7 +47,7 @@ orServiceStateDiag:
 	systemctl status openresty.service
 	@echo ' ========================================================='
 	journalctl -xe 
-	false
+	foalse
 
 orServiceState:
 	@sleep 1

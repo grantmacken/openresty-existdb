@@ -59,8 +59,11 @@ function b60Encode(remaining)
     slug = character .. slug
     remaining = (remaining - d) / 60
   end
-return slug end function _M.getID(k)
- --  ngx.say( 'get Post ID' )
+  return slug
+end
+
+function _M.getID(k)
+  --  ngx.say( 'get Post ID' )
   local slugDict = ngx.shared.slugDict
   local count = slugDict:get("count") or 0
   -- setup count and today
@@ -68,8 +71,8 @@ return slug end function _M.getID(k)
     slugDict:add("count", count)
     slugDict:add("today", encodeDate())
   end
- -- if the same day increment
- -- otherwise reset today and reset counter
+  -- if the same day increment
+  -- otherwise reset today and reset counter
   if slugDict:get("today") == encodeDate() then
     -- ngx.say('increment counter')
     slugDict:incr("count",1)
@@ -77,13 +80,16 @@ return slug end function _M.getID(k)
     --ngx.say(slugDict:get("today"))
   else
     -- ngx.say('reset counter')
-   slugDict:replace("today", encodeDate())
+    slugDict:replace("today", encodeDate())
+    slugDict:replace("count", 1)
+  end
+  -- TODO! comment out test
+   ngx.log(ngx.INFO,  'comment out after test' )
    slugDict:replace("count", 1)
- end
-  --slugDict:replace("count", 1)
--- ngx.say(slugDict:get("count"))
--- ngx.say(slugDict:get("today"))
- return k .. slugDict:get("today") .. b60Encode(slugDict:get("count"))
+   ngx.log(ngx.INFO,  'COUNT: ' .. slugDict:get("count") )
+  -- ngx.say(slugDict:get("count"))
+  -- ngx.say(slugDict:get("today"))
+  return k .. slugDict:get("today") .. b60Encode(slugDict:get("count"))
 end
 
 return _M

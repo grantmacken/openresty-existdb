@@ -58,6 +58,13 @@ TEST: curl
 
 --]]
 
+local cfg = {
+port = 8080,
+host = '127.0.0.1',
+auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
+domain = ngx.var.domain 
+}
+
 --UTILITY TODO move to utility.lua
 function requestError( status, msg ,description)
   ngx.status = status
@@ -269,8 +276,7 @@ function processGet()
   local msg = ''
 
   local args = ngx.req.get_uri_args()
-  local domain = ngx.var.http_Host
-  local mediaEndpoint = 'https://' .. domain .. '/micropub'
+  local mediaEndpoint = 'https://' .. cfg.domain .. '/micropub'
   if args['q'] then
     -- ngx.say( ' query the endpoint ' )-
     local q = args['q']
@@ -292,7 +298,7 @@ function processGet()
         local url = args['url']
         ngx.say( 'has url: ' , url  )
 
-        local data =  require('mod.eXist').fetchPostsDoc( url )
+        local data =  require('grantmacken.eXist').fetchPostsDoc( url )
         -- local xml = require 'xml'
         -- local d =  xml.load( data ) 
       else 
@@ -322,8 +328,7 @@ end
 
 
 function processPostArgs()
-  -- ngx.say(' process POST arguments ' )
- 
+  ngx.log(ngx.INFO, ' process POST arguments ' )
   local msg = ''
   ngx.req.read_body()
   local args, err = ngx.req.get_post_args()
@@ -335,7 +340,7 @@ function processPostArgs()
       msg)
   end
   if args['h'] then
-    -- ngx.say( ' assume we are creating a post item'  )
+    ngx.log(ngx.INFO,  ' assume we are creating a post item'  )
     local hType = args['h']
     if not microformatObjectTypes[hType] then
       msg = 'can not handle microformat  object type": ' .. hType
@@ -350,9 +355,8 @@ function processPostArgs()
     --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
 
     if hType == 'entry' then
-      -- ngx.say( 'Create Entry ' )
+      ngx.log(ngx.INFO,  'Create Entry ' )
 
-      local domain = ngx.var.site
       local reqargs = require "resty.reqargs"
       local get, post, files = reqargs( reqargsOptions )
       if not get then
@@ -366,30 +370,55 @@ function processPostArgs()
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
-     --  ngx.say( cjson.encode(jData) ) 
-      local ret = require('mod.eXist').restxqMicropubRequest( jData )
-
-      -- ngx.say( jData.type)
-      -- ngx.say( jData.properties.url[1] )
-      -- ngx.say( jData.properties.uid[1] )
-      -- rewrite ^/?(.*)$ /exist/restxq/$host/$1 break;
-
-      -- local data = createXmlEntry( jData )
-      -- ngx.say(require('xml').dump( xData))
-     -- ngx.say( location )
-     -- ngx.header.location = jData.properties.url[1]
-     -- ngx.status = ngx.HTTP_CREATED
-     -- ngx.header.content_type = 'application/xml'
-     -- local reason =  require('mod.eXist').postJSON( 'posts', jData )
-     -- if reason == 'Created' then
-
-     --   ngx.exit(ngx.HTTP_CREATED)
-     -- end
-     -- local reason =  require('mod.eXist').putXML( 'posts', data )
-     -- if reason == 'Created' then
-     --   ngx.say(require('xml').dump( xData))
-     --   ngx.exit(ngx.HTTP_CREATED)
-     -- end
+    ngx.log(ngx.INFO,  cjson.encode(jData) ) 
+    ngx.log(ngx.INFO, " micropub create" )
+    local http   = require "resty.http"
+    local httpc  = http.new()
+    httpc:set_timeout(500)
+    local ok, err = httpc:connect(cfg.host, cfg.port)
+    if not ok then 
+      return requestError(
+        ngx.HTTP_SERVICE_UNAVAILABLE,
+        'HTTP service unavailable',
+        'connection failure')
+    end
+    ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+    local restxqPath  = "/exist/restxq/" .. cfg.domain .. '/_micropub'
+    ngx.log(ngx.INFO, restxqPath )
+    ngx.log(ngx.INFO, 'Proxy request' )
+    httpc:set_timeout(2000)
+      local res, err =  httpc:request({
+        version = 1.1,
+        method = "POST",
+        path = restxqPath,
+        headers = {
+          ["Authorization"] =  cfg.auth,
+          ["Content-Type"] = 'application/json'
+        },
+        body = cjson.encode(jData),
+        ssl_verify = false
+      })
+    ngx.log(ngx.INFO, 'Response status: [ '  .. res.status ..   ' '  .. res.reason .. ' ]'   )
+    if res.has_body then
+      body, err = res:read_body()
+      if not body then
+        ngx.log(ngx.INFO, "failed to read body: ", err)
+        return requestError(
+          ngx.HTTP_SERVICE_UNAVAILABLE,
+          'HTTP service unavailable',
+          'connection failure')
+      end
+      ngx.header.location = jData.properties.url[1]
+      ngx.status = ngx.HTTP_CREATED
+      ngx.header.content_type = 'application/xml'
+      ngx.say(body)
+      ngx.exit(ngx.HTTP_CREATED)
+    end
+    -- should not be here
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
     end
   elseif args['action'] then
    --  ngx.say( ' assume we are modifying a post item in some way'  )
@@ -441,8 +470,8 @@ function createMicroformatproperties( post )
   -- ' from the sent properties - discovery the kind of post '
   local kindOfPost = discoverPostType( post )
   local properties = {}
-  local sID = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
-  local sURL = 'https://' .. ngx.var.site .. '/' .. sID  
+  local sID = require('grantmacken.postID').getID( getShortKindOfPost(kindOfPost))
+  local sURL = 'https://' .. cfg.domain .. '/' .. sID  
   local sPub, n, err =  ngx.re.sub(ngx.localtime(), " ", "T")
 
   properties['published'] =  { sPub }
@@ -595,7 +624,7 @@ function createEntryFromJson( hType , props)
 
 
   properties['published'] = ngx.today()
-  properties['id'] = require('mod.postID').getID( getShortKindOfPost(kindOfPost))
+  properties['id'] = require('grantmacken.postID').getID( getShortKindOfPost(kindOfPost))
   properties['url'] = 'https://' .. host ..  '/' .. properties['id']
 
   for key, val in pairs(properties) do
@@ -691,12 +720,12 @@ function processJsonTypes(args)
           ngx.header.location = location
           ngx.status = ngx.HTTP_CREATED
           ngx.header.content_type = 'application/xml'
-          local reason =  require('mod.eXist').putXML( 'posts',  data )
+          local reason =  require('grantmacken.eXist').putXML( 'posts',  data )
           if reason == 'Created' then
              ngx.say(require('xml').dump(data))
             ngx.exit(ngx.HTTP_CREATED)
           end
-          -- require('mod.eXist').putXML('posts', data)
+          -- require('grantmacken.eXist').putXML('posts', data)
         end
       end
     end
@@ -743,7 +772,7 @@ function processActions( postType, args )
           local property = 'content'
           local item = table.concat(args['replace']['content'], " ")
           -- TODO! for each item
-          require('mod.eXist').replaceProperty( url, property, item )
+          require('grantmacken.eXist').replaceProperty( url, property, item )
         else
           return requestError(
             ngx.HTTP_BAD_REQUEST,
@@ -776,16 +805,16 @@ function processActions( postType, args )
           --ngx.say( type(property) ) 
           if type(property) == 'table' then
             for index, item in ipairs (property) do
-              local reason =  require('mod.eXist').removePropertyItem( url, key , item )
+              local reason =  require('grantmacken.eXist').removePropertyItem( url, key , item )
               if reason == 'OK' then
                 --  ngx.say(reason)
-                require('mod.eXist').fetchPostsDoc( url )
+                require('grantmacken.eXist').fetchPostsDoc( url )
               end
             end
           elseif type(property) == 'string' then
-            local reason =  require('mod.eXist').removeProperty( url, property )
+            local reason =  require('grantmacken.eXist').removeProperty( url, property )
             if reason == 'OK' then
-              require('mod.eXist').fetchPostsDoc( url )
+              require('grantmacken.eXist').fetchPostsDoc( url )
             end
           end
 
@@ -800,14 +829,14 @@ function processActions( postType, args )
         local property = 'category'
         local item = table.concat(args['add']['category'], " ")
         -- ngx.say(item)
-        require('mod.eXist').addProperty( url, property, item )
+        require('grantmacken.eXist').addProperty( url, property, item )
       end
     end
     -- end of ACTION UPDATEs
   elseif action == 'delete' then
     -- start of ACTION DELETE
     -- ngx.say("delete")
-    local reason =  require('mod.eXist').deletePost( url )
+    local reason =  require('grantmacken.eXist').deletePost( url )
     if reason == 'OK' then
       ngx.status = ngx.HTTP_NO_CONTENT
       ngx.exit( ngx.HTTP_NO_CONTENT )
@@ -815,7 +844,7 @@ function processActions( postType, args )
   elseif action == 'undelete' then
     -- start of ACTION UNDELETE
     -- ngx.say("undelete")
-    local reason =  require('mod.eXist').undeletePost( url )
+    local reason =  require('grantmacken.eXist').undeletePost( url )
     if reason == 'OK' then
       ngx.status = ngx.HTTP_OK
       ngx.exit( ngx.HTTP_OK )
@@ -866,7 +895,7 @@ function processMultPartForm()
 
       -- id prefix always M
       local ext, mimeType = getMimeType( val.file )
-      local sID = require('mod.postID').getID( 'm' )
+      local sID = require('grantmacken.postID').getID( 'm' )
       local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
       local data = { 
         xml = 'media'
@@ -887,12 +916,12 @@ function processMultPartForm()
        -- ngx.say(k, ": ", v)
         table.insert(data,1,{ xml = k, v })
       end
-      local reason =  require('mod.eXist').putMedia( read( val.temp ),  mediaFileName , mimeType )
+      local reason =  require('grantmacken.eXist').putMedia( read( val.temp ),  mediaFileName , mimeType )
       if reason == 'Created' then
         -- NOTE: return binary source as location
         ngx.header.location = properties['src']
         -- Note create a doc for the 'shoebox
-        local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
+        local reason2 =  require('grantmacken.eXist').putXML( 'uploads',  data )
         if reason2 == 'Created' then
           -- ngx.say(require('xml').dump(data))
           ngx.exit(ngx.HTTP_CREATED)
@@ -936,10 +965,10 @@ function processMultPartForm()
 end
 
 function xprocessMultPartForm()
-    --  mod.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
+    --  grantmacken.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
   --  from agentzha TODO! check if avaible on OPM
   --  @see https://github.com/agentzh/lua-resty-multipart-parser
-  local parser = require "mod.parser" 
+  local parser = require "grantmacken.parser" 
   ngx.req.read_body()
   local body = ngx.req.get_body_data()
   local p, err = parser.new(body, ngx.var.http_content_type)
@@ -974,7 +1003,7 @@ function xprocessMultPartForm()
     end
 
     local ext, mimeType = getMimeType( filename )
-    local sID = require('mod.postID').getID( 'm' )
+    local sID = require('grantmacken.postID').getID( 'm' )
     local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
     local data = { 
       xml = 'media'
@@ -994,12 +1023,12 @@ function xprocessMultPartForm()
       -- ngx.say(key, ": ", val)
       table.insert(data,1,{ xml = key, val })
     end
-    local reason =  require('mod.eXist').putMedia( part_body,  mediaFileName , mimeType )
+    local reason =  require('grantmacken.eXist').putMedia( part_body,  mediaFileName , mimeType )
     if reason == 'Created' then
       -- NOTE: return binary source as location
       ngx.header.location = properties['src']
       -- Note create a doc for the 'shoebox
-      local reason2 =  require('mod.eXist').putXML( 'uploads',  data )
+      local reason2 =  require('grantmacken.eXist').putXML( 'uploads',  data )
       if reason2 == 'Created' then
         ngx.say(require('xml').dump(data))
         ngx.exit(ngx.HTTP_CREATED)

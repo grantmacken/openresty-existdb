@@ -15,6 +15,8 @@ make ngBasic
 make ngTLS
 make ngDev
 make ngProd
+make orLoggedErrorFollow
+make orServiceLogFollow
 ```
 
 The above replaces the main nginx.conf file.

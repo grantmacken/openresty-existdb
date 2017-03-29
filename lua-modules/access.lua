@@ -98,7 +98,6 @@ function extractDomain( url )
   return sDomain
 end
 
-
 function extractToken()
   ngx.log(ngx.INFO, "Extract Token")
   --TODO! token in post args
@@ -111,7 +110,7 @@ function extractToken()
     if token  ~=  nil then
       return token 
     else
-      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'no token') 
+      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', 'read body but no token') 
     end
   else
     local token, err = require("ngx.re").split(ngx.var.http_authorization,' ')[2]

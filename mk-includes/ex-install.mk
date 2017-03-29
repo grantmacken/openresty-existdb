@@ -8,6 +8,8 @@ exInstallDownload:
 exInstall: exInstallDownload
 exInstall:
 	@$(MAKE) --silent $(T)/eXist-run.sh
+	@$(MAKE) --silent $(T)/eXist-run.sh
+	@$(MAKE) --silent exMimeTypes
 
 
 exClean: 

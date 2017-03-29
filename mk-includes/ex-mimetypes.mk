@@ -1,4 +1,4 @@
-define exMimeTypes
+define exMimetypes
 <mime-types xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="schema/mime-types.xsd">
 
     <!-- Mime types stored as XML -->
@@ -59,7 +59,6 @@ define exMimeTypes
         <description>Schema Component Model</description>
         <extensions>.scm</extensions>
     </mime-type>
-    
     <!-- Binary mime types -->
     <mime-type name="application/exi" type="binary">
         <description>Efficient XML Interchange</description>
@@ -77,11 +76,8 @@ define exMimeTypes
         <description>JSON</description>
         <extensions>.json</extensions>
     </mime-type>
-    
-    
     <!-- TODO : for OpenOffice.org and other Zip files: add a new type="archive",
          that will unzip and store as a collection -->
-         
     <mime-type name="application/zip" type="binary">
         <description>ZIP archive</description>
         <extensions>.zip</extensions>
@@ -403,16 +399,16 @@ define exMimeTypes
 </mime-types>
 endef
 
-exMimeType: 
+exMimeTypes: 
 	@echo 'replace eXist mimetypes'
 	@rm  $(EXIST_HOME)/mime-types.xml
 	@$(MAKE) --silent $(EXIST_HOME)/mime-types.xml
 	@cat $(EXIST_HOME)/mime-types.xml | grep 'svg'
 
-$(EXIST_HOME)/mime-types.xml: export exMimeTypes:=$(exMimeTypes)
+$(EXIST_HOME)/mime-types.xml: export exMimetypes:=$(exMimetypes)
 $(EXIST_HOME)/mime-types.xml:
 	@echo "## $@ ##"
-	@echo "$${exMimeTypes}" | tidy -q -xml -utf8 -e  --show-warnings no
-	@echo "$${exMimeTypes}" | tidy -q -xml -utf8 -i --indent-spaces 1 --output-file $@
+	@echo "$${exMimetypes}" | tidy -q -xml -utf8 -e  --show-warnings no
+	@echo "$${exMimetypes}" | tidy -q -xml -utf8 -i --indent-spaces 1 --output-file $@
 
 .PHONY: ex-mime-types

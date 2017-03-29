@@ -1,20 +1,28 @@
 
 #MAIN TARGETS
 
-exInstall: $(T)/eXist-run.sh
+exInstallDownload:
+	@rm $(T)/eXist-latest.version 2>/dev/null || echo 'latest versions gone'
+	@$(MAKE) --silent $(T)/eXist-latest.version
 
-exLatest:
-	@$(MAKE) $(T)/eXist-latest.version
+exInstall: exInstallDownload
+exInstall:
+	@$(MAKE) --silent $(T)/eXist-run.sh
+
 
 exClean: 
 	@echo 'stop eXist'
-	@sudo $(MAKE) exServiceStop
-	@echo 'remove eXist dir'
-	@rm -R $(EXIST_HOME)
+	@$(if $(SUDO_USER),\
+ $(MAKE) exServiceStop,\
+ sudo $(MAKE) exServiceStop)
+	@echo 'removing eXist dir'
+	@if [ -e  $(EXIST_HOME) ];then rm -R $(EXIST_HOME);fi
 
 exBackup:
 	@echo 'TODO!'
 
+.PHONY: exInstall exClean exInstallDownload
+############################################
 # dependency chain
 
 $(T)/eXist-latest.version:

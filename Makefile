@@ -93,9 +93,10 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
 .SECONDARY:
 
+include mk-includes/*
+
 default: help
 
-include mk-includes/*
 
 help:
 	@echo 'OS NAME: $(OS_NAME) '

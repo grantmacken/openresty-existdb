@@ -89,10 +89,10 @@ exServiceRemove:
 exServiceStop:
 	@$(call assert-is-root)
 	@systemctl is-enabled  eXist.service  >/dev/null
-	@systemctl is-active eXist.service >/dev/null && systemctl stop eXist.service >/dev/null
+	@systemctl is-active eXist.service && systemctl stop eXist.service || echo 'stopped'
 	@for i in $$(seq 1 60);\
  do journalctl -u eXist.service -o cat | tail -n -1  ;\
-  sleep 5 ;\
+  sleep 2 ;\
   journalctl -u eXist.service -o cat | tail -n -1  | grep 'eXist.service failed' &>/dev/null && break ;\
  done
 	@$(MAKE) exServiceState

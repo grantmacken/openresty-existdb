@@ -403,7 +403,7 @@ define exMimeTypes
 </mime-types>
 endef
 
-ex-mime-types: 
+exMimeType: 
 	@echo 'replace eXist mimetypes'
 	@rm  $(EXIST_HOME)/mime-types.xml
 	@$(MAKE) --silent $(EXIST_HOME)/mime-types.xml

@@ -89,29 +89,19 @@ exServiceRemove:
 exServiceStop:
 	@$(call assert-is-root)
 	@systemctl is-enabled  eXist.service  >/dev/null
-	@systemctl is-active eXist.service && systemctl stop eXist.service || echo 'stopped'
-	@for i in $$(seq 1 60);\
+	@if systemctl is-active eXist ;then\
+ systemctl stop eXist.service;\
+ for i in $$(seq 1 60);\
  do journalctl -u eXist.service -o cat | tail -n -1  ;\
   sleep 2 ;\
   journalctl -u eXist.service -o cat | tail -n -1  | grep 'eXist.service failed' &>/dev/null && break ;\
- done
+ done;fi
 	@$(MAKE) exServiceState
 
 exServiceStart:
 	@$(call assert-is-root)
-	@systemctl is-enabled  eXist.service
-	@systemctl is-failed eXist.service >/dev/null  && systemctl start eXist.service  >/dev/null
-	@for i in $$(seq 1 60);\
- do journalctl -u eXist.service -o cat | tail -n -1  ;\
-  sleep 1 ;\
-  journalctl -u eXist.service -o cat | tail -n -1  | grep 'Jetty server starting' &>/dev/null && break ;\
- done
-	@for i in $$(seq 1 60);\
- do journalctl -u eXist.service -o cat | tail -n -1  ;\
-  sleep 1 ;\
-  journalctl -u eXist.service -o cat | tail -n 8 | grep 'Server has started,' &>/dev/null && break ;\
- done
-	@$(MAKE) exServiceState
+	@$(MAKE) --silent exService
+	@$(MAKE) --silent exServiceState
 
 exServiceStatus:
 	@systemctl status  eXist.service

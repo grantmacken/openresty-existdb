@@ -362,37 +362,5 @@ function putAsset( properties )
 end 
 
 
--- ++++++++++++++++++++++++++++++++++++++++++
-function _M.mpCreate( jData )
-  ngx.log(ngx.INFO, " micropub create" )
-  local domain = ngx.var.domain
-  local http          = require "resty.http"
-  local httpc = http.new()
-  httpc:set_timeout(500)
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
-  local restxqPath  = "/exist/restxq/" .. domain .. '/_micropub'
-  ngx.log(ngx.INFO, restxqPath )
-  ngx.log(ngx.INFO, 'Proxy request' )
-  httpc:set_timeout(2000)
-    httpc:proxy_response( httpc:request({
-      version = 1.1,
-      method = "POST",
-      path = restxqPath,
-      headers = {
-        ["Authorization"] =  cfg.auth,
-        ["Content-Type"] = 'application/json'
-      },
-      body = cjson.encode(jData),
-      ssl_verify = false
-    }))
-  -- httpc:set_keepalive()
-end
 
 return _M

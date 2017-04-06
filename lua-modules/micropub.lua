@@ -109,6 +109,17 @@ function getMimeType( filename )
   end
 end
 
+function extractID( url )
+  -- short urls https://gmack.nz/xxxxx
+  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+  if err then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  return sID
+end
 
 -- https://www.w3.org/TR/micropub/#h-reserved-properties
 -- note reserved extension mp-* 
@@ -270,6 +281,7 @@ function _M.processRequest()
 end
 
 function processGet()
+  ngx.log(ngx.INFO, 'process GET query to micropub endpoint' )
   --ngx.say( ' process GET query to micropub endpoint ' )
   ngx.header.content_type = 'application/json' 
   local response = {}
@@ -278,7 +290,7 @@ function processGet()
   local args = ngx.req.get_uri_args()
   local mediaEndpoint = 'https://' .. cfg.domain .. '/micropub'
   if args['q'] then
-    -- ngx.say( ' query the endpoint ' )-
+    ngx.log(ngx.INFO, ' query the endpoint ' )
     local q = args['q']
     if q  == 'config' then
       -- 'https://www.w3.org/TR/micropub/#h-configuration'
@@ -291,16 +303,14 @@ function processGet()
       ngx.print(json)
       ngx.exit(status)
     elseif q  == 'source' then
-      ngx.status = ngx.HTTP_OK 
+      ngx.log(ngx.INFO, '- source query' )
       -- TODO!
       -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
       if args['url'] then
         local url = args['url']
-        ngx.say( 'has url: ' , url  )
+        ngx.log(ngx.INFO,  'has url: ' , url  )
+        fetchPostsDoc( url )
 
-        local data =  require('grantmacken.eXist').fetchPostsDoc( url )
-        -- local xml = require 'xml'
-        -- local d =  xml.load( data ) 
       else 
       msg = 'source must have associated url'
       return requestError(
@@ -325,7 +335,6 @@ function processGet()
 
   ngx.exit(ngx.OK)
 end
-
 
 function processPostArgs()
   ngx.log(ngx.INFO, ' process POST arguments ' )
@@ -421,8 +430,7 @@ function processPostArgs()
       'connection failure')
     end
   elseif args['action'] then
-   --  ngx.say( ' assume we are modifying a post item in some way'  )
-   --  ngx.say ('TODO!')
+   ngx.log(ngx.INFO,  ' assume we are modifying a post item in some way'  )
     processActions( 'form' , args )
   else
     msg = "failed to get actionable POST argument, h or action required"
@@ -717,7 +725,7 @@ function processJsonTypes(args)
           local location, data = createEntryFromJson( hType , args['properties'] )
           -- ngx.say( location  )
           -- ngx.say(require('xml').dump(data))
-          ngx.header.location = location
+          ngx.header['Location'] = location
           ngx.status = ngx.HTTP_CREATED
           ngx.header.content_type = 'application/xml'
           local reason =  require('grantmacken.eXist').putXML( 'posts',  data )
@@ -748,7 +756,7 @@ function processActions( postType, args )
   local action = args['action']
   local url = args['url']
   -- TODO! gen err if no action and or url
-  --start of ACTION UPDATEs
+  ngx.log(ngx.INFO, 'start of ACTION UPDATEs')
   if action == 'update' then
     -- ngx.say(action)
     if url == nil then
@@ -765,14 +773,22 @@ function processActions( postType, args )
           --]]
     -- ACTION UPDATE REPLACE
     if args['replace'] then
-      -- ngx.say("do replace")
+      ngx.log(ngx.INFO, "do replace")
       -- TODO! replace other properties
       if type(args['replace'] ) == 'table' then
         if type(args['replace']['content']) == 'table' then
+          ngx.log(ngx.INFO, "do replace content")
           local property = 'content'
           local item = table.concat(args['replace']['content'], " ")
           -- TODO! for each item
-          require('grantmacken.eXist').replaceProperty( url, property, item )
+          ngx.log(ngx.INFO, "url: " .. url)
+          ngx.log(ngx.INFO, "property: " .. property)
+          ngx.log(ngx.INFO, "item: " .. item)
+          local reason = replaceProperty( url, property, item )
+          if reason == 'OK' then
+            ngx.status = ngx.HTTP_OK
+            ngx.exit( ngx.HTTP_OK )
+          end
         else
           return requestError(
             ngx.HTTP_BAD_REQUEST,
@@ -788,63 +804,87 @@ function processActions( postType, args )
     end
     -- ACTION UPDATE DELETE
     if args['delete'] then
-      --  ngx.say("do delete")
-      -- ngx.say( args['delete'] ) 
-      --  ngx.say( type( args['delete']) ) 
-      -- TODO! replace other properties
-      --local n = #args['delete']
+      ngx.log(ngx.INFO, 'do action update DELETE')
+      ngx.log(ngx.INFO, type(args['delete']) )
+      local reason = nil
+      -- -- TODO! replace other properties
+      -- --local n = #args['delete']
       for key, property in pairs(args['delete']) do
-        -- ngx.say( type(key) ) 
-        -- ngx.say( type(property) ) 
+        ngx.log(ngx.INFO, 'keyType:' .. type(key) ) 
+        ngx.log(ngx.INFO, 'propType:' .. type(property) ) 
         if type(key) == 'number' then
-          -- should not happen
-          -- ngx.say(key)
-          --  ngx.say(property)
+          -- ngx.log(ngx.INFO, 'keyType:' .. key ) 
+          -- ngx.log(ngx.INFO, 'property:' .. property ) 
+          if type(property) == 'string' then
+            local reason =  removeProperty( url, property)
+          end
         elseif type(key) == 'string' then
           -- ngx.say(key)
           --ngx.say( type(property) ) 
           if type(property) == 'table' then
             for index, item in ipairs (property) do
-              local reason =  require('grantmacken.eXist').removePropertyItem( url, key , item )
-              if reason == 'OK' then
-                --  ngx.say(reason)
-                require('grantmacken.eXist').fetchPostsDoc( url )
-              end
+              ngx.log(ngx.INFO, "url: " .. url)
+              ngx.log(ngx.INFO, "key: " .. key)
+              ngx.log(ngx.INFO, "item: " .. item)
+              reason =  removePropertyItem( url, key , item )
             end
           elseif type(property) == 'string' then
-            local reason =  require('grantmacken.eXist').removeProperty( url, property )
-            if reason == 'OK' then
-              require('grantmacken.eXist').fetchPostsDoc( url )
-            end
+            ngx.log(ngx.INFO, "url: " .. url)
+            ngx.log(ngx.INFO, "key: " .. key)
+            -- local reason =  require('grantmacken.eXist').removeProperty( url, property )
+            -- if reason == 'OK' then
+            --   require('grantmacken.eXist').fetchPostsDoc( url )
+            -- end
           end
-
         end
+      end
+      ngx.log(ngx.INFO, 'end action update DELETE')
+      if reason == 'OK' then
+        ngx.status = ngx.HTTP_OK
+        ngx.exit( ngx.HTTP_OK )
       end
     end
     -- ACTION UPDATE ADD
     if args['add'] then
-      --  ngx.say("do add")
-      --  TODO add more properties
-      if type(args['add']['category']) == 'table' then
-        local property = 'category'
-        local item = table.concat(args['add']['category'], " ")
-        -- ngx.say(item)
-        require('grantmacken.eXist').addProperty( url, property, item )
+      ngx.log(ngx.INFO, 'do action update ADD')
+     local reason = nil 
+     --  ngx.log(ngx.INFO, type(args['add']) ) 
+      for key, property in pairs(args['add']) do
+        -- ngx.log(ngx.INFO, 'keyType: '  .. type(key) ) 
+        -- ngx.log(ngx.INFO, 'propType: ' .. type(property) ) 
+        if type(key) == 'number' then
+          ngx.log(ngx.INFO, 'TODO! key:' .. key ) 
+        elseif type(key) == 'string' then
+          --  ngx.log(ngx.INFO, 'key: ' .. key ) 
+          if type(property) == 'table' then
+            for index, item in ipairs (property) do
+              ngx.log(ngx.INFO, "url: " .. url)
+              ngx.log(ngx.INFO, "key: " .. key)
+              ngx.log(ngx.INFO, "item: " .. item)
+              reason =  addProperty( url, key, item )
+            end
+          end
+        end
+      end
+      ngx.log(ngx.INFO, 'end action update ADD')
+      if reason == 'OK' then
+        ngx.status = ngx.HTTP_OK
+        ngx.exit( ngx.HTTP_OK )
       end
     end
     -- end of ACTION UPDATEs
   elseif action == 'delete' then
     -- start of ACTION DELETE
-    -- ngx.say("delete")
-    local reason =  require('grantmacken.eXist').deletePost( url )
+    ngx.log(ngx.INFO, "start of ACTION DELETE")
+    ngx.log(ngx.INFO, "URL: " .. url )
+    local reason = deletePost( url )
     if reason == 'OK' then
       ngx.status = ngx.HTTP_NO_CONTENT
       ngx.exit( ngx.HTTP_NO_CONTENT )
     end
   elseif action == 'undelete' then
-    -- start of ACTION UNDELETE
-    -- ngx.say("undelete")
-    local reason =  require('grantmacken.eXist').undeletePost( url )
+    ngx.log(ngx.INFO, "start of ACTION UNDELETE")
+    local reason =  undeletePost( url )
     if reason == 'OK' then
       ngx.status = ngx.HTTP_OK
       ngx.exit( ngx.HTTP_OK )
@@ -872,98 +912,520 @@ end
 
 function processMultPartForm()
   local msg = ''
-
-  -- ngx.say( 'process MultPart Form' )
-
+  ngx.log(ngx.INFO, "process MultPart Form")
+  if ngx.var.http2 ~= 'h2' then
+    msg = 'Upload only done with HTTP1.1'
+    ngx.log(ngx.INFO, msg)
+  else
+    ngx.log(ngx.INFO,  'http version 2 ' .. ngx.var.http2)
+    msg = 'Upload only done with HTTP1.1'
+    ngx.log(ngx.WARN, msg)
+    requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+  end
+  -- https://github.com/bungle/lua-resty-reqargs 
+  local split = require( "ngx.re" ).split
   local reqargs = require "resty.reqargs"
   local get, post, files = reqargs( reqargsOptions )
-   if not get then
+  if not get then
     error(post)
   end
 
-  -- ngx.say( 'files' )
-  -- this is like the php files array
+  ngx.log(ngx.INFO, 'FILES')
+  -- for key, val in pairs(files) do
+  --   if type(val) == "table" then
+  --     ngx.log(ngx.INFO,'key', ": ", key)
+  --     ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+  --     for k, v in pairs( val ) do
+  --       ngx.log(ngx.INFO,'key', ": ", k)
+  --       ngx.log(ngx.INFO, 'value type: ' ..  v)
+  --     end
+  --   else
+  --     ngx.log(ngx.INFO,'key', ": ", key)
+  --   end
+  -- end
+
+  local properties = {}
   for key, val in pairs(files) do
     if type(val) == "table" then
-     -- ngx.say('key', ": ", key)
-     -- ngx.say( 'value type: ' ..  type(val))
-     --  for k, v in pairs( val ) do
-     --    ngx.say('k', ": ", k)
-     --    ngx.say( 'v: ' ..  v)
-     --  end
-     --  ngx.say('-------------------------')
-
-      -- id prefix always M
       local ext, mimeType = getMimeType( val.file )
       local sID = require('grantmacken.postID').getID( 'm' )
-      local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
-      local data = { 
-        xml = 'media'
-      }
-
       local properties = {}
-      properties['name']      = val.file
-     --  properties['size']      = val.size
+      properties[ 'mimeType' ] =  mimeType
+      -- ngx.log(ngx.INFO,'key', ": ", key)
+      -- ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+      properties['file']      = val.file
+      properties['size']      = val.size
+      properties['temp']      = val.temp
       properties['uploaded']  = ngx.today()
-      -- properties['signature'] = ngx.md5(part_body)
+      properties['signature'] = ngx.md5(part_body)
       properties['mime']      = mimeType
-      -- id prefix always M
-      properties['id']  = sID
-      properties['url'] = 'https://' .. ngx.var.host .. '/' .. sID
-      properties['src'] = 'https://' .. ngx.var.host .. '/' .. mediaFileName
-      for k, v in pairs(properties) do
-       -- ngx.say(type(v))
-       -- ngx.say(k, ": ", v)
-        table.insert(data,1,{ xml = k, v })
-      end
-      local reason =  require('grantmacken.eXist').putMedia( read( val.temp ),  mediaFileName , mimeType )
+      properties['extension'] = ext
+      properties['id']        = sID
+      properties['name']      = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext
+      properties['url']       = 'https://' .. cfg.domain .. '/' .. sID
+      properties['src']       = 'https://' .. cfg.domain  .. '/' .. ngx.re.sub(sID, "^m", "M") ..  '.' .. ext
+
+      ngx.log(ngx.INFO,     'file [ ' ..  properties.file      .. ' ]')
+      ngx.log(ngx.INFO,     'mime [ ' ..  properties.mime      .. ' ]')
+      ngx.log(ngx.INFO,     'temp [ ' ..  properties.temp      .. ' ]')
+      ngx.log(ngx.INFO,     'size [ ' ..  properties.size      .. ' ]')
+      ngx.log(ngx.INFO, 'uploaded [ ' ..  properties.uploaded  .. ' ]')
+      ngx.log(ngx.INFO,'signature [ ' ..  properties.signature .. ' ]')
+      ngx.log(ngx.INFO,'extension [ ' ..  properties.extension .. ' ]')
+      ngx.log(ngx.INFO,'renamed   [ ' ..  properties.name .. ' ]')
+      ngx.log(ngx.INFO,'doc id    [ ' ..  properties.id .. ' ]')
+      ngx.log(ngx.INFO,'src       [ ' ..  properties.src .. ' ]')
+      ngx.log(ngx.INFO,'url       [ ' ..  properties.url .. ' ]')
+
+      local reason =  putMedia( properties )
       if reason == 'Created' then
         -- NOTE: return binary source as location
-        ngx.header.location = properties['src']
         -- Note create a doc for the 'shoebox
-        local reason2 =  require('grantmacken.eXist').putXML( 'uploads',  data )
+        local reason2 =  putXML( 'uploads', properties )
         if reason2 == 'Created' then
-          -- ngx.say(require('xml').dump(data))
+          ngx.header['Location'] = properties['src']
+          ngx.status = ngx.HTTP_CREATED
           ngx.exit(ngx.HTTP_CREATED)
         end
       end
-    else
-      ngx.say('key', ": ", key)
     end
   end
-  -- ngx.say( 'post ')
-
-  -- for key, val in pairs(get) do
-  --   if type(val) == "table" then
-  --      ngx.say('key', ": ", key)
-  --      ngx.say( 'value type: ' ..  type(val))
-  --      for k, v in pairs( val ) do
-  --      ngx.say('key', ": ", k)
-  --      ngx.say( 'value type: ' ..  v)
-  --      end
-
-  --   else
-  --      ngx.say('key', ": ", key)
-  --   end
-  -- end
-
-  -- ngx.say( 'get' )
-
-  -- for key, val in pairs(post) do
-  --   if type(val) == "table" then
-  --      ngx.say('key', ": ", key)
-  --      ngx.say( 'value type: ' ..  type(val))
-  --      for k, v in pairs( val ) do
-  --      ngx.say('key', ": ", k)
-  --      ngx.say( 'value type: ' ..  v)
-  --      end
-  --   else
-  --      ngx.say('key', ": ", key)
-  --   end
-  -- end
-
 end
 
+--[[
+deleting and undeleting posts
+moves posts to and from a recycle collection ( like a trash/recycle bin )
+on windows
+--]]
+
+function deletePost( uri )
+  local contentType = 'application/xml'
+  local resource    = extractID( uri) 
+  local restPath  = '/exist/rest/db/apps/' .. cfg.domain 
+  local sourceCollection = '/db/data/' .. cfg.domain .. '/docs/posts'
+  local targetCollection = '/db/data/' .. cfg.domain .. '/docs/recycle'
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $sourceCollection := "]] .. sourceCollection .. [["
+    let $targetCollection := "]] .. targetCollection .. [["
+    let $resource         := "]] .. resource .. [["
+    let $docPath          := $sourceCollection || '/' || $resource
+    return
+    if (exists($docPath)) then (
+     xmldb:move( $sourceCollection, $targetCollection, $resource)
+    )
+    else ( )
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  -- ngx.say(txt)
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function undeletePost( uri )
+  local contentType = 'application/xml'
+  local resource    = extractID( uri) 
+  local restPath  = '/exist/rest/db/apps/' .. cfg.domain 
+  local sourceCollection = '/db/data/' .. cfg.domain .. '/docs/recycle'
+  local targetCollection = '/db/data/' .. cfg.domain .. '/docs/posts'
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $sourceCollection := "]] .. sourceCollection .. [["
+    let $targetCollection := "]] .. targetCollection .. [["
+    let $resource         := "]] .. resource .. [["
+    let $docPath          := $sourceCollection || '/' || $resource
+    return
+    if (exists($docPath)) then (
+     xmldb:move( $sourceCollection, $targetCollection, $resource)
+    )
+    else ( )
+
+    ]] ..']]>' .. [[
+    </text>
+  </query>
+]]
+  --  ngx.say(txt)
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+--[[
+updating posts
+ update actions
+ - add
+ - delete
+ - replace
+
+--]]
+
+function addProperty( uri, property, item )
+  local domain      = cfg.domain
+  local resource    = extractID( uri )
+  local contentType = 'application/xml'
+  -- TODO only allow certain properties
+  local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [["
+    let $document := doc($path)
+    let $node := ]] .. xmlNode .. [[
+    let $item := ']] .. item .. [['
+    return
+    if ($document/entry/]] .. property .. [[  = $node ) then (
+      update replace $document/entry/]] .. property .. [[[./string() eq $item]  with $node )
+    else (
+      update insert $node into $document/entry
+    )
+
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function replaceProperty( uri, property, item )
+  local domain      =  cfg.domain
+  local resource    = extractID( uri)
+  --local xml = require 'xml'
+  local contentType = 'application/xml'
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
+  local xmlNode = ''
+  -- TODO only allow certain properties
+  if property == 'content' then
+    xmlNode = '<value>' .. item .. '</value>'
+  else
+   -- xmlNode = { xml = property, item } 
+  end
+
+  -- ngx.say(xml.dump(xmlNode))
+
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [["
+    let $document := doc($path)
+    let $node := ]] .. xmlNode .. [[
+    let $item := ']] .. item .. [['
+    return
+    if ( exists( $document/entry/]] .. property .. [[/value)) then (
+      update replace $document/entry/]] .. property .. [[/value with $node )
+    else (
+      update insert $node into $document/entry
+    )
+
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+
+function removeProperty( uri, property)
+  local domain      = cfg.domain
+  local resource    = extractID( uri) 
+  local contentType = 'application/xml'
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [["
+    let $document := doc($path)
+    return
+    if ( exists($document//]] .. property .. [[ )) 
+      then ( update delete $document//]] .. property .. [[ )
+    else ( )
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function removePropertyItem( uri, property, item )
+  local contentType = 'application/xml'
+  local domain      = cfg.domain
+  local resource    = extractID( uri) 
+  -- TODO only allow certain properties
+  -- ngx.say( resource )
+  -- ngx.say( property )
+  -- ngx.say( item )
+  local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    let $path := "]] .. docPath .. [["
+    let $document := doc($path)
+    let $item := ']] .. item .. [['
+    return
+    if ( $document/entry/]] .. property .. '[ . = "' .. item .. '" ]' ..  [[ ) then (
+    update delete  $document/entry/]] .. property .. '[ . = "' .. item .. '" ]' ..  [[
+    )
+    else ( )
+    ]] ..']]>' .. [[ 
+    </text>
+  </query>
+]]
+  -- ngx.log(ngx.INFO, txt)
+  local response =  sendMicropubRequest( restPath, txt )
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function fetchPostsDoc( uri )
+  ngx.log(ngx.INFO, "fetch posts doc ")
+  local contentType = 'application/xml'
+  local domain      = cfg.domain
+  local resource    = extractID( uri) 
+  ngx.log(ngx.INFO, "ID: " .. resource)
+  local target = 'xmldb:exist:///db/data/' .. cfg.domain .. '/docs/posts/' .. resource
+  ngx.log(ngx.INFO, "target: " .. target)
+
+  local txt  = [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no" cache="no">
+    <text>
+    <![CDATA[
+xquery version "3.1";
+declare namespace output = "http://www.w3.org/2010/xslt-xquery-serialization";
+let $params := 
+<output:serialization-parameters>
+  <output:method value="json"/>
+  <output:media-type value="application/json"/>
+</output:serialization-parameters>
+  return
+  serialize(doc( xs:anyURI( ' ]] .. target .. [[ ' ))/* , $params)
+
+]] ..']]>' .. [[
+    </text>
+  </query>
+]]
+
+  ngx.log(ngx.INFO, "txt: ", txt)
+  local restPath  = '/exist/rest/db/data/' .. cfg.domain
+  local http = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+   local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = restPath,
+      headers = {
+        ["Authorization"] = cfg.auth,
+        ["Content-Type"]  = contentType
+      },
+      body =  txt,
+      ssl_verify = false
+    })
+
+  if not res then
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+      return requestError(
+        ngx.HTTP_SERVICE_UNAVAILABLE,
+        'HTTP service unavailable',
+        'connection failure')
+    end
+    ngx.log(ngx.INFO, "status: ", res.status)
+    ngx.log(ngx.INFO,"reason: ", res.reason)
+    ngx.log(ngx.INFO,"body: ", body)
+    ngx.status = ngx.HTTP_OK
+    -- local args  = cjson.decode(ngx.req.get_body_data())
+    ngx.print(body)
+    ngx.exit( ngx.HTTP_OK )
+  end
+end
+
+function sendMicropubRequest( restPath, txt  )
+  local http = require "resty.http"
+  local authorization = cfg.auth
+  local contentType = 'application/xml'
+  -- ngx.say( txt )
+
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = restPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body =  txt,
+      ssl_verify = false
+    })
+  if not res then
+    ngx.say("failed to request: ", err)
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  return res
+end
+
+function putXML( collection, props )
+  ngx.log(ngx.INFO, 'do putXML' )
+  local rootName  = 'upload'
+  local http = require "resty.http"
+  local authorization = cfg.auth
+  local contentType = 'application/xml'
+  local domain   = cfg.domain 
+  local resource =  props.id
+  --local kindOfPost = xml.find(data, 'entry').kind
+  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
+  -- store without extension
+  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
+  local properties = {}
+  for property, item in pairs(props) do
+    local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+    table.insert(properties,xmlNode)
+    -- ngx.log(ngx.INFO, xmlNode)
+  end
+
+  local xmlDoc=  '<' .. rootName .. '>' .. table.concat(properties) .. '</' .. rootName .. '>'
+  ngx.log(ngx.INFO, xmlDoc)
+
+
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  local response, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = putPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body = xmlDoc,
+      ssl_verify = false
+    })
+
+  if not response then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
+  end
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function putMedia( props )
+  local http = require "resty.http"
+  local authorization = cfg.auth 
+  local domain        = cfg.domain
+  -- ngx.say( contentType )
+  local dataPath = "/exist/rest/db/data/" .. domain
+  local colPath  = "media"
+  local putPath  = dataPath .. '/' .. colPath .. '/' .. props.name
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+
+  local response, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = putPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = props.mime
+      },
+      body =  read( props.temp ) ,
+      ssl_verify = false
+    })
+  if not response then
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'request failure')
+  end
+  if response.has_body then
+    body, err = response:read_body()
+    if not body then
+      ngx.say("failed to read body: ", err)
+      return
+    end
+  end
+
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end 
+
+--[[
 function xprocessMultPartForm()
     --  grantmacken.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
   --  from agentzha TODO! check if avaible on OPM
@@ -1037,7 +1499,7 @@ function xprocessMultPartForm()
   end
 end
 
-
+--]]
 --[[
 
     -- ngx.say( ext )

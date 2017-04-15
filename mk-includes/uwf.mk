@@ -43,10 +43,11 @@ uwf:
 	@ufw enable
 	@ufw status numbered
 
-
 uwfClean:
 	@echo '## $@ ##'
 	@rm /etc/ufw/applications.d/*
+
+.PHONY: uwfClean uwf
 
 /etc/ufw/applications.d/Nginx: export ufwNginx:=$(ufwNginx)
 /etc/ufw/applications.d/Nginx:

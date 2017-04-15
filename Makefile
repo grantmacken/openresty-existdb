@@ -97,7 +97,6 @@ include mk-includes/*
 
 default: help
 
-
 help:
 	@echo 'OS NAME: $(OS_NAME) '
 	@echo 'SYSTEMD_PATH: $(SYSTEMD_PATH) '

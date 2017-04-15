@@ -45,9 +45,10 @@ uwf:
 
 
 uwfClean:
-	rm /etc/ufw/applications.d/*
+	@echo '## $@ ##'
+	@rm /etc/ufw/applications.d/*
 
-/etc/ufw/applications.d/Nginx export ufwNginx:=$(ufwNginx)
+/etc/ufw/applications.d/Nginx: export ufwNginx:=$(ufwNginx)
 /etc/ufw/applications.d/Nginx:
 	@echo "$${ufwNginx}" > $@
 

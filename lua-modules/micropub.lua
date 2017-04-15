@@ -270,8 +270,10 @@ end
 -- Main entry point
 
 function _M.processRequest()
+  ngx.log( ngx.INFO, 'Process Request' )
   --  the methods this endpoint can handle
   local method =  acceptMethods({"POST","GET"})
+  ngx.log( ngx.INFO, 'Accept Method: ' .. method )
   -- ngx.say(method)
   if method == "POST" then
     processPost()
@@ -282,7 +284,6 @@ end
 
 function processGet()
   ngx.log(ngx.INFO, 'process GET query to micropub endpoint' )
-  --ngx.say( ' process GET query to micropub endpoint ' )
   ngx.header.content_type = 'application/json' 
   local response = {}
   local msg = ''
@@ -339,15 +340,52 @@ end
 function processPostArgs()
   ngx.log(ngx.INFO, ' process POST arguments ' )
   local msg = ''
+  local args = {}
   ngx.req.read_body()
-  local args, err = ngx.req.get_post_args()
-  if not args then
+  local reqargs = require "resty.reqargs"
+  local get, post, files = reqargs(  )
+  if not get then
     msg = "failed to get post args: " ..  err
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
       msg)
   end
+
+  local getItems = 0
+  for k,v in pairs(get) do
+    getItems = getItems + 1
+  end
+
+  local postItems = 0
+  for k,v in pairs(post) do
+    postItems = postItems + 1
+  end
+
+  if  getItems > 0 then
+    ngx.log(ngx.INFO, ' - count post args ' .. getItems )
+    args = get
+  end
+
+  if  postItems > 0 then
+    ngx.log(ngx.INFO, ' - count post args ' .. postItems )
+    args = post
+  end
+
+  ngx.log(ngx.INFO, 'args')
+  for key, val in pairs(args) do
+    if type(val) == "table" then
+      ngx.log(ngx.INFO,'key', ": ", key)
+      ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+      for k, v in pairs( val ) do
+        ngx.log(ngx.INFO,'key', ": ", k)
+        ngx.log(ngx.INFO, 'value type: ' ..  v)
+      end
+    else
+      ngx.log(ngx.INFO,'key', ": ", key)
+    end
+  end
+
   if args['h'] then
     ngx.log(ngx.INFO,  ' assume we are creating a post item'  )
     local hType = args['h']
@@ -359,75 +397,85 @@ function processPostArgs()
         msg )
     end
 
-
+    ngx.log(ngx.INFO,  'Microformat Object Type: ' .. args['h'] )
     --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
     --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
 
     if hType == 'entry' then
       ngx.log(ngx.INFO,  'Create Entry ' )
-
-      local reqargs = require "resty.reqargs"
-      local get, post, files = reqargs( reqargsOptions )
-      if not get then
-        error(post)
-      end
-
-      local properties = createMicroformatproperties( post )
+      local properties = createMicroformatproperties( args )
 
       -- serialise as mf2 object
       local jData = { 
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
-    ngx.log(ngx.INFO,  cjson.encode(jData) ) 
-    ngx.log(ngx.INFO, " micropub create" )
-    local http   = require "resty.http"
-    local httpc  = http.new()
-    httpc:set_timeout(500)
-    local ok, err = httpc:connect(cfg.host, cfg.port)
-    if not ok then 
-      return requestError(
-        ngx.HTTP_SERVICE_UNAVAILABLE,
-        'HTTP service unavailable',
-        'connection failure')
-    end
-    ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
-    local restxqPath  = "/exist/restxq/" .. cfg.domain .. '/_micropub'
-    ngx.log(ngx.INFO, restxqPath )
-    ngx.log(ngx.INFO, 'Proxy request' )
-    httpc:set_timeout(2000)
-      local res, err =  httpc:request({
-        version = 1.1,
-        method = "POST",
-        path = restxqPath,
-        headers = {
-          ["Authorization"] =  cfg.auth,
-          ["Content-Type"] = 'application/json'
-        },
-        body = cjson.encode(jData),
-        ssl_verify = false
-      })
-    ngx.log(ngx.INFO, 'Response status: [ '  .. res.status ..   ' '  .. res.reason .. ' ]'   )
-    if res.has_body then
-      body, err = res:read_body()
-      if not body then
-        ngx.log(ngx.INFO, "failed to read body: ", err)
-        return requestError(
-          ngx.HTTP_SERVICE_UNAVAILABLE,
-          'HTTP service unavailable',
-          'connection failure')
+      ngx.log(ngx.INFO,  'post args serialised as mf2' )
+      --ngx.log(ngx.INFO,  cjson.encode(jData) )
+      local reason =  putXML( 'posts', jData.properties.uid[1] , createXmlEntry(jData))
+      if reason == 'Created' then
+        ngx.header.location = jData.properties.url[1]
+        ngx.exit(ngx.HTTP_CREATED)
       end
-      ngx.header.location = jData.properties.url[1]
-      ngx.status = ngx.HTTP_CREATED
-      ngx.header.content_type = 'application/xml'
-      ngx.say(body)
-      ngx.exit(ngx.HTTP_CREATED)
-    end
-    -- should not be here
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+      -- local properties = {}
+      -- for property, item in pairs(props) do
+      --   ngx.log(ngx.INFO,  cjson.encode(jData) ) 
+      --   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+      --   table.insert(properties,xmlNode)
+      --   -- ngx.log(ngx.INFO, xmlNode)
+      -- end
+
+
+
+
+
+      --     ngx.log(ngx.INFO, " micropub create" )
+      --     local http   = require "resty.http"
+      --     local httpc  = http.new()
+      --     httpc:set_timeout(500)
+      --     local ok, err = httpc:connect(cfg.host, cfg.port)
+      --     if not ok then 
+      --       return requestError(
+      --         ngx.HTTP_SERVICE_UNAVAILABLE,
+      --         'HTTP service unavailable',
+      --         'connection failure')
+      --     end
+      --     ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+      --     local restPath  = "/exist/rest/db/apps/" .. cfg.domain .. '/modules/api/mp-create.xq'
+      --     ngx.log(ngx.INFO, restxqPath )
+      --     httpc:set_timeout(2000)
+      --       local res, err =  httpc:request({
+      --         version = 1.1,
+      --         method = "POST",
+      --         path = restPath,
+      --         headers = {
+      --           ["Authorization"] =  cfg.auth,
+      --           ["Content-Type"] = 'application/json'
+      --         },
+      --         body = cjson.encode(jData),
+      --         ssl_verify = false
+      --       })
+      --     ngx.log(ngx.INFO, 'Response status: [ '  .. res.status ..   ' '  .. res.reason .. ' ]'   )
+      --     if res.has_body then
+      --       body, err = res:read_body()
+      --       if not body then
+      --         ngx.log(ngx.INFO, "failed to read body: ", err)
+      --         return requestError(
+      --           ngx.HTTP_SERVICE_UNAVAILABLE,
+      --           'HTTP service unavailable',
+      --           'connection failure')
+      --       end
+      --       ngx.header.location = jData.properties.url[1]
+      --       restPath  = "/exist/rest/db/data/" .. cfg.domain .. '/docs/posts/' .. jData.properties.uid[1]
+      --       ngx.header.content_type = 'application/xml'
+      --       ngx.say(body)
+      --       ngx.exit(ngx.HTTP_CREATED)
+      --     end
+      -- should not be here
+      -- return requestError(
+      --   ngx.HTTP_SERVICE_UNAVAILABLE,
+      --   'HTTP service unavailable',
+      --   'connection failure')
     end
   elseif args['action'] then
    ngx.log(ngx.INFO,  ' assume we are modifying a post item in some way'  )
@@ -561,37 +609,45 @@ function createMicroformatproperties( post )
  end
 
  function createXmlEntry( jData )
-   local xml = require 'xml' 
-   local m, err = ngx.re.match( jData.type, "[^-]+$")
-
-   xData = { 
-     xml = m[0] 
-   }
-
-  for key, val in pairs( jData.properties ) do
-    -- ngx.say('key', ": ", key)
-    -- ngx.say( 'value type: ' ..  type(val))
-    for k, v in pairs( val ) do
-      if type(v) == "table" then
-        table.insert( xData,1,{ xml = key })
-        for ky, vl in pairs( v ) do
-          -- ngx.say('key', ": ", key)
-          -- ngx.say('key', ": ", ky)
-          --  ngx.say( 'value type: ' ..  type(vl))
-          -- local xContent = xml.find( xData, key )
-          -- NOTE: TODO! url escape vl
-          if type(vl) == "string" then
-            table.insert(xml.find( xData, key ) ,1,{ xml = ky, ngx.encode_base64(vl)})
-          end
-        end
+   ngx.log(ngx.INFO,  'create XML entry from jData' )
+   local root = ngx.re.match( jData.type, "[^-]+$")[0]
+   local xmlNode = ''
+   -- ngx.log(ngx.INFO,  'root documentElement: ' .. root   )
+   local properties = {}
+   local contents = {}
+   for property, val in pairs( jData.properties ) do
+     -- ngx.log(ngx.INFO, 'property', ": ", property)
+     -- ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+     for i, item in pairs( val ) do
+       if type(item) == "table" then
+         -- ngx.log(ngx.INFO, cjson.encode(item) )
+         --table.insert( xData,1,{ xml = key })
+         for key, item2 in pairs( item ) do
+           -- ngx.log(ngx.INFO,'key', ": ", key)
+           -- ngx.log(ngx.INFO,'item2 type: ' ..  type(item2))
+           if type(item2) == "string" then
+             xmlNode =  '<' .. key .. '>' .. item2 .. '</' .. key .. '>'
+             table.insert(contents,xmlNode)
+           end
+         end
+         xmlNode =  '<' .. property .. '>' .. table.concat(contents) .. '</' .. property .. '>'
+        table.insert(properties,xmlNode)
       else
-        table.insert( xData,1,{ xml = key, v })
+         xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+        table.insert(properties,xmlNode)
       end
     end
   end
-  return xData
+ local xmlDoc =  '<' .. root .. '>' .. table.concat(properties) .. '</' .. root .. '>'
+  return xmlDoc
 end
-
+     -- local properties = {}
+      -- for property, item in pairs(props) do
+      --   ngx.log(ngx.INFO,  cv v v v v json.encode(jData) ) 
+      --   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
+      --   table.insert(properties,xmlNode)
+      --   -- ngx.log(ngx.INFO, xmlNode)
+      -- end
 function createEntryFromJson( hType , props)
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
@@ -666,16 +722,15 @@ end
 function acceptContentTypes(contentTypes)
   --  the content-types this endpoint can handle
   local contentType = ngx.var.http_content_type
-  local from, to, err = ngx.re.find(contentType ,"(multipart/form-data)")
+  local from, to, err = ngx.re.find(contentType ,"(multipart/form-data|application/x-www-form-urlencoded|multipart/form-data)")
   if from then
-    contentType =  'multipart/form-data'
+    contentType =  string.sub(contentType, from, to)
   end
-
   if not contains(contentTypes,contentType)  then
     local msg = 'endpoint does not accept' .. contentType
     return requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
+      'not accepted ',
       msg )
   end
   return contentType
@@ -899,6 +954,8 @@ function processPost()
       'application/x-www-form-urlencoded',
       'multipart/form-data'
     })
+
+  ngx.log( ngx.INFO, 'Accept Content Type: ' .. contentType )
   --  ngx.say( contentType )
   if contentType  == 'application/x-www-form-urlencoded' then
     processPostArgs()
@@ -981,7 +1038,7 @@ function processMultPartForm()
       if reason == 'Created' then
         -- NOTE: return binary source as location
         -- Note create a doc for the 'shoebox
-        local reason2 =  putXML( 'uploads', properties )
+        local reason2 =  putXML2( 'uploads', properties )
         if reason2 == 'Created' then
           ngx.header['Location'] = properties['src']
           ngx.status = ngx.HTTP_CREATED
@@ -1212,34 +1269,14 @@ end
 
 function fetchPostsDoc( uri )
   ngx.log(ngx.INFO, "fetch posts doc ")
-  local contentType = 'application/xml'
+  local contentType = 'application/json'
+  local authorization = cfg.auth
   local domain      = cfg.domain
-  local resource    = extractID( uri) 
-  ngx.log(ngx.INFO, "ID: " .. resource)
-  local target = 'xmldb:exist:///db/data/' .. cfg.domain .. '/docs/posts/' .. resource
-  ngx.log(ngx.INFO, "target: " .. target)
-
-  local txt  = [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no" cache="no">
-    <text>
-    <![CDATA[
-xquery version "3.1";
-declare namespace output = "http://www.w3.org/2010/xslt-xquery-serialization";
-let $params := 
-<output:serialization-parameters>
-  <output:method value="json"/>
-  <output:media-type value="application/json"/>
-</output:serialization-parameters>
-  return
-  serialize(doc( xs:anyURI( ' ]] .. target .. [[ ' ))/* , $params)
-
-]] ..']]>' .. [[
-    </text>
-  </query>
-]]
-
-  ngx.log(ngx.INFO, "txt: ", txt)
-  local restPath  = '/exist/rest/db/data/' .. cfg.domain
+  local txt    =    extractID( uri )
+  ngx.log(ngx.INFO, "ID: " .. txt)
+  local restPath  = '/exist/rest/db/apps/' .. cfg.domain
+  local target  =  restPath .. '/modules/api/mp-source.xq'
+  ngx.log(ngx.INFO, "path:  " .. target )
   local http = require "resty.http"
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
@@ -1250,24 +1287,30 @@ let $params :=
       'connection failure')
   end
 
-   local res, err = httpc:request({
+  local res, err = httpc:request({
       version = 1.1,
       method = "POST",
-      path = restPath,
+      path = target,
       headers = {
-        ["Authorization"] = cfg.auth,
-        ["Content-Type"]  = contentType
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
       },
       body =  txt,
       ssl_verify = false
     })
-
   if not res then
+    ngx.say("failed to request: ", err)
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
+--   if not res then
+--     return requestError(
+--       ngx.HTTP_SERVICE_UNAVAILABLE,
+--       'HTTP service unavailable',
+--       'connection failure')
+--   end
 
   if res.has_body then
     body, err = res:read_body()
@@ -1323,7 +1366,45 @@ function sendMicropubRequest( restPath, txt  )
   return res
 end
 
-function putXML( collection, props )
+
+function putXML( collection, resource , data )
+  local http = require "resty.http"
+  local authorization = cfg.auth
+  local contentType = 'application/xml'
+  local dataPath = "/exist/rest/db/data/" ..cfg.domain  .. '/docs'
+  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  local response, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = putPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body = data,
+      ssl_verify = false
+    })
+
+  if not response then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
+  end
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
+
+function putXML2( collection, props )
   ngx.log(ngx.INFO, 'do putXML' )
   local rootName  = 'upload'
   local http = require "resty.http"

@@ -169,12 +169,21 @@ end
 
 function processPost()
   -- ngx.log(ngx.INFO, "Process the content-types this endpoint can handle")
+  -- mainly handle eXist rest endpoint
   local contentType = acceptContentTypes({
+      'application/xquery',
       'application/xml',
       'application/json',
       'application/x-www-form-urlencoded',
       'multipart/form-data'
     })
+
+
+--[[
+POST  If the remainder of the URI (the part after /exist/rest) i
+ references an XQuery program stored in the database, it will be executed.
+]]--
+
   ngx.log(ngx.INFO, "Accepted Content Type [ " .. contentType  .. ' ]')
   --  ngx.say( contentType )
   if contentType  == 'application/x-www-form-urlencoded' then
@@ -182,13 +191,88 @@ function processPost()
   elseif contentType  == 'multipart/form-data' then
     processMultiPartForm()
   elseif contentType  == 'application/json' then
-    -- processJsonBody()
+         processJsonBody()
   elseif contentType  == 'application/xml' then
-         processXquery()
+         processXqueryXML()
+  elseif contentType  == 'application/xquery' then
+         processXqueryFile()
   end
 end
 
-function processXquery()
+
+function processJsonBody()
+  ngx.log(ngx.INFO, "Process JSON Body")
+  ngx.req.read_body()
+  local data = ngx.req.get_body_data()
+  ngx.log(ngx.INFO, type(data))
+  ngx.log(ngx.INFO, ngx.var.uri)
+
+  local sPath, n, err =  ngx.re.sub( ngx.var.uri, "/_exist", "")
+  -- ngx.log(ngx.INFO, data)
+  local restPath =  '/exist/rest/db/apps/' .. ngx.var.domain .. ngx.re.sub( ngx.var.uri, "/_exist", "")
+
+  local http = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "POST",
+        path = restPath,
+        headers = {
+          ["Content-Type"] =  ngx.header.content_type,
+          ["Authorization"] = cfg.auth 
+        },
+        body =  data,
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+end
+
+function processXqueryFile()
+  ngx.log(ngx.INFO, "Process xQuery File")
+  ngx.req.read_body()
+  local data = ngx.req.get_body_data()
+  ngx.log(ngx.INFO, type(data))
+  ngx.log(ngx.INFO, ngx.var.uri)
+
+  local sPath, n, err =  ngx.re.sub( ngx.var.uri, "/_exist", "")
+  -- ngx.log(ngx.INFO, data)
+  local restPath =  '/exist/rest/db/apps/' .. ngx.var.domain .. ngx.re.sub( ngx.var.uri, "/_exist", "")
+
+  local http = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  httpc:set_timeout(2000)
+  httpc:proxy_response( httpc:request({
+        version = 1.1,
+        method = "POST",
+        path = restPath,
+        headers = {
+          ["Content-Type"] =  ngx.header.content_type,
+          ["Authorization"] = cfg.auth 
+        },
+        body =  data,
+        ssl_verify = false
+    }))
+  httpc:set_keepalive()
+end
+
+function processXqueryXML()
   ngx.log(ngx.INFO, "Process xQuery ")
   ngx.req.read_body()
   local data = ngx.req.get_body_data()

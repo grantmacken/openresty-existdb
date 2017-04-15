@@ -28,4 +28,3 @@ make orModules && curl -G -H "Authorization: Bearer $(<../.site-access-token)" h
 
 curl -H "Content-Type: application/xml" -G -H "Authorization: Bearer $(<../.site-access-token)" https://gmack.nz/exist
 
-

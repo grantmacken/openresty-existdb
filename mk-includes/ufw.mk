@@ -20,7 +20,7 @@ description=Small, but very powerful and efficient web server
 ports=80,443/tcp
 endef
 
-uwf:
+ufw:
 	@$(MAKE) --silent /etc/ufw/applications.d/Nginx
 	@$(MAKE) --silent /etc/ufw/applications.d/OpenSSH
 	@$((MAKE) --silent /etc/ufw/applications.d/eXist
@@ -43,11 +43,11 @@ uwf:
 	@ufw enable
 	@ufw status numbered
 
-uwfClean:
+ufwClean:
 	@echo '## $@ ##'
 	@rm /etc/ufw/applications.d/*
 
-.PHONY: uwfClean uwf
+.PHONY: ufwClean ufw
 
 /etc/ufw/applications.d/Nginx: export ufwNginx:=$(ufwNginx)
 /etc/ufw/applications.d/Nginx:

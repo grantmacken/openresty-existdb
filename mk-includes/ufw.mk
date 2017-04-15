@@ -20,10 +20,7 @@ description=Small, but very powerful and efficient web server
 ports=80,443/tcp
 endef
 
-ufw:
-	@$(MAKE) --silent /etc/ufw/applications.d/Nginx
-	@$(MAKE) --silent /etc/ufw/applications.d/OpenSSH
-	@$((MAKE) --silent /etc/ufw/applications.d/eXist
+ufw: /etc/ufw/applications.d/Nginx /etc/ufw/applications.d/OpenSSH /etc/ufw/applications.d/eXist
 	@ufw reset
 	@ufw app list
 	@ufw app update Nginx

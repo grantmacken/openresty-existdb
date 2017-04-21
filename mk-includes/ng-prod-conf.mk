@@ -10,7 +10,7 @@
 #  file: nginx-config/dev-server-port443.conf
 ##########################################################
 
-define cnfPod
+define cnfProd
 # Note: worker proccess set to the amount of cpu cores
 worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 
@@ -46,8 +46,8 @@ http {
 
 endef
 
-ngDev: export cnfProd:=$(cnfProd)
-ngDev:
+ngProd: export cnfProd:=$(cnfProd)
+ngProd:
 	@echo "$(DOMAIN)"
 	@test -d /etc/letsencrypt/
 	@test -e /etc/letsencrypt//dh-param.pem

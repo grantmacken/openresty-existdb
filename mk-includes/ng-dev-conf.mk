@@ -31,11 +31,10 @@ worker_rlimit_nofile 8000;
 include events.conf;
 
 http {
-  include http-lua.conf;
-  # nginx-config/http-lua.conf
+  lua_code_cache off;    # only during development
+  include http-lua.conf; # nginx-config/http-lua.conf
   include mime.types;
-  # nginx-config/http-opt.conf
-  include http-opt.conf;
+  include http-opt.conf; # nginx-config/http-opt.conf
 
   #  HTTP server
   #  nginx-config/server-port80-redirect.conf

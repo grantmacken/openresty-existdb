@@ -40,8 +40,8 @@ http {
   #  nginx-config/server-port80-redirect.conf
   include server-port80-redirect.conf;
 
-  #  nginx-config/dev-server.conf
-  include dev-server.conf;
+  #  nginx-config/server.conf
+  include server.conf;
 }
 
 endef

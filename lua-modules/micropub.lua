@@ -150,6 +150,7 @@ postedEntryProperties= {
   ['category'] = true,
   ['rsvp'] = true,
   ['in-reply-to'] = true,
+  ['syndicate-to'] = true,
   ['repost-of'] = true,
   ['like-of'] = true,
   ['video'] = true,
@@ -173,6 +174,7 @@ local updateTypes = {
 
 local shortKindOfPost = {
  note = 'n',
+ reply = 'r',
  article = 'a',
  photo = 'p',
  media = 'm'
@@ -180,6 +182,7 @@ local shortKindOfPost = {
 
 local longKindOfPost = {
  n = 'note',
+ r = 'reply',
  a = 'article',
  p = 'photo',
  m = 'media'
@@ -229,35 +232,39 @@ end
 function discoverPostType(props)
   -- https://www.w3.org/TR/post-type-discovery/
   local kindOfPost = 'note'
-  for key, val in pairs(props) do
-    -- ngx.say(key)
-    if key == "rsvp" then
-      --TODO check valid value
-      kindOfPost = 'RSVP'
-    elseif key == "in-reply-to" then
-      --TODO check valid value
-      kindOfPost = 'reply'
-    elseif key == "repost-of" then
-      --TODO check valid value
-      kindOfPost = 'share'
-    elseif key == "like-of" then
-      --TODO check valid value
-      kindOfPost = 'like'
-    elseif key == "video" then
-      --TODO check valid value
-      kindOfPost = 'video'
-    elseif key == "photo" then
-      --TODO check valid value
-      kindOfPost = 'photo'
-      break
-    elseif key == "name" then
-      --TODO check valid value
-      kindOfPost = 'article'
-      break
-    else
-      kindOfPost = 'note'
-    end
+  if props['in-reply-to'] ~= nil then
+    kindOfPost = 'reply'
   end
+  -- for key, val in pairs(props) do
+  --   ngx.log(ngx.INFO, "key: ", key)
+  --   ngx.log(ngx.INFO, "key: ", type( key ))
+  --   if key == "rsvp" then
+  --     --TODO check valid value
+  --     kindOfPost = 'RSVP'
+  --   elseif key == 'in%-reply%-to' then
+  --     --TODO check valid value
+  --     kindOfPost = 'reply'
+  --   elseif key == 'repost%-of' then
+  --     --TODO check valid value
+  --     kindOfPost = 'share'
+  --   elseif key == 'like%-of' then
+  --     --TODO check valid value
+  --     kindOfPost = 'like'
+  --   elseif key == "video" then
+  --     --TODO check valid value
+  --     kindOfPost = 'video'
+  --   elseif key == "photo" then
+  --     --TODO check valid value
+  --     kindOfPost = 'photo'
+  --     break
+  --   elseif key == "name" then
+  --     --TODO check valid value
+  --     kindOfPost = 'article'
+  --     break
+  --   else
+  --     kindOfPost = 'note'
+  --   end
+  -- end
  return kindOfPost
 end
 
@@ -400,82 +407,34 @@ function processPostArgs()
     ngx.log(ngx.INFO,  'Microformat Object Type: ' .. args['h'] )
     --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
     --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
-
     if hType == 'entry' then
       ngx.log(ngx.INFO,  'Create Entry ' )
-      local properties = createMicroformatproperties( args )
-
-      -- serialise as mf2 object
+      local properties, kindOfPost = createMf2Properties( args )
       local jData = { 
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
-      ngx.log(ngx.INFO,  'post args serialised as mf2' )
+      ngx.log(ngx.INFO,  ' - post args serialised as mf2' )
+
+      -- tasks depends on type of post 
       --ngx.log(ngx.INFO,  cjson.encode(jData) )
       local reason =  putXML( 'posts', jData.properties.uid[1] , createXmlEntry(jData))
+      if kindOfPost == 'reply' then
+        ngx.log(ngx.INFO,  kindOfPost  ..  ' additional tasks ' )
+        -- my page 
+        local source = jData.properties.url[1]
+        local target = jData.properties['in-reply-to'][1]
+        ngx.log(ngx.INFO, 'source: [ '  .. source .. ' ]' )
+        ngx.log(ngx.INFO, 'target: [ '  .. target .. ' ]' )
+        local endpoint = discoverWebMentionEndpoint( target )
+        ngx.log(ngx.INFO, 'endpoint: [ '  .. endpoint .. ' ]' )
+        local mention = sendWebMention( endpoint, source, target )
+      end
+      -- Finally 
       if reason == 'Created' then
         ngx.header.location = jData.properties.url[1]
         ngx.exit(ngx.HTTP_CREATED)
       end
-      -- local properties = {}
-      -- for property, item in pairs(props) do
-      --   ngx.log(ngx.INFO,  cjson.encode(jData) ) 
-      --   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
-      --   table.insert(properties,xmlNode)
-      --   -- ngx.log(ngx.INFO, xmlNode)
-      -- end
-
-
-
-
-
-      --     ngx.log(ngx.INFO, " micropub create" )
-      --     local http   = require "resty.http"
-      --     local httpc  = http.new()
-      --     httpc:set_timeout(500)
-      --     local ok, err = httpc:connect(cfg.host, cfg.port)
-      --     if not ok then 
-      --       return requestError(
-      --         ngx.HTTP_SERVICE_UNAVAILABLE,
-      --         'HTTP service unavailable',
-      --         'connection failure')
-      --     end
-      --     ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
-      --     local restPath  = "/exist/rest/db/apps/" .. cfg.domain .. '/modules/api/mp-create.xq'
-      --     ngx.log(ngx.INFO, restxqPath )
-      --     httpc:set_timeout(2000)
-      --       local res, err =  httpc:request({
-      --         version = 1.1,
-      --         method = "POST",
-      --         path = restPath,
-      --         headers = {
-      --           ["Authorization"] =  cfg.auth,
-      --           ["Content-Type"] = 'application/json'
-      --         },
-      --         body = cjson.encode(jData),
-      --         ssl_verify = false
-      --       })
-      --     ngx.log(ngx.INFO, 'Response status: [ '  .. res.status ..   ' '  .. res.reason .. ' ]'   )
-      --     if res.has_body then
-      --       body, err = res:read_body()
-      --       if not body then
-      --         ngx.log(ngx.INFO, "failed to read body: ", err)
-      --         return requestError(
-      --           ngx.HTTP_SERVICE_UNAVAILABLE,
-      --           'HTTP service unavailable',
-      --           'connection failure')
-      --       end
-      --       ngx.header.location = jData.properties.url[1]
-      --       restPath  = "/exist/rest/db/data/" .. cfg.domain .. '/docs/posts/' .. jData.properties.uid[1]
-      --       ngx.header.content_type = 'application/xml'
-      --       ngx.say(body)
-      --       ngx.exit(ngx.HTTP_CREATED)
-      --     end
-      -- should not be here
-      -- return requestError(
-      --   ngx.HTTP_SERVICE_UNAVAILABLE,
-      --   'HTTP service unavailable',
-      --   'connection failure')
     end
   elseif args['action'] then
    ngx.log(ngx.INFO,  ' assume we are modifying a post item in some way'  )
@@ -489,8 +448,8 @@ function processPostArgs()
   end
 end
 
-function createMicroformatproperties( post )
-
+function createMf2Properties( post )
+   ngx.log(ngx.INFO,  'Convert post data into a mf2 JSON Serialization Format' )
   --[[
     convert post data into a mf2 JSON  Serialization Formati
 
@@ -523,8 +482,9 @@ function createMicroformatproperties( post )
 
   --]]
 
-  -- ' from the sent properties - discovery the kind of post '
+  ngx.log(ngx.INFO, ' - from the sent properties - discover the kind of post ')
   local kindOfPost = discoverPostType( post )
+  ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
   local properties = {}
   local sID = require('grantmacken.postID').getID( getShortKindOfPost(kindOfPost))
   local sURL = 'https://' .. cfg.domain .. '/' .. sID  
@@ -534,9 +494,13 @@ function createMicroformatproperties( post )
   properties['uid'] =  { sID  }
   properties['url'] = { sURL }
 
+  ngx.log(ngx.INFO, 'property: published - ' .. sPub )
+  ngx.log(ngx.INFO, 'property: uid  - ' .. sID )
+  ngx.log(ngx.INFO, 'property: url  - ' .. sURL )
+
   for key, val in pairs( post ) do
-    -- ngx.say( 'post key: '  .. key  )
-    -- ngx.say( type( val ) )
+    -- ngx.log(ngx.INFO,  'post key: '  .. key  )
+    -- ngx.log(ngx.INFO,   type( val ) )
     if key == 'content' then
       if type(post['content'][1]) == "table" then
         for k, v in pairs(post['content'][1]) do
@@ -566,12 +530,17 @@ function createMicroformatproperties( post )
         properties['content'] = content
       end
     elseif  type(val) == "string" then
+      -- ngx.log(ngx.INFO,  'post key: '  .. key  )
+      -- ngx.log(ngx.INFO,   type( val ) )
+      -- categories are array like
       local m, err = ngx.re.match(key, "\\[\\]")
+      -- ngx.log(ngx.INFO,   type( m ) )
       if m then
-       local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
+        local pKey, n, err = ngx.re.sub(key, "\\[\\]", "")
         if pKey then
           if postedEntryProperties[pKey] ~=  nil then
             if properties[ pKey ] ~= nil then
+              ngx.log(ngx.INFO,  'pKey : '  .. pKey )
               -- ngx.say('key', ": ", pKey)
               table.insert(properties[ pKey ],val)
             else
@@ -584,9 +553,11 @@ function createMicroformatproperties( post )
           ngx.log(ngx.ERR, "error: ", err)
           return
         end
-        --  ngx.say("match not found")
+        -- ngx.log(ngx.INFO,   'match not found' )
         if postedEntryProperties[key] ~=  nil then
-          properties[ key ] = { value }
+          -- ngx.log(ngx.INFO,  'non array key: '  .. key  )
+          -- ngx.log(ngx.INFO,   val  )
+          properties[ key ] = { val }
         end
       end
     elseif type(val) == "table" then
@@ -605,7 +576,7 @@ function createMicroformatproperties( post )
       end
     end
   end
- return properties
+ return properties, kindOfPost
  end
 
  function createXmlEntry( jData )
@@ -641,13 +612,7 @@ function createMicroformatproperties( post )
  local xmlDoc =  '<' .. root .. '>' .. table.concat(properties) .. '</' .. root .. '>'
   return xmlDoc
 end
-     -- local properties = {}
-      -- for property, item in pairs(props) do
-      --   ngx.log(ngx.INFO,  cv v v v v json.encode(jData) ) 
-      --   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
-      --   table.insert(properties,xmlNode)
-      --   -- ngx.log(ngx.INFO, xmlNode)
-      -- end
+
 function createEntryFromJson( hType , props)
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
@@ -1402,6 +1367,40 @@ function putXML( collection, resource , data )
   ngx.log(ngx.INFO, "status: ", response.status)
   ngx.log(ngx.INFO,"reason: ", response.reason)
   return response.reason
+end
+
+function discoverWebMentionEndpoint( target )
+  ngx.log(ngx.INFO, 'Discover Web Mention Endpoint' )
+  -- TODO!
+  local webMentionEndpoint = 'https://gmack.nz/webmention'
+  return webMentionEndpoint
+end
+
+function sendWebMention( endpoint, source, target )
+  ngx.log(ngx.INFO, 'Send Web Mention' )
+  local http = require "resty.http"
+  local httpc = http.new()
+  -- For simple singleshot requests, use the URI interface.
+  local res, err = httpc:request_uri(endpoint, {
+    method = "POST",
+    body = {
+    ['source'] = source,
+    ['target'] = target,
+    },
+    headers = {
+      ["Content-Type"] = "application/x-www-form-urlencoded",
+    }
+  })
+  if not res then 
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
+  end
+
+  ngx.log(ngx.INFO, "webmention post response status: ", res.status)
+  ngx.log(ngx.INFO, "webmention post response reason: ", res.reason)
+ return res
 end
 
 function putXML2( collection, props )

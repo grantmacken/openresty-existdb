@@ -13,7 +13,6 @@ START_JAR := $(JAVA) \
  -Djava.awt.headless=true \
  -jar $(EXIST_HOME)/start.jar
 
-
 define eXistService
 [Unit]
 Description=The exist db application server

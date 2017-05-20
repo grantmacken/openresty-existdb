@@ -62,7 +62,7 @@ local cfg = {
 port = 8080,
 host = '127.0.0.1',
 auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
-domain = ngx.var.domain 
+domain = ngx.var.domain
 }
 
 --UTILITY TODO move to utility.lua
@@ -286,7 +286,7 @@ function _M.processRequest()
     processPost()
   else
     processGet()
-  end
+  endpoint
 end
 
 function processGet()
@@ -666,6 +666,7 @@ function createEntryFromJson( hType , props)
       table.insert(data,1,{ xml = 'content',['type'] = k, v })
     end 
   elseif type(props['content'][1]) == "string" then
+
     table.insert(data,1,{ xml = 'content',['type'] = 'text', props['content'][1]})
   end
 
@@ -679,9 +680,9 @@ function acceptMethods(methods)
     return requestError(
       ngx.HTTP_METHOD_NOT_IMPLEMENTED,
       method .. ' method not implemented',
-      'endpoint only implements POST and GET methods') 
+      'endpoint only implements POST and GET methods')
   end
- return method  
+ return method
 end
 
 function acceptContentTypes(contentTypes)
@@ -1380,27 +1381,48 @@ function sendWebMention( endpoint, source, target )
   ngx.log(ngx.INFO, 'Send Web Mention' )
   local http = require "resty.http"
   local httpc = http.new()
-  -- For simple singleshot requests, use the URI interface.
-  local res, err = httpc:request_uri(endpoint, {
-    method = "POST",
-    body = {
-    ['source'] = source,
-    ['target'] = target,
-    },
-    headers = {
-      ["Content-Type"] = "application/x-www-form-urlencoded",
-    }
-  })
-  if not res then 
+ --  For simple singleshot requests, use the URI interface.
+  local ok, err = httpc:connect('gmack.nz',443)
+  if not ok then 
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
-      'no response' )
+      'connection failure')
   end
 
+  local contentType = 'application/x-www-form-urlencoded'
+  local strBody = 'source=' .. source .. '&target=' .. target
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = endpoint,
+      headers = {
+        ["Content-Type"] = contentType
+      },
+      body = strBody,
+      ssl_verify = false
+    })
+  if not res then
+    ngx.say("failed to request: ", err)
+    return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
   ngx.log(ngx.INFO, "webmention post response status: ", res.status)
   ngx.log(ngx.INFO, "webmention post response reason: ", res.reason)
- return res
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+         return requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'failed to read body')
+    end
+  ngx.log(ngx.INFO, res.body)
+
+  end
+  return res
 end
 
 function putXML2( collection, props )

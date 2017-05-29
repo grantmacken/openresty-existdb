@@ -14,7 +14,7 @@ is "$(curl -Is http://127.0.0.1:8080/ |\
  grep -oP 'Jetty')" 'Jetty'  'Jetty serves on port 8080' 
 
 is "$(cd ${EXIST_HOME} && \
- java -jar ${EXIST_HOME}/start.jar client -sq -u admin -P ${P} -x 'sm:is-authenticated()'|\
+   -jar ${EXIST_HOME}/start.jar client -sq -u admin -P ${P} -x 'sm:is-authenticated()'|\
  tail -1)" 'true'  'can authenticate with username and password'
 
 note "FIN"

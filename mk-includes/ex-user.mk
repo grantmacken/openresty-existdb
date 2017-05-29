@@ -14,9 +14,7 @@ eXist USER: changing user account
 
 ==========================================================
 
-`make orModules`
-`make watch-orModules`
-`make orModules-help`
+`make exGitUserAddd`
 
 endef
 

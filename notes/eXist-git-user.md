@@ -6,9 +6,9 @@ with the password as my current GitHub access token.
 The pathway to the token is set in the config file in the projects root
 
 ```
-make exGitAdminCheck
 make exGitUserAdd
 make exGitUserRemove
+make exGitAdminCheck
 ```
 
 [![asciicast](https://asciinema.org/a/103652.png)](https://asciinema.org/a/103652)
@@ -56,13 +56,13 @@ user:password combo available as an ENVIROMENT variable.
 ```
 This becomes our  base64 encoded string that can be used by openenresty for HTTP Basic Athentication with eXist
 
-To use enviroment var 'EXIST_AUTH' in OpenResty, the env var must be set as a directive in nginx.conf
+To use environment var 'EXIST_AUTH' in OpenResty, the env var must be set as a directive in nginx.conf
 
 ```
  env EXIST_AUTH;
 ```
 
-Once set the enviroment var can be accessed use in lua modules to interact with eXist
+Once set the environment var can be accessed use in lua modules to interact with eXist
 
 ``` 
 local existAuth = os.getenv("EXIST_AUTH")

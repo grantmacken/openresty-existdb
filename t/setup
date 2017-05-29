@@ -10,6 +10,7 @@ if [ -e ${SITE_TOKEN_PATH} ] ;then TOKEN="$(<${SITE_TOKEN_PATH})";fi
 USER=$(whoami)
 if [ -n ${SUDO_USER} ] ;then USER="${SUDO_USER}";fi
 
+JAVA="$(which java)"
 cmdClient="java -jar ${EXIST_HOME}/start.jar client -sqx -u admin -P ${P}"
 
 TEST_MORE_PATH='bin/test-more-bash'

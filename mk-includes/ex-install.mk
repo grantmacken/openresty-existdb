@@ -3,22 +3,22 @@
 exInstallDownload:
 	@rm $(T)/eXist-latest.version 2>/dev/null || echo 'latest versions gone'
 	@$(MAKE) --silent $(T)/eXist-latest.version
+	@cat $(T)/eXist-latest.version
 
 exInstall: exInstallDownload
 exInstall:
 	@$(MAKE) --silent $(T)/eXist-run.sh
 	@$(MAKE) --silent exMimeTypes
 
-exClean: 
+exClean:
 	@echo 'stop eXist'
 	@$(if $(SUDO_USER),\
  $(MAKE) exServiceStop,\
  sudo $(MAKE) exServiceStop)
 	@echo 'removing eXist dir'
-	@if [ -e  $(EXIST_HOME) ];then rm -R $(EXIST_HOME);fi
+	@mkdir /usr/local/backup
+	@if [ -e  $(EXIST_HOME) ];then cp -R $(EXIST_HOME) /usr/local/backup/;fi
 
-exBackup:
-	@echo 'TODO!'
 
 .PHONY: exInstall exClean exInstallDownload
 ############################################

@@ -249,7 +249,7 @@ function isTokenValid( jwtObj )
      msg = "failed to do SSL handshake: ", err
      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
    end
-    
+
     ngx.log(ngx.INFO, "SSL Handshake Completed: "  ..type(shake))
    --ngx.var.http_authorization
 
@@ -276,10 +276,10 @@ function isTokenValid( jwtObj )
      body, err = response:read_body()
      if not body then
        msg = "failed to read post args: " ..  err
-       return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
+       return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg )
      end
      ngx.log(ngx.INFO, "verify body recieved: ")
-     local args = ngx.decode_args(body, 0)  
+     local args = ngx.decode_args(body, 0)
      if not args then
        msg = "failed to decode post args: " ..  err
        return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 

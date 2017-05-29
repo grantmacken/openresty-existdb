@@ -1,142 +1,100 @@
 local _M = {}
 
---[[
-
-lua modules used
-
-@see https://github.com/openresty/lua-nginx-module
-
-@see https://github.com/pintsized/lua-resty-http
-@see http://doc.lubyk.org/xml.html
-
-luarocks install lua-resty-http
-luarocks install xml
-
-@see  https://indieweb.org/token-endpoint
-@see  https://www.w3.org/TR/micropub/
- 
- - MUST support creating posts with the [h-entry] vocabulary
-
-TEST: curl
-
-1. a x-www-form-urlencoded POST request : emulate a HTML formx-www-form-urlencoded 
-
- curl -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub  -d 'h=entry' -d 'content=hello world'
- 
- 4. POST application/json
+local modUtil = require('grantmacken.util')
+local cfg     = require('grantmacken.config')
 
 
- curl -H "Content-Type: application/json"  -H "authorization: Bearer $(<../.me-access-token)" https://gmack.nz/micropub -d '{"type": ["h-entry"],"properties":{"content": ["hello world"]}}'
-
-
- id unique to the db
-   [a-z]{1}  shortKindOfPost n = note
-   O
-   [\w]{3}   short date base60 encoded 
-   [\w]{1}   the base60 encoded incremented number of entries for the day
-   total of 5 chars 
-  the short URL http://{domain}/{uid)  - no extension
-  expanded  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/{KIND}/{CHAR}
-  where kind = kind of post e.g. note
-  where char = the incremented entry number for the day
-  5 chars limited to less than 60 entries for the day
-  6 chars  limited to less than 360 entries for the day
-
-  URL http://{domain}/{YEAR}/{MONTH}/{DAY}/notes
-  list notes for day
-
-  URL http://{domain}/{YEAR}/{MONTH}/{DAY}
-  list any archived posts for day
-
-  URL http://{domain}/{YEAR}/{MONTH}
-  list archived posts for month 
-
-  URL http://{domain}/{YEAR}/{MONTH}/notes
-  list notes for month
-  
-  etc
-
---]]
-
-local cfg = {
-port = 8080,
-host = '127.0.0.1',
-auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
-domain = ngx.var.domain
-}
 
 --UTILITY TODO move to utility.lua
-function requestError( status, msg ,description)
-  ngx.status = status
-  ngx.header.content_type = 'application/json'
-  local json = cjson.encode({
-      error  = msg,
-      error_description = description
-    })
-  ngx.print(json)
-  ngx.exit(status)
-end
+-- function requestError( status, msg ,description)
+--   ngx.status = status
+--   ngx.header.content_type = 'application/json'
+--   local json = cjson.encode({
+--       error  = msg,
+--       error_description = description
+--     })
+--   ngx.print(json)
+--   ngx.exit(status)
+-- end
 
-local extensions = {
-png = 'image/png',
-jpg = 'image/jpeg',
-jpeg = 'image/jpeg',
-gif = 'image/gif'
-}
+-- local extensions = {
+-- png = 'image/png',
+-- jpg = 'image/jpeg',
+-- jpeg = 'image/jpeg',
+-- gif = 'image/gif'
+-- }
 
-function read(f)
-  local open     = io.open
-  local f, e = open(f, "rb")
-  if not f then
-    return nil, e
-  end
-  local c = f:read "*a"
-  f:close()
-  return c
-end
+-- function read(f)
+--   local open     = io.open
+--   local f, e = open(f, "rb")
+--   if not f then
+--     return nil, e
+--   end
+--   local c = f:read "*a"
+--   f:close()
+--   return c
+-- end
 
-function getMimeType( filename )
-  -- get file extension Only handle 
-  local ext, err = ngx.re.match(filename, "[^.]+$")
-  if ext then
-   return ext[0], extensions[ext[0]]
-  else
-    if err then
-      ngx.log(ngx.ERR, "error: ", err)
-      return
-    end
-    ngx.say("match not found")
-  end
-end
+-- function getMimeType( filename )
+--   -- get file extension Only handle 
+--   local ext, err = ngx.re.match(filename, "[^.]+$")
+--   if ext then
+--    return ext[0], extensions[ext[0]]
+--   else
+--     if err then
+--       ngx.log(ngx.ERR, "error: ", err)
+--       return
+--     end
+--     ngx.say("match not found")
+--   end
+-- end
 
-function extractID( url )
-  -- short urls https://gmack.nz/xxxxx
-  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
-  if err then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-  return sID
-end
+-- function extractID( url )
+--   -- short urls https://gmack.nz/xxxxx
+--   local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+--   if err then 
+--     return requestError(
+--       ngx.HTTP_SERVICE_UNAVAILABLE,
+--       'HTTP service unavailable',
+--       'connection failure')
+--   end
+--   return sID
+-- end
 
 -- https://www.w3.org/TR/micropub/#h-reserved-properties
 -- note reserved extension mp-* 
 
-local reservedPostPropertyNames = {
-  access_token = true,
-  h = true,
-  q = true,
-  action = true,
-  url = true
-}
+-- local reservedPostPropertyNames = {
+--   access_token = true,
+--   h = true,
+--   q = true,
+--   action = true,
+--   url = true
+-- }
+
+
+
+-- function contains(tab, val)
+--   for index, value in ipairs (tab) do
+--     if value == val then
+--       return true
+--     end
+--   end
+--   return false
+-- end
+
+
+--[[
+3.8 Error Response
+https://www.w3.org/TR/micropub/#error-response
+--]]
+
 
 
  -- https://www.w3.org/TR/micropub/#create
  --  handle these microformat Object Types
  --  TODO!  mark true when can handle
- --
+ ---
 local microformatObjectTypes = {
   entry = true,
   card = false,
@@ -202,32 +160,6 @@ function getShortKindOfPost(kind)
   return shortKindOfPost[kind]
 end
 
-function contains(tab, val)
-  for index, value in ipairs (tab) do
-    if value == val then
-      return true
-    end
-  end
-  return false
-end
-
-
---[[
-3.8 Error Response
-https://www.w3.org/TR/micropub/#error-response
---]]
-
-local function requestError( status, msg ,description)
-  ngx.status = status
-  ngx.header.content_type = 'application/json'
-  local json = cjson.encode({
-      error  = msg,
-      error_description = description
-    })
-  ngx.print(json)
-  ngx.exit(status)
-end
-
 
 function discoverPostType(props)
   -- https://www.w3.org/TR/post-type-discovery/
@@ -267,82 +199,40 @@ function discoverPostType(props)
   -- end
  return kindOfPost
 end
-
--- local function extractCategory( cat )
---   -- short urls https://gmack.nz/xxxxx
-
---   return sCat
--- end
-
 -- Main entry point
 
 function _M.processRequest()
-  ngx.log( ngx.INFO, 'Process Request' )
-  --  the methods this endpoint can handle
-  local method =  acceptMethods({"POST","GET"})
+  ngx.log( ngx.INFO, 'Process Request for '  .. cfg.get('domain') )
+  local method =  modUtil.acceptMethods({"POST","GET"})
   ngx.log( ngx.INFO, 'Accept Method: ' .. method )
-  -- ngx.say(method)
   if method == "POST" then
-    processPost()
+     processPost()
   else
-    processGet()
-  endpoint
-end
-
-function processGet()
-  ngx.log(ngx.INFO, 'process GET query to micropub endpoint' )
-  ngx.header.content_type = 'application/json' 
-  local response = {}
-  local msg = ''
-
-  local args = ngx.req.get_uri_args()
-  local mediaEndpoint = 'https://' .. cfg.domain .. '/micropub'
-  if args['q'] then
-    ngx.log(ngx.INFO, ' query the endpoint ' )
-    local q = args['q']
-    if q  == 'config' then
-      -- 'https://www.w3.org/TR/micropub/#h-configuration'
-      -- TODO!
-      local status = ngx.HTTP_OK 
-      -- response = { 'media-endpoint' =  mediaEndpoint}
-      local json = cjson.encode({
-         [ 'media-endpoint' ]  = mediaEndpoint
-        })
-      ngx.print(json)
-      ngx.exit(status)
-    elseif q  == 'source' then
-      ngx.log(ngx.INFO, '- source query' )
-      -- TODO!
-      -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
-      if args['url'] then
-        local url = args['url']
-        ngx.log(ngx.INFO,  'has url: ' , url  )
-        fetchPostsDoc( url )
-
-      else 
-      msg = 'source must have associated url'
-      return requestError(
-        ngx.HTTP_NOT_ACCEPTABLE,
-        'not accepted',
-        msg )
-      end
-      ngx.exit(ngx.OK)
-    elseif q  == 'syndicate-to' then
-      ngx.status = ngx.HTTP_OK 
-      -- https://github.com/bungle/lua-resty-libcjson
-      -- https://github.com/bungle/lua-resty-libcjson/issues/1
-      --  ngx.print(cjson.encode(json.decode('{"syndicate-to":[]}'))) 
-     local json = '{"syndicate-to":[]}'
-     ngx.print(json)
-      ngx.exit(ngx.OK)
-    end
+    --  processGet()
   end
-  ngx.status = ngx.HTTP_OK 
-  -- TODO!
-  ngx.say('You may query the endpoint using q pararm')
-
-  ngx.exit(ngx.OK)
 end
+
+function processPost()
+  -- ngx.say('the content-types this endpoint can handle')
+  local contentType = modUtil.acceptContentTypes({
+      'application/json',
+      'application/x-www-form-urlencoded',
+      'multipart/form-data'
+    })
+
+  ngx.log( ngx.INFO, 'Accept Content Type: ' .. contentType )
+  --  ngx.say( contentType )
+  if contentType  == 'application/x-www-form-urlencoded' then
+     processPostArgs()
+  elseif contentType  == 'multipart/form-data' then
+    -- ngx.say( contentType )
+    -- processMultPartForm()
+  elseif contentType  == 'application/json' then
+    -- processJsonBody()
+  end
+end
+
+
 
 function processPostArgs()
   ngx.log(ngx.INFO, ' process POST arguments ' )
@@ -353,7 +243,7 @@ function processPostArgs()
   local get, post, files = reqargs(  )
   if not get then
     msg = "failed to get post args: " ..  err
-    return requestError(
+    return modUtil.requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
       msg)
@@ -394,41 +284,53 @@ function processPostArgs()
   end
 
   if args['h'] then
-    ngx.log(ngx.INFO,  ' assume we are creating a post item'  )
     local hType = args['h']
-    if not microformatObjectTypes[hType] then
+    if microformatObjectTypes[hType] then
+      ngx.log(ngx.INFO,  ' assume we are creating a post item'  )
+    else
       msg = 'can not handle microformat  object type": ' .. hType
-      return requestError(
+      return modUtil.requestError(
         ngx.HTTP_NOT_ACCEPTABLE,
         'not accepted',
         msg )
     end
 
-    ngx.log(ngx.INFO,  'Microformat Object Type: ' .. args['h'] )
-    --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
-    --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
+    -- ngx.log(ngx.INFO,  'Microformat Object Type: ' .. args['h'] )
+    -- --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
+    -- --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
     if hType == 'entry' then
       ngx.log(ngx.INFO,  'Create Entry ' )
+      ngx.log(ngx.INFO, ' - from the sent properties - discover the kind of post ')
+      local kindOfPost = discoverPostType( post )
+      ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
       local properties, kindOfPost = createMf2Properties( args )
       local jData = { 
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
       ngx.log(ngx.INFO,  ' - post args serialised as mf2' )
-
+      ngx.log(ngx.INFO,  ' - serialize jData as XML nodes and store in eXist db' )
+      local uID = jData.properties.uid[1]
+      ngx.log(ngx.INFO,  ' - store resource "' .. uID .. '" into "posts" collection')
       -- tasks depends on type of post 
-      --ngx.log(ngx.INFO,  cjson.encode(jData) )
-      local reason =  putXML( 'posts', jData.properties.uid[1] , createXmlEntry(jData))
+      local xmlEntry = createXmlEntry(jData)
+      local uID = jData.properties.uid[1]
+      local reason =  require('grantmacken.eXist').putXML( 'posts', uID, xmlEntry)
       if kindOfPost == 'reply' then
         ngx.log(ngx.INFO,  kindOfPost  ..  ' additional tasks ' )
         -- my page 
         local source = jData.properties.url[1]
+        -- TODO may have more than one in-reply-to
         local target = jData.properties['in-reply-to'][1]
-        ngx.log(ngx.INFO, 'source: [ '  .. source .. ' ]' )
-        ngx.log(ngx.INFO, 'target: [ '  .. target .. ' ]' )
-        local endpoint = discoverWebMentionEndpoint( target )
-        ngx.log(ngx.INFO, 'endpoint: [ '  .. endpoint .. ' ]' )
-        local mention = sendWebMention( endpoint, source, target )
+        local endpoint = require('grantmacken.endpoint').discoverWebmentionEndpoint( target )
+        if endpoint ~= nil then
+          ngx.log(ngx.INFO, 'source: [ '  .. source .. ' ]' )
+          ngx.log(ngx.INFO, 'target: [ '  .. target .. ' ]' )
+          ngx.log(ngx.INFO, 'endpoint: [ '  .. endpoint .. ' ]' )
+          local mention = sendWebMention( endpoint, source, target )
+        else
+          ngx.log(ngx.INFO, 'could NOT discover endpoint' )
+        end 
       end
       -- Finally 
       if reason == 'Created' then
@@ -447,6 +349,7 @@ function processPostArgs()
       msg)
   end
 end
+
 
 function createMf2Properties( post )
    ngx.log(ngx.INFO,  'Convert post data into a mf2 JSON Serialization Format' )
@@ -487,7 +390,7 @@ function createMf2Properties( post )
   ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
   local properties = {}
   local sID = require('grantmacken.postID').getID( getShortKindOfPost(kindOfPost))
-  local sURL = 'https://' .. cfg.domain .. '/' .. sID  
+  local sURL = 'https://' .. cfg.get('domain') .. '/' .. sID
   local sPub, n, err =  ngx.re.sub(ngx.localtime(), " ", "T")
 
   properties['published'] =  { sPub }
@@ -572,12 +475,13 @@ function createMf2Properties( post )
               properties[ pKey ] = { v }
             end
           end
-        end 
+        end
       end
     end
   end
  return properties, kindOfPost
  end
+
 
  function createXmlEntry( jData )
    ngx.log(ngx.INFO,  'create XML entry from jData' )
@@ -613,6 +517,74 @@ function createMf2Properties( post )
   return xmlDoc
 end
 
+function processGet()
+  ngx.log(ngx.INFO, 'process GET query to micropub endpoint' )
+  ngx.header.content_type = 'application/json' 
+  local response = {}
+  local msg = ''
+
+  local args = ngx.req.get_uri_args()
+  local mediaEndpoint = 'https://' .. cfg.domain .. '/micropub'
+  if args['q'] then
+    ngx.log(ngx.INFO, ' query the endpoint ' )
+    local q = args['q']
+    if q  == 'config' then
+      -- 'https://www.w3.org/TR/micropub/#h-configuration'
+      -- TODO!
+      local status = ngx.HTTP_OK
+      -- response = { 'media-endpoint' =  mediaEndpoint}
+      local json = cjson.encode({
+         [ 'media-endpoint' ]  = mediaEndpoint
+        })
+      ngx.print(json)
+      ngx.exit(status)
+    elseif q  == 'source' then
+      ngx.log(ngx.INFO, '- source query' )
+      -- TODO!
+      -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
+      if args['url'] then
+        local url = args['url']
+        ngx.log(ngx.INFO,  'has url: ' , url  )
+        fetchPostsDoc( url )
+
+      else 
+      msg = 'source must have associated url'
+      return requestError(
+        ngx.HTTP_NOT_ACCEPTABLE,
+        'not accepted',
+        msg )
+      end
+      ngx.exit(ngx.OK)
+    elseif q  == 'syndicate-to' then
+      ngx.status = ngx.HTTP_OK 
+      -- https://github.com/bungle/lua-resty-libcjson
+      -- https://github.com/bungle/lua-resty-libcjson/issues/1
+      --  ngx.print(cjson.encode(json.decode('{"syndicate-to":[]}'))) 
+     local json = '{"syndicate-to":[]}'
+     ngx.print(json)
+      ngx.exit(ngx.OK)
+    end
+  end
+  ngx.status = ngx.HTTP_OK 
+  -- TODO!
+  ngx.say('You may query the endpoint using q pararm')
+
+  ngx.exit(ngx.OK)
+end
+
+
+
+
+
+
+--------------------------------
+--TODO
+--
+--cleanup below
+----------------------------------
+
+
+
 function createEntryFromJson( hType , props)
   local host = ngx.req.get_headers()["Host"]
   local data = {} -- the xml based table to return
@@ -621,8 +593,8 @@ function createEntryFromJson( hType , props)
   -- https://www.w3.org/TR/jf2/#post-properties
   local kindOfPost = discoverPostType( props )
   -- top level entry
-  data = { 
-    xml = hType, 
+  data = {
+    xml = hType,
     kind = kindOfPost
   }
   local properties = {}
@@ -913,25 +885,7 @@ function processActions( postType, args )
   end
 end
 
-function processPost()
-  -- ngx.say('the content-types this endpoint can handle')
-  local contentType = acceptContentTypes({
-      'application/json',
-      'application/x-www-form-urlencoded',
-      'multipart/form-data'
-    })
 
-  ngx.log( ngx.INFO, 'Accept Content Type: ' .. contentType )
-  --  ngx.say( contentType )
-  if contentType  == 'application/x-www-form-urlencoded' then
-    processPostArgs()
-  elseif contentType  == 'multipart/form-data' then
-    -- ngx.say( contentType )
-    processMultPartForm()
-  elseif contentType  == 'application/json' then
-    processJsonBody()
-  end
-end
 
 function processMultPartForm()
   local msg = ''
@@ -1332,97 +1286,74 @@ function sendMicropubRequest( restPath, txt  )
   return res
 end
 
-
-function putXML( collection, resource , data )
-  local http = require "resty.http"
-  local authorization = cfg.auth
-  local contentType = 'application/xml'
-  local dataPath = "/exist/rest/db/data/" ..cfg.domain  .. '/docs'
-  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
-  local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-  local response, err = httpc:request({
-      version = 1.1,
-      method = "PUT",
-      path = putPath,
-      headers = {
-        ["Authorization"] = authorization,
-        ["Content-Type"] = contentType
-      },
-      body = data,
-      ssl_verify = false
-    })
-
-  if not response then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'no response' )
-  end
-  ngx.log(ngx.INFO, "status: ", response.status)
-  ngx.log(ngx.INFO,"reason: ", response.reason)
-  return response.reason
-end
-
-function discoverWebMentionEndpoint( target )
-  ngx.log(ngx.INFO, 'Discover Web Mention Endpoint' )
-  -- TODO!
-  local webMentionEndpoint = 'https://gmack.nz/webmention'
-  return webMentionEndpoint
-end
-
 function sendWebMention( endpoint, source, target )
   ngx.log(ngx.INFO, 'Send Web Mention' )
   local http = require "resty.http"
   local httpc = http.new()
- --  For simple singleshot requests, use the URI interface.
-  local ok, err = httpc:connect('gmack.nz',443)
-  if not ok then 
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+  local scheme, host, port, path = unpack(httpc:parse_uri(endpoint))
+  local base = scheme .. '://' .. host
+  local http = require "resty.http"
+  local httpc = http.new()
+  local ok, err = httpc:connect( host ,port )
+  if not ok then
+    ngx.log(ngx.INFO, 'FAILED to to connect to endpoint:  '  .. host ..  ' on port '  .. port )
+    return nil
+  else
+    ngx.log(ngx.INFO, 'CONNECTED to endpoint:  '  .. host ..  ' on port '  .. port )
+  end
+
+  if scheme == 'https' then
+    -- 4 sslhandshake opts
+    local reusedSession = nil -- defaults to nil
+    local serverName = host    -- for SNI name resolution
+    local sslVerify = false  -- boolean if true make sure the directives set
+    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
+    local sendStatusReq = '' -- boolean OCSP status request
+    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
+    if not shake then
+      ngx.log(ngx.INFO, 'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
+      return nil
+    else
+      ngx.log(ngx.INFO, "SSL Handshake Completed: "  .. type(shake))
+    end
   end
 
   local contentType = 'application/x-www-form-urlencoded'
   local strBody = 'source=' .. source .. '&target=' .. target
-  local res, err = httpc:request({
-      version = 1.1,
-      method = "POST",
-      path = endpoint,
-      headers = {
-        ["Content-Type"] = contentType
-      },
-      body = strBody,
-      ssl_verify = false
-    })
-  if not res then
-    ngx.say("failed to request: ", err)
-    return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
-  end
-  ngx.log(ngx.INFO, "webmention post response status: ", res.status)
-  ngx.log(ngx.INFO, "webmention post response reason: ", res.reason)
-  if res.has_body then
-    body, err = res:read_body()
-    if not body then
-         return requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'failed to read body')
-    end
-  ngx.log(ngx.INFO, res.body)
 
+  httpc:set_timeout(2000)
+  local response, err = httpc:request({
+      ['version'] = 1.1,
+      ['method'] = "POST",
+      ['path'] = path,
+      ['headers'] = {
+        ["Host"] =  host,
+        ["Content-Type"] = contentType,
+      },
+      ['body'] = strBody,
+      ['ssl_verify'] = sslVerify
+    })
+
+  if not response then
+    ngx.log(ngx.INFO,  'FAILED to get webmention post reponse from "'  .. host .. '" with path ' .. path  )
+    return nil
+  else
+    ngx.log(ngx.INFO, 'GOT webmention post response from "' .. host .. '" with path ' .. path  )
+    ngx.log(ngx.INFO, "webmention post response status: ", response.status)
+    ngx.log(ngx.INFO, "webmention post response reason: ", response.reason)
   end
-  return res
+
+  if response.has_body then
+    body, err = response:read_body()
+    if not body then
+      ngx.log(ngx.INFO,  'FAILED to get response body' )
+      return nil
+    else
+      ngx.log(ngx.INFO,  'GOT response body ... '  )
+      ngx.log(ngx.INFO, response.body)
+    end
+  end
+  return response
 end
 
 function putXML2( collection, props )
@@ -1704,6 +1635,5 @@ in converting to xml follow atom syntax
  <content type="html">"<b>Hello</b> <i>World</i>"</content>
 
 --]]
-
 
 return _M

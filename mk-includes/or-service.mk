@@ -122,3 +122,11 @@ orLoggedErrorFollow: $(OPENRESTY_HOME)/nginx/logs/error.log
 	@tail -f  $(OPENRESTY_HOME)/nginx/logs/error.log |\
  grep --line-buffered -oP '^.+\K\[\w+\].+$$' |\
  cut -d ',' -f1
+
+
+orSudoers:
+	@$(call assert-is-root)
+	@touch /etc/sudoers.d/$(SUDO_USER)
+	@echo '%$(SUDO_USER) ALL= NOPASSWD: /usr/bin/systemctl stop openresty.service' >> /etc/sudoers.d/$(SUDO_USER)
+
+

@@ -445,6 +445,97 @@ function putAsset( properties )
    return res.reason
 end 
 
+function _M.putXML( collection, resource , data )
+  local config = require('grantmacken.config')
+  local util = require('grantmacken.util')
+  local http   = require "resty.http"
+  local authorization = config.get('auth')
+  local domain  = config.get('domain')
+  local host  = config.get('host')
+  local port  = config.get('port')
+  local contentType = 'application/xml'
+  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
+  local putPath  = dataPath .. '/' .. collection .. '/' .. resource
+  local httpc = http.new()
+  local ok, err = httpc:connect( host, port)
+  if not ok then 
+    return util.requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'connection failure')
+  end
+  local response, err = httpc:request({
+      version = 1.1,
+      method = "PUT",
+      path = putPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body = data,
+      ssl_verify = false
+    })
 
+  if not response then 
+    return util.requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'no response' )
+  end
+  ngx.log(ngx.INFO, "status: ", response.status)
+  ngx.log(ngx.INFO,"reason: ", response.reason)
+  return response.reason
+end
 
+function _M.restQuery( txt )
+  local config = require('grantmacken.config')
+  local util = require('grantmacken.util')
+  local http   = require "resty.http"
+  local authorization = config.get('auth')
+  local domain  = config.get('domain')
+  local host  = config.get('host')
+  local port  = config.get('port')
+  local restPath  = '/exist/rest/db/'
+  local contentType = 'application/xml'
+  local msg = ''
+  local httpc = http.new()
+  local ok, err = httpc:connect(cfg.host, cfg.port)
+  if not ok then
+    msg = 'ERR: could not connect to host'
+    return modUtil.requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      msg)
+  end
+  local res, err = httpc:request({
+      version = 1.1,
+      method = "POST",
+      path = restPath,
+      headers = {
+        ["Authorization"] = authorization,
+        ["Content-Type"] = contentType
+      },
+      body =  txt,
+      ssl_verify = false
+    })
+  if not res then
+    msg = 'ERR: failed request' .. err
+    return modUtil.requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      msg)
+  end
+  if res.has_body then
+    body, err = res:read_body()
+    if not body then
+    msg = 'ERR: failed to get request body' .. err
+      return modUtil.requestError(
+        ngx.HTTP_SERVICE_UNAVAILABLE,
+        'HTTP service unavailable',
+        msg)
+    end
+    return body
+  end
+  return nil
+end
 return _M

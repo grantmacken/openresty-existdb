@@ -8,11 +8,11 @@
 Automates the OpenResty install 
  
 Establishes latest version of sources,
-then if required downloads the  source archive.
+then if required downloads the source archive.
 
 - OpenResty
 - zlib : zip library
-- pcre : perl reg ex  
+- pcre : perl reg ex
 - openssl 
 
 Installs and compiles from latest sources.

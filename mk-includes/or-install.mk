@@ -1,4 +1,32 @@
 
+define helpOrInstall
+# OpenResty Install
+
+```
+ sudo make orInstall
+```
+Automates the OpenResty install 
+
+Establishes latest version of sources,
+then if required downloads the source archive.
+
+- OpenResty
+- zlib : zip library
+- pcre : perl reg ex
+- openssl
+
+Installs and compiles from latest sources.
+
+the configurable OpenResty configure install options are in the target.
+`mk-includes/or-install.mk`.  Alter the configure options to fit your
+requirements. 
+
+endef
+
+orInstallHelp: export helpOrInstall:=$(helpOrInstall)
+orInstallHelp:
+	echo "$${helpOrInstall}"
+
 $(T)/openresty-latest.version:
 	@echo " $(notdir $@)"
 	@echo 'fetch the latest openresty version'
@@ -61,17 +89,16 @@ downloadZlib: $(T)/zlib-latest.version
  curl -L http://zlib.net/$(shell cat $<).tar.gz | \
  tar xz --directory $(T)
 
-
 #rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
-orInstallDownload: 
-	rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
+orInstallDownload:
+	@sudo rm $(T)/*-latest.version 2>/dev/null || echo 'latest versions gone'
 	@$(MAKE) --silent downloadOpenresty
 	@$(MAKE) --silent downloadOpenssl
 	@$(MAKE) --silent downloadPcre
 	@$(MAKE) --silent downloadZlib
 
-orInstall: orInstallDownload
-orInstall:
+orConfigure: orInstallDownload
+orConfigure:
 	@echo "configure and install $(shell cat $(T)/openresty-latest.version) "
 	@[ -d $(T)/$(shell cat $(T)/pcre-latest.version) ] && \
  echo " $(shell cat $(T)/pcre-latest.version) "
@@ -101,8 +128,12 @@ orInstall:
  --without-http_empty_gif_module \
  --without-http_fastcgi_module \
  --without-http_uwsgi_module \
- --without-http_scgi_module \
- && make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
+ --without-http_scgi_module
+
+orInstall:
+	@$(call assert-is-root)
+	@cd $(T)/$(shell cat $(T)/openresty-latest.version);\
+ && gmake -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && gmake install
 
 orCheck:
 	@ls $(OPENRESTY_HOME)/bin
@@ -114,4 +145,22 @@ orCheck:
 orCheckConfigureOptions:
 	@cd $(T)/$(shell cat $(T)/openresty-latest.version) && ./configure --help
 
+orClean:
+	@$(call assert-is-root)
+	@sudo $(MAKE) orServiceStop
+	@mkdir /usr/local/orBackup
+	@sudo mv $(OPENRESTY_HOME) --target-directory=/usr/local/orBackup
 
+orDestroy:
+	@sudo rm -R $(OPENRESTY_HOME)
+
+orPerms:
+	@$(call assert-is-root)
+	chown -R $(SUDO_USER) $(OPENRESTY_HOME)
+	@cd $(OPENRESTY_HOME)/nginx/html && find . -type d -exec chmod 775 {} +
+	@cd $(OPENRESTY_HOME)/nginx/html && find . -type f -exec chmod 664 {} +
+	@ls -al $(OPENRESTY_HOME)/nginx/html
+
+
+# usermod -d $(OPENRESTY_HOME)/nginx/html nobody
+# usermod -a -G $(SUDO_USER) nobody

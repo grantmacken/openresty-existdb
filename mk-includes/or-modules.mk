@@ -13,10 +13,13 @@ MODULES : working with lua modules  - lua
 `make orModules`
 `make watch-orModules`
 `make orModules-help`
+`make orLoggedErrorFollow`
 
  1. orModules 
  2. watch-orModules  ...  watch the directory
-  'make modules' will now be triggered by changes in dir
+  'make orModules' will now be triggered by changes in dir
+ 3. orLoggedErrorFollow  ... follow the nginx log file
+
 endef
 
 orModules-help: export orModulesHelp:=$(orModulesHelp)

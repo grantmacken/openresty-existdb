@@ -31,7 +31,7 @@ function _M.acceptMethods( methods )
   -- ngx.say( 'the methods this endpoint can handle' )
   local method = ngx.req.get_method()
   if not contains( methods, method )  then
-    return requestError(
+    return _M.requestError(
       ngx.HTTP_METHOD_NOT_IMPLEMENTED,
       method .. ' method not implemented',
       'endpoint does not accept' .. method .. 'methods')
@@ -76,4 +76,15 @@ function _M.acceptFormArgs( args , acceptArgs )
  return true
 end
 
+function _M.extractID( url )
+  -- short urls https://gmack.nz/xxxxx
+  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+  if err then 
+    return _M.requestError(
+      ngx.HTTP_SERVICE_UNAVAILABLE,
+      'HTTP service unavailable',
+      'not a valid resource')
+  end
+  return sID
+end
 return _M

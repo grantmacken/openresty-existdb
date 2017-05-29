@@ -7,7 +7,8 @@ make exClean
 - exInstall :
  automated fetch and install of latest eXist version
 
-- exClean :
+- exClean : 
+ this will stop the eXist service then mv the existing install into the backup dir
  
 ------------------------------------------------------------
 

@@ -6,6 +6,7 @@ addons:
         packages:
         - expect
         - nmap
+        - tidy
 before_install:
    - pwd
 install:

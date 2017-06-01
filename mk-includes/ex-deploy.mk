@@ -1,4 +1,3 @@
-# 
 #  Deploy an eXist app from Repo
 #################################
 exDeploy: $(T)/deploy.sh

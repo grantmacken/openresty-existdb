@@ -78,12 +78,10 @@ end
 
 function _M.extractID( url )
   -- short urls https://gmack.nz/xxxxx
-  local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
-  if err then 
-    return _M.requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'not a valid resource')
+  local sID, err = require("ngx.re").split(url, "([nar]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
+  if err then
+    local msg = 'could not extract id from URL'
+    return _M.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
   end
   return sID
 end

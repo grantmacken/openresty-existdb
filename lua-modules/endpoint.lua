@@ -262,30 +262,6 @@ function exQuery( body )
     return responseBody
 end
 
-function exQueryX( body )
-  local binary = ngx.encode_base64( body )
-  local txt  =   [[
-  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
-    <text>
-    <![CDATA[
-    xquery version "3.1";
-    import module namespace contentextraction="http://exist-db.org/xquery/contentextraction";
-    declare default element namespace "http://www.w3.org/1999/xhtml";
-    let $binary := "]] .. binary.. [["
-    let $doc := util:parse-html(util:base64-decode($binary))
-    return
-      $doc
-     ]] ..']]>' .. [[
-    </text>
-  </query>
-]]
-  local responseBody =  require('grantmacken.eXist').restQuery( txt )
-  if responseBody ~= '' then
-      ngx.say(responseBody)
-  ngx.exit(200)
-  end
-end
-
 function exResolve( base , pth )
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -301,9 +277,12 @@ function exResolve( base , pth )
     </text>
   </query>]]
   local responseBody =  require('grantmacken.eXist').restQuery( txt )
-  if responseBody ~= '' then
-    return responseBody
+  if responseBody == '' then
+    responseBody = nil
   end
+  return responseBody
 end
+
+
 
 return _M

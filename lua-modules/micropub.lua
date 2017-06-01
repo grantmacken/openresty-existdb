@@ -213,7 +213,6 @@ function _M.processRequest()
 end
 
 function processPost()
-  -- ngx.say('the content-types this endpoint can handle')
   local contentType = modUtil.acceptContentTypes({
       'application/json',
       'application/x-www-form-urlencoded',
@@ -221,11 +220,9 @@ function processPost()
     })
 
   ngx.log( ngx.INFO, 'Accept Content Type: ' .. contentType )
-  --  ngx.say( contentType )
   if contentType  == 'application/x-www-form-urlencoded' then
      processPostArgs()
   elseif contentType  == 'multipart/form-data' then
-    -- ngx.say( contentType )
     -- processMultPartForm()
   elseif contentType  == 'application/json' then
     -- processJsonBody()
@@ -444,7 +441,6 @@ function createMf2Properties( post )
           if postedEntryProperties[pKey] ~=  nil then
             if properties[ pKey ] ~= nil then
               ngx.log(ngx.INFO,  'pKey : '  .. pKey )
-              -- ngx.say('key', ": ", pKey)
               table.insert(properties[ pKey ],val)
             else
               properties[ pKey ] = { val }
@@ -469,7 +465,6 @@ function createMf2Properties( post )
         if pKey then
           if postedEntryProperties[pKey] ~=  nil then
             if properties[ pKey ] ~= nil then
-              -- ngx.say('key', ": ", pKey)
               table.insert(properties[ pKey ],v)
             else
               properties[ pKey ] = { v }
@@ -541,7 +536,6 @@ function processGet()
     elseif q  == 'source' then
       ngx.log(ngx.INFO, '- source query' )
       -- TODO!
-      -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
       if args['url'] then
         local url = args['url']
         ngx.log(ngx.INFO,  'has url: ' , url  )
@@ -567,7 +561,6 @@ function processGet()
   end
   ngx.status = ngx.HTTP_OK 
   -- TODO!
-  ngx.say('You may query the endpoint using q pararm')
 
   ngx.exit(ngx.OK)
 end

@@ -1,21 +1,10 @@
 local _M = {}
 
---[[
-
-jump to:
-_M.processRequest : main entry point
-  processPost
-    processMultiPartForm
-    _M.putMedia
-  processGet()
-
---]]
-
 local cfg = {
 port = 8080,
 host = '127.0.0.1',
-auth = 'Basic ' .. os.getenv("EXIST_AUTH"),
-domain = ngx.var.domain 
+auth = 'Basic ' .. os.getenv( "EXIST_AUTH" ),
+domain = ngx.var.domain
 }
 
 local reqargsOptions = {
@@ -443,11 +432,15 @@ function putAsset( properties )
     end
   end
    return res.reason
-end 
+end
+
+--[[
+--  only log failures
+--
+--]]--
 
 function _M.putXML( collection, resource , data )
   local config = require('grantmacken.config')
-  local util = require('grantmacken.util')
   local http   = require "resty.http"
   local authorization = config.get('auth')
   local domain  = config.get('domain')
@@ -458,11 +451,10 @@ function _M.putXML( collection, resource , data )
   local putPath  = dataPath .. '/' .. collection .. '/' .. resource
   local httpc = http.new()
   local ok, err = httpc:connect( host, port)
-  if not ok then 
-    return util.requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'connection failure')
+  if not ok then
+    msg = 'eXist connection failure'
+    ngx.log(ngx.INFO, msg )
+    return nil
   end
   local response, err = httpc:request({
       version = 1.1,
@@ -477,35 +469,31 @@ function _M.putXML( collection, resource , data )
     })
 
   if not response then 
-    return util.requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      'no response' )
+    msg = 'eXist response failure'
+    ngx.log(ngx.INFO, msg )
+    return nil
   end
-  ngx.log(ngx.INFO, "status: ", response.status)
-  ngx.log(ngx.INFO,"reason: ", response.reason)
+  ngx.log(ngx.INFO, "PUT status: ", response.status)
+  ngx.log(ngx.INFO, "PUT reason: ", response.reason)
   return response.reason
 end
 
 function _M.restQuery( txt )
   local config = require('grantmacken.config')
-  local util = require('grantmacken.util')
   local http   = require "resty.http"
   local authorization = config.get('auth')
   local domain  = config.get('domain')
   local host  = config.get('host')
   local port  = config.get('port')
-  local restPath  = '/exist/rest/db/'
   local contentType = 'application/xml'
+  local restPath = "/exist/rest/db"
   local msg = ''
+  local body = nil
   local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then
-    msg = 'ERR: could not connect to host'
-    return modUtil.requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      msg)
+  local ok, err = httpc:connect(host, port)
+  if not ok then 
+    msg = "failed to connect to eXist"
+    return modUtil.requestError(ngx.HTTP_BAD_REQUEST,'bad request',msg)
   end
   local res, err = httpc:request({
       version = 1.1,
@@ -519,23 +507,23 @@ function _M.restQuery( txt )
       ssl_verify = false
     })
   if not res then
-    msg = 'ERR: failed request' .. err
-    return modUtil.requestError(
-      ngx.HTTP_SERVICE_UNAVAILABLE,
-      'HTTP service unavailable',
-      msg)
+    msg = "eXist failed to respond "
+    return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
   end
+  if res.status ~= 200 then
+    msg = "eXist failed to respond OK to request"
+    return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
+  end
+
   if res.has_body then
     body, err = res:read_body()
     if not body then
-    msg = 'ERR: failed to get request body' .. err
-      return modUtil.requestError(
-        ngx.HTTP_SERVICE_UNAVAILABLE,
-        'HTTP service unavailable',
-        msg)
+      msg = "eXist failed to return reponse body"
+      return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg )
     end
-    return body
   end
-  return nil
+  -- note body may be empty | a string | nil
+  return body
 end
+
 return _M

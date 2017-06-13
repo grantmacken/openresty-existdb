@@ -1,5 +1,8 @@
 local _M = {}
 
+local util    = require('grantmacken.util')
+local config  = require('grantmacken.config')
+
 local cfg = {
 port = 8080,
 host = '127.0.0.1',
@@ -120,40 +123,69 @@ function getMimeType( filename )
 end
 
 -- ++++++++++++++++++++++++++++++++++++++++++
+--  MAIN endpoint for exist requests
+--  https://<domain>//eXist/
 
 function _M.processRequest()
   ngx.log(ngx.INFO, "Process Request" )
-  local method =  acceptMethods({"POST","GET"})
+  local method =  util.acceptMethods({"POST","GET" , "DELETE"})
+
   ngx.log(ngx.INFO, "Accepted Method [ " .. method  .. ' ]')
-  if method == "POST" then
-     processPost()
-  else
-     processGet()
+  if ( method == "POST" ) then
+    processPost()
+  elseif (  method == "PUT" ) then
+    -- processPut method )
+  else 
+    processGetDelete()
   end
 end
 
-function processGet()
-  ngx.log(ngx.INFO, "Process GET query to eXist endpoint")
+function processGetDelete( method )
+  ngx.log(ngx.INFO, "Process GET DELETE requests to eXist endpoint")
   ngx.log(ngx.INFO, ngx.var.uri)
   local response = {}
   local msg = ''
   local args = ngx.req.get_uri_args()
   if not args[1] then
-    -- TODO!
     ngx.log(ngx.INFO, "Look for path")
-    msg =  "No arguments in URL"
-    ngx.log(ngx.WARN, msg)
-    requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+    local sID= require('ngx.re').split(ngx.var.uri, '/')[3]
+    local from, to, err = ngx.re.find(
+    sID,
+    "([rnap]{1})([0-9A-HJ-NP-Z_a-km-z]{3})([0-9A-HJ-NP-Z_a-km-z]{1})", 
+    "jo")
+    if from then
+      -- ngx.say("from: ", from)
+      -- ngx.say("to: ", to)
+      local matched = string.sub(sID, from, to)
+      ngx.log(ngx.INFO, "matched: ", matched )
+       _M.proxyGetDelete( 'posts' , matched )
+    else
+      if err then
+        msg =  "error: " .. err
+        ngx.log(ngx.WARN, msg)
+        requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+      end
+      msg =  "error: not valid uid"
+      ngx.log(ngx.WARN, msg)
+      requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+    end
+
+    -- if sID ~= '' then
+    -- else
+    -- msg =  "TODO! : " .. type(sID)
+    -- ngx.log(ngx.WARN, msg)
+    -- requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+    -- end
   end
     -- TODO!
-    ngx.log(ngx.INFO, "Look for path")
-    for key, val in pairs(args) do
-      if type(val) == "table" then
-        ngx.say(key, ": ", table.concat(val, ", "))
-      else
-        ngx.say(key, ": ", val)
-      end
-    end
+    -- ngx.log(ngx.INFO, "Look for path")
+    -- for key, val in pairs(args) do
+    --   if type(val) == "table" then
+    --     ngx.say(key, ": ", table.concat(val, ", "))
+    --   else
+    --     ngx.say(key, ": ", val)
+    --   end
+    -- end
 end
 
 function processPost()
@@ -204,7 +236,7 @@ function processJsonBody()
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
   if not ok then 
-    return requestError(
+    return requesterror(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
@@ -234,7 +266,8 @@ function processXqueryFile()
 
   local sPath, n, err =  ngx.re.sub( ngx.var.uri, "/_exist", "")
   -- ngx.log(ngx.INFO, data)
-  local restPath =  '/exist/rest/db/apps/' .. ngx.var.domain .. ngx.re.sub( ngx.var.uri, "/_exist", "")
+  local restPath =
+  '/exist/rest/db/apps/' .. ngx.var.domain .. ngx.re.sub( ngx.var.uri, "/_exist", "")
 
   local http = require "resty.http"
   local httpc = http.new()
@@ -439,6 +472,45 @@ end
 --
 --]]--
 
+function _M.proxyGetDelete( collection, resource )
+  local http   = require "resty.http"
+  local authorization = config.get('auth')
+  local domain  = config.get('domain')
+  local host  = config.get('host')
+  local port  = config.get('port')
+  local contentType = 'application/xml'
+  -- eXist rest server
+  local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
+  local resPath  = dataPath .. '/' .. collection .. '/' .. resource
+  local httpc = http.new()
+  httpc:set_timeout(500)
+  local msg = ''
+  local ok, err = httpc:connect( host, port)
+  if not ok then
+    msg = 'eXist connection failure'
+    ngx.log(ngx.INFO, msg )
+     return util:requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
+   end
+  msg = 'connected to ' .. host .. ' on port ' .. port
+  ngx.log(ngx.INFO, msg )
+  local method = ngx.req.get_method()
+  msg =  method  .. ' resource "' ..  resource .. '" in "' .. collection .. '" collection'
+  ngx.log(ngx.INFO, msg )
+  httpc:set_timeout(2000)
+  -- ngx.log(ngx.INFO, msg )
+  httpc:proxy_response( httpc:request({
+        ['version'] = 1.1,
+        ['method'] = method,
+        ['path'] = resPath,
+        ['headers'] = {
+          ["Authorization"] = authorization
+        },
+        ['ssl_verify'] = false
+    }))
+   httpc:set_keepalive()
+end
+
+
 function _M.putXML( collection, resource , data )
   local config = require('grantmacken.config')
   local http   = require "resty.http"
@@ -493,7 +565,7 @@ function _M.restQuery( txt )
   local ok, err = httpc:connect(host, port)
   if not ok then 
     msg = "failed to connect to eXist"
-    return modUtil.requestError(ngx.HTTP_BAD_REQUEST,'bad request',msg)
+    return util.requestError(ngx.HTTP_BAD_REQUEST,'bad request',msg)
   end
   local res, err = httpc:request({
       version = 1.1,
@@ -508,20 +580,21 @@ function _M.restQuery( txt )
     })
   if not res then
     msg = "eXist failed to respond "
-    return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
+    return util.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
   end
   if res.status ~= 200 then
     msg = "eXist failed to respond OK to request"
-    return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
+    return util.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg)
   end
 
   if res.has_body then
     body, err = res:read_body()
     if not body then
       msg = "eXist failed to return reponse body"
-      return modUtil.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg )
+      return util.requestError( ngx.HTTP_BAD_REQUEST,'bad request', msg )
     end
   end
+  -- note eXist will return a body but body may be empty
   -- note body may be empty | a string | nil
   return body
 end

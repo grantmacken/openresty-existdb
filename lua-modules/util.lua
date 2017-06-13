@@ -1,13 +1,30 @@
 
 local _M = {}
 
+function _M.read(f)
+  local open     = io.open
+  local f, e = open(f, "rb")
+  if not f then
+    return nil, e
+  end
+  local c = f:read "*a"
+  f:close()
+  return c
+end
+
 function _M.tablelength(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
   return count
 end
 
-function contains(tab, val)
+
+
+
+
+--
+--UTILITY TODO move to utility.lua
+local function contains(tab, val)
   for index, value in ipairs (tab) do
     if value == val then
       return true
@@ -26,6 +43,7 @@ function _M.requestError( status, msg, description )
   ngx.print(json)
   ngx.exit(status)
 end
+
 
 function _M.acceptMethods( methods )
   -- ngx.say( 'the methods this endpoint can handle' )

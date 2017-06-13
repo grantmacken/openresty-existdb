@@ -90,7 +90,7 @@ function processPostArgs()
   -- Request Verification
 
   ngx.log(ngx.INFO, 'receiver MUST check that source and target are valid URLs' )
-  if isURL( args['source'] ) ~= 'true' then
+  if not isURL( args['source'] ) then
     msg = 'source "' .. args['source']  .. '" MUST be a valid url'
     ngx.log(ngx.INFO, msg)
     return modUtil.requestError(
@@ -99,7 +99,7 @@ function processPostArgs()
       msg)
   end
 
-  if isURL( args['target'] ) ~= 'true' then
+  if not isURL( args['target'] ) then
     msg = 'target "' .. args['target']  .. '" MUST be a valid url'
     ngx.log(ngx.INFO, msg)
     return modUtil.requestError(
@@ -340,9 +340,7 @@ function extractSource( binary )
     <text>
     <![CDATA[
     xquery version "3.1";
-    try {
-     util:parse-html(util:base64-decode("]] .. binary.. [["))
-    }
+    try { util:parse-html(util:base64-decode("]] .. binary.. [[")) }
     catch *{()}
      ]] ..']]>' .. [[
     </text>
@@ -377,9 +375,7 @@ function isValidResource( url )
     <text>
     <![CDATA[
     xquery version "3.1";
-    try {
-      doc-available( "xmldb:exist:///db/data/]] .. domain  .. '/docs/posts/' .. dbID .. [[")
-   }
+    try { doc-available( "xmldb:exist:///db/data/]] .. domain  .. '/docs/posts/' .. dbID .. [[") }
     catch *{()}
      ]] ..']]>' .. [[
     </text>
@@ -405,9 +401,9 @@ function createResourceID( str )
     <![CDATA[
     xquery version "3.1";
     import module namespace muURL="http://markup.nz/#muURL" at "xmldb:exist:///db/apps/]] .. domain  .. [[/modules/lib/muURL.xqm";
-    let $str := "]] .. str.. [["
-    return muURL:urlHash( $str )
-     ]] ..']]>' .. [[
+    try { muURL:urlHash( "]] .. str.. [[") }
+    catch *{()}
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -416,9 +412,7 @@ function createResourceID( str )
   local responseBody =  require('grantmacken.eXist').restQuery( txt )
   ngx.log(ngx.INFO, "body: ", responseBody)
   --ngx.log(ngx.INFO, "body: ", type( responseBody))
-
   return responseBody
-
 end
 
 function isURL( url )
@@ -433,18 +427,19 @@ function isURL( url )
     <![CDATA[
     xquery version "3.1";
     import module namespace muURL="http://markup.nz/#muURL" at "xmldb:exist:///db/apps/]] .. domain  .. [[/modules/lib/muURL.xqm";
-    try {
-      muURL:meetsAcceptableCriteria(  "]] .. url .. [[" )
-   }
+    try { muURL:meetsAcceptableCriteria(  "]] .. url .. [[" ) }
     catch *{()}
      ]] ..']]>' .. [[
     </text>
   </query>
 ]]
-  --  ngx.log(ngx.INFO, 'constructed txt')
-  --  ngx.say(txt)
-  local responseBody =  require('grantmacken.eXist').restQuery( txt )
-  return responseBody
+  local exResult = require('grantmacken.eXist').restQuery( txt )
+  -- expect boolean
+  if exResult == 'true' then
+    return true
+  else
+    return false
+  end
 end
 
 return _M

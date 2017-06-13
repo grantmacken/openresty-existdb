@@ -12,40 +12,67 @@ local cfg     = require('grantmacken.config')
 local http = require "resty.http"
 
 function _M.discoverWebmentionEndpoint( target )
-  ngx.log(ngx.INFO, 'Discover Webmention Endpoint' )
-  -- TODO!
-  local linkURL = resStatus(target, nil )
+  ngx.log(ngx.INFO, 'Discover Webmention Endpoint')
+  ngx.log (ngx.INFO, '---------------------------' )
+  local linkURL = resStatus(target, nil)
   --  ngx.log(ngx.INFO, 'Discovered Webmention Endpoint: [ ' .. linkURL .. ' ]')
   return linkURL
 end
 
+ function resStatus( target, res )
+     if res == nil then
+       ngx.log(ngx.INFO, "Initial Request: " .. target  )
+       res = getTarget( target )
+       ngx.log(ngx.INFO, "Initial Response: " .. res.reason )
+     end
+     if res.status == 302 then
+       ngx.log(ngx.INFO, 'First Response Redirect: ' .. res.status  )
+       local location = resolveRedirectLocation( target, res )
+       if location ~= nil then
+         res = getTarget( location )
+         ngx.log(ngx.INFO, "Redirect Response: " .. res.reason )
+       end
+     end
+     if res.status == 200 then
+       ngx.log(ngx.INFO, "Response OK: " .. res.status  )
+       linkURL = resHeaders( target, res )
+       if linkURL ~= nil then
+         ngx.log(ngx.INFO, "Return linkURL: " .. linkURL)
+       else
+         linkURL = resBody( target, res )
+       end
+     end
+     return linkURL
+ end
+
 function getTarget( target )
+  ngx.log(ngx.INFO, "Attempt to get target: " .. target  )
   local httpc = http.new()
   local scheme, host, port, path = unpack(httpc:parse_uri(target))
   local base = scheme .. '://' .. host
+  local response = nil
+  -- 4 sslhandshake opts
+  local reusedSession = nil -- defaults to nil
+  local serverName = host    -- for SNI name resolution
+  local sslVerify = false  -- boolean if true make sure the directives set
+  -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
+  local sendStatusReq = '' -- boolean OCSP status request
   local ok, err = httpc:connect( host, port )
   if not ok then
     ngx.log(ngx.INFO, 'FAILED to to connect to target:  '  .. host ..  ' on port '  .. port )
     return nil
   else
-    ngx.log(ngx.INFO, 'CONNECTED to target:  '  .. host ..  ' on port '  .. port )
+    ngx.log(ngx.INFO, ' - CONNECTED to target:  '  .. host ..  ' on port '  .. port )
   end
   if scheme == 'https' then
-    -- 4 sslhandshake opts
-    local reusedSession = nil -- defaults to nil
-    local serverName = host    -- for SNI name resolution
-    local sslVerify = false  -- boolean if true make sure the directives set
-    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
-    local sendStatusReq = '' -- boolean OCSP status request
     local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
     if not shake then
       ngx.log(ngx.INFO, 'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
       return nil
     else
-      ngx.log(ngx.INFO, "SSL Handshake Completed: "  .. type(shake))
+      ngx.log(ngx.INFO, " - SSL Handshake Completed: "  .. type(shake))
     end
   end
-
   httpc:set_timeout(2000)
   local response, err = httpc:request({
       ['version'] = 1.1,
@@ -63,39 +90,17 @@ function getTarget( target )
       ['ssl_verify'] = sslVerify
     })
 
-    if not response then
+   if not response then
       ngx.log(ngx.INFO,  'FAILED to get response from "'  .. host .. '" with path ' .. path  )
       return nil
     else
-      ngx.log(ngx.INFO,  'GOT response from "' .. host .. '" with path ' .. path  )
+      ngx.log(ngx.INFO,  ' - GOT response from "' .. host .. '" with path ' .. path  )
+      ngx.log(ngx.INFO,  ' - response status "' ..  response.status)
     end
+   ngx.log(ngx.INFO,  ' - response type: ' ..  type( response )  )
    return response
  end
 
- function resStatus( target, res )
-     if res == nil then
-       ngx.log(ngx.INFO, "Initial Request [ " .. target .. ' ]' )
-       res = getTarget( target )
-       ngx.log(ngx.INFO, "Initial Response [ " .. res.reason .. ' ]' )
-     end
-     if res.status == 302 then
-       ngx.log(ngx.INFO, "First Response Redirect [ " .. res.status .. ' ]' )
-       local location = resolveRedirectLocation( target, res )
-       if location ~= nil then
-         res = getTarget( location )
-         ngx.log(ngx.INFO, "Redirect Response [ " .. res.reason .. ' ]' )
-       end
-     end
-     if res.status == 200 then
-       linkURL = resHeaders( target, res )
-       if linkURL ~= nil then
-         ngx.log(ngx.INFO, "Return linkURL: " .. linkURL)
-       else
-         linkURL = resBody( target, res )
-       end
-     end
-     return linkURL
- end
 
 function resolveRedirectLocation(  target, res )
   ngx.log(ngx.INFO, " - redirect " )

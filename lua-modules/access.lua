@@ -164,62 +164,68 @@ function _M.verifyToken()
 end
 
 function isTokenValid( jwtObj )
+  ngx.log(ngx.INFO, "Check The Tokens Validity")
   if not jwtObj.valid then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'not a jwt token') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'not a jwt token') 
   end
- ngx.log(ngx.INFO, 'Yep!: looks like a JWT token ')
+  ngx.log(ngx.INFO, 'Yep!: looks like a JWT token ')
   local me = jwtObj.payload.me
   if me == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing me') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing me') 
   end
 
   local clientID = jwtObj.payload.client_id
   if clientID == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing client id') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing client id') 
   end
   ngx.log(ngx.INFO, 'Yep!: has a client id  [ ' .. clientID  .. ' ] ')
 
   local scope = jwtObj.payload.scope
   if scope == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing scope') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing scope') 
   end
   ngx.log(ngx.INFO, 'Yep!: has a scope [ ' .. scope  .. ' ] ')
 
   local issuedAt = jwtObj.payload.issued_at
   if  issuedAt == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued_at') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued_at') 
   end
   ngx.log(ngx.INFO, 'Yep!: has a issued at date [ ' .. issuedAt  .. ' ] ')
+
   local issuedBy = jwtObj.payload.issued_by
   if  issuedBy == nil then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued by') 
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued by') 
   end
   ngx.log(ngx.INFO, 'Yep!: has a issued by domain [ ' .. issuedBy  .. ' ] ')
--- 
+
   local thisDomain =  extractDomain( me )
   if ngx.var.domain  ~=  thisDomain  then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
- end
+    return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
+  end
   ngx.log(ngx.INFO, 'Yep!: I am the one who authorized the use of this token')
--- I have the appropiate post scope
-  if scope ~= 'post'  then
-   return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', ' do not have the appropiate post scope') 
- end
- ngx.log(ngx.INFO, 'Yep!: I have the appropiate post scope')
 
--- I have the appropiate post scope
--- TODO! scope is a list
---  ngx.say(clientID)
+  ngx.log(ngx.INFO, 'Check: I have the appropiate create update scope')
+  if scope ~= 'create update'  then
+    return  requestError(
+      ngx.HTTP_UNAUTHORIZED,
+      'insufficient_scope',
+      ' do not have the appropiate "create update" scope')
+  end
+  ngx.log(ngx.INFO, 'Yep!: I have the appropiate post scope')
 
--- I accept posts only from the following clients
--- TODO!
---
--- I accept tokens no older than 
--- -- TODO!
+  -- I have the appropiate post scope
+  -- TODO! scope is a list
+  --  ngx.say(clientID)
 
- return true
- 
- end
+  -- I accept posts only from the following clients
+  -- TODO!
+  --
+  -- I accept tokens no older than 
+  -- -- TODO!
+
+  return true
+
+end
 
  function verifyAtTokenEndpoint( )
     ngx.log(ngx.INFO, "Verify At Token Endpoint... ")

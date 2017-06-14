@@ -19,11 +19,6 @@ function _M.tablelength(T)
 end
 
 
-
-
-
---
---UTILITY TODO move to utility.lua
 local function contains(tab, val)
   for index, value in ipairs (tab) do
     if value == val then
@@ -32,6 +27,107 @@ local function contains(tab, val)
   end
   return false
 end
+
+
+--UTILITY TODO move to utility.lua
+-- utility REQUEST functions
+--
+--[[
+-- a simple GET request wrapper for resty-http
+-- @see https://github.com/pintsized/lua-resty-http
+-- @param URL 
+-- @returns  response table , err
+--]]--
+function _M.fetch( url )
+  local msg = ''
+  local httpc = require('resty.http').new()
+  local scheme, host, port, path = unpack(httpc:parse_uri(url))
+  httpc:set_timeout(6000) -- 6 sec timeout
+  local ok, err = httpc:connect(host, port)
+  if not ok then
+    msg = "FAILED to connect to " .. host .. " on port "  .. port .. ' - ERR: ' ..  err
+    return {}, msg
+  else
+      ngx.log(
+        ngx.INFO,
+        " - connected to " .. host .. " on port "  .. port )
+  end
+  if scheme == 'https' then
+    -- 4 sslhandshake opts
+    local reusedSession = nil   -- defaults to nil
+    local serverName = host     -- for SNI name resolution
+    local sslVerify = false     -- boolean if true make sure the directives set
+    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
+    local sendStatusReq = '' -- boolean OCSP status request
+    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
+    if not shake then
+      ngx.log(
+        ngx.INFO,
+        'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
+      return {}, msg
+    else
+      ngx.log(
+        ngx.INFO,
+        " - SSL Handshake Completed: "  .. type(shake))
+    end
+  end
+
+  -- local DEFAULT_PARAMS 
+  --   method = "GET",
+  --   path = "/",
+  --   version = 1.1,
+  --  also defaults to
+  --  headers["User-Agent"] = _M._USER_AGENT
+  --  if SSL headers["Host"] = self.host .. ":" .. self.port
+  --  else headers["Host"] = self.host
+  --  headers["Connection"] = "Keep-Alive"
+  --  if body will also add 
+  --  headers["Content-Length"] = #body
+
+   httpc:set_timeout(6000)
+   local response, err = httpc:request({
+        ["path"] = path
+     })
+
+   if not response then
+     msg = "failed to complete request: ", err
+     ngx.log( ngx.INFO, msg )
+     return {}, msg
+   end
+
+  return response, err
+    -- ngx.log(ngx.INFO, "Request Response Status: " .. response.status)
+    -- ngx.log(ngx.INFO, "Request Response Reason: " .. response.reason)
+
+   -- if response.has_body then
+    --  body, err = response:read_body()
+    --  if not body then
+    --    msg = "failed to read body : " ..  err
+    --    return {}, msg
+    --  end
+   -- end
+    --  ngx.log(ngx.INFO, " - response body received and read ")
+
+   -- httpc:set_timeout(6000)
+  -- return httpc:request({
+   --    ["path"] = path
+   --  })
+
+  -- if not response then
+  --   msg = "FAILED - to  get response: ", err
+  --   return {}, msg
+  -- end
+
+  -- if response.has_body then
+  --   body, err = response:read_body()
+  --   if not body then
+  --     msg = "WARN could nor read body " ..  err
+  --     return {}, msg
+  --   end
+end
+
+--
+--UTILITY TODO move to utility.lua
 
 function _M.requestError( status, msg, description )
   ngx.status = status
@@ -43,7 +139,6 @@ function _M.requestError( status, msg, description )
   ngx.print(json)
   ngx.exit(status)
 end
-
 
 function _M.acceptMethods( methods )
   -- ngx.say( 'the methods this endpoint can handle' )

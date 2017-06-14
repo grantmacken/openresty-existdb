@@ -24,103 +24,44 @@ function _M.discoverWebmentionEndpoint( target )
   ngx.log (ngx.INFO, '---------------------------' )
   ngx.log(ngx.INFO, 'Target: '   .. target        )
   local linkURL = resStatus(target, nil)
-  return nil
-  -- local linkURL = resStatus(target, nil)
-  -- --  ngx.log(ngx.INFO, 'Discovered Webmention Endpoint: [ ' .. linkURL .. ' ]')
-  -- return linkURL
+  if type( linkURL ) == 'string' then
+    ngx.log(ngx.INFO, 'Discovered Webmention Endpoint')
+  else
+    linkURL =  nil
+  end
+  return linkURL
 end
 
- function resStatus( target, res )
-     if res == nil then
-       ngx.log(ngx.INFO, "Initial Request: " .. target  )
-       res = getTarget( target )
-       ngx.log(ngx.INFO, "Initial Response: " .. res.reason )
-     end
-     if res.status == 302 then
-       ngx.log(ngx.INFO, 'First Response Redirect: ' .. res.status  )
-       local location = resolveRedirectLocation( target, res )
-       if location ~= nil then
-         res = getTarget( location )
-         ngx.log(ngx.INFO, "Redirect Response: " .. res.reason )
-       end
-     end
-     if res.status == 200 then
-       ngx.log(ngx.INFO, "Response OK: " .. res.status  )
-       linkURL = resHeaders( target, res )
-       if linkURL ~= nil then
-         ngx.log(ngx.INFO, "Return linkURL: " .. linkURL)
-       else
-         linkURL = resBody( target, res )
-       end
-     end
-     return linkURL
- end
-
-function getTarget( target )
-  ngx.log(ngx.INFO, "Attempt to get target: " .. target  )
-  local httpc = http.new()
-  local scheme, host, port, path = unpack(httpc:parse_uri(target))
-  local base = scheme .. '://' .. host
-  local response = nil
-  -- 4 sslhandshake opts
-  local reusedSession = nil -- defaults to nil
-  local serverName = host    -- for SNI name resolution
-  local sslVerify = false  -- boolean if true make sure the directives set
-  -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
-  local sendStatusReq = '' -- boolean OCSP status request
-  local ok, err = httpc:connect( host, port )
-  if not ok then
-    ngx.log(ngx.INFO, 'FAILED to to connect to target:  '  .. host ..  ' on port '  .. port )
-    return nil
-  else
-    ngx.log(ngx.INFO, ' - connected To target:  '  .. host ..  ' on port '  .. port )
+function resStatus( target, res )
+  local util = require('grantmacken.util')
+  if res == nil then
+    ngx.log(ngx.INFO, "Initial Request: " .. target  )
+    res, err = util.fetch( target )
+    ngx.log(ngx.INFO, "Initial Response: " .. res.reason )
   end
-  if scheme == 'https' then
-    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
-    if not shake then
-      ngx.log(ngx.INFO, 'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
-      return nil
-    else
-      ngx.log(ngx.INFO, " - SSL Handshake Completed: "  .. type(shake))
+  if res.status == 302 then
+    ngx.log(ngx.INFO, 'First Response Redirect: ' .. res.status  )
+    local location = resolveRedirectLocation( target, res )
+    if location ~= nil then
+      res, err = util.fetch( target )
+      ngx.log(ngx.INFO, "Redirect Response: " .. res.reason )
     end
   end
-  ngx.log(ngx.INFO, ' - path  '  .. path )
-  ngx.log(ngx.INFO, ' - host  '  .. host )
-
-
-
-  httpc:set_timeout(2000)
-  local response, err = httpc:request({
-      ['version'] = 1.1,
-      ['method'] = "GET",
-      ['path'] = target,
-      ['headers'] = {
-        ["Host"] =  host,
-        ["User-Agent"] =  'Mozilla/5.0' ,
-        ["Accept"] =  'text/html,application/xhtml+xml,application/xml',
-        ["Connection"] =  'keep-alive',
-        ["DNT"] =  '1',
-        ["Cache-Control"] =  'max-age=0',
-        ["Upgrade-Insecure-Requests"] =  '1',
-      },
-      ['ssl_verify'] = sslVerify
-    })
-
-   if not response then
-      ngx.log(ngx.INFO,  'FAILED to get response from "'  .. host .. '" with path ' .. path  )
-      return nil
+  if res.status == 200 then
+    ngx.log(ngx.INFO, "Response OK: " .. res.status  )
+    linkURL = resHeaders( target, res )
+    if linkURL ~= nil then
+      ngx.log(ngx.INFO, "Return linkURL: " .. linkURL)
     else
-      ngx.log(ngx.INFO,  ' - GOT response from "' .. host .. '" with path ' .. path  )
-      ngx.log(ngx.INFO,  ' - response status "' ..  response.status)
+      linkURL = resBody( target, res )
     end
-   ngx.log(ngx.INFO,  ' - response type: ' ..  type( response )  )
-   return response
+  end
+  return linkURL
  end
-
 
 function resolveRedirectLocation(  target, res )
   ngx.log(ngx.INFO, " - redirect " )
-  local httpc = http.new()
+  local httpc = require('resty.http').new()
   local scheme, host, port, path = unpack(httpc:parse_uri(target))
   local base = scheme .. '://' .. host
   local location =  res.headers['Location']
@@ -189,16 +130,16 @@ function resBody( target, res )
 end
 
  function getLinkHeaderURL( response )
+   ngx.log(ngx.INFO, "LOOK for rel webmention Link in resonse headers")
    local headerLink = response.headers['Link']
    local linkItem = nil
-   ngx.log(ngx.INFO, "found Link ... look for rel webmention")
-   ngx.log(ngx.INFO, "found Link type ..." .. type(headerLink) )
+   ngx.log(ngx.INFO, " - found Link type ..." .. type(headerLink) )
    if type(headerLink) == 'string' then
-     -- might be multiple link headers ... lookr for comma seperator
+     -- might be multiple link headers ... look for comma seperator
      local links , err = require('ngx.re').split(headerLink, ",")
      if type(links) == 'table' then
        for index, item in ipairs ( links ) do
-         ngx.log(ngx.INFO, 'found link '  .. tostring(index) .. ' [ ' .. item .. ' ]' )
+         ngx.log(ngx.INFO, ' - found link '  .. tostring(index) .. ' [ ' .. item .. ' ]' )
          linkItem =  getLinkItem( item )
          if linkItem ~= nil then
            break
@@ -218,18 +159,13 @@ end
  end
 
  function getLinkItem( item )
-   ngx.log(ngx.INFO, "look for 'rel=mention' : [ " .. item  .. ' ]' )
+   ngx.log(ngx.INFO, "LOOK for 'rel=mention' : [ " .. item  .. ' ]' )
    local relMentionString = nil
    local from, to, err = ngx.re.find(item ,'(rel=webmention|rel="webmention"|rel="webmention.+")')
    if from then
      local linkRel =  string.sub( item, from, to )
      ngx.log(ngx.INFO, ' - OK webmention found: ' .. linkRel )
      relMentionString = item
-   else
-     if err then
-       ngx.log(ngx.INFO, "error: ", err)
-     end
-     ngx.log(ngx.INFO, "not matched!")
    end
    return relMentionString
  end

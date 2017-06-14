@@ -2,8 +2,6 @@ local _M = {}
 --[[
 @see https://www.w3.org/TR/webmention/#sender-discovers-receiver-webmention-endpoint
 @see https://webmention.rocks/
- 21
- 22
 @see https://github.com/golgote/neturl
 --]]
 
@@ -11,12 +9,25 @@ local modUtil = require('grantmacken.util')
 local cfg     = require('grantmacken.config')
 local http = require "resty.http"
 
+--[[
+sender discovers receiver webmention endpoint
+----------------------------------------------
+
+before we can send a webmention we examine the target and try to
+discover the webmention endpoint
+@see https://www.w3.org/TR/webmention/#sender-discovers-receiver-webmention-endpoint
+]]--
+
 function _M.discoverWebmentionEndpoint( target )
+  ngx.log (ngx.INFO, '---------------------------' )
   ngx.log(ngx.INFO, 'Discover Webmention Endpoint')
   ngx.log (ngx.INFO, '---------------------------' )
+  ngx.log(ngx.INFO, 'Target: '   .. target        )
   local linkURL = resStatus(target, nil)
-  --  ngx.log(ngx.INFO, 'Discovered Webmention Endpoint: [ ' .. linkURL .. ' ]')
-  return linkURL
+  return nil
+  -- local linkURL = resStatus(target, nil)
+  -- --  ngx.log(ngx.INFO, 'Discovered Webmention Endpoint: [ ' .. linkURL .. ' ]')
+  -- return linkURL
 end
 
  function resStatus( target, res )
@@ -62,7 +73,7 @@ function getTarget( target )
     ngx.log(ngx.INFO, 'FAILED to to connect to target:  '  .. host ..  ' on port '  .. port )
     return nil
   else
-    ngx.log(ngx.INFO, ' - CONNECTED to target:  '  .. host ..  ' on port '  .. port )
+    ngx.log(ngx.INFO, ' - connected To target:  '  .. host ..  ' on port '  .. port )
   end
   if scheme == 'https' then
     local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
@@ -73,15 +84,20 @@ function getTarget( target )
       ngx.log(ngx.INFO, " - SSL Handshake Completed: "  .. type(shake))
     end
   end
+  ngx.log(ngx.INFO, ' - path  '  .. path )
+  ngx.log(ngx.INFO, ' - host  '  .. host )
+
+
+
   httpc:set_timeout(2000)
   local response, err = httpc:request({
       ['version'] = 1.1,
       ['method'] = "GET",
-      ['path'] = path,
+      ['path'] = target,
       ['headers'] = {
         ["Host"] =  host,
         ["User-Agent"] =  'Mozilla/5.0' ,
-        ["Accept"] =  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        ["Accept"] =  'text/html,application/xhtml+xml,application/xml',
         ["Connection"] =  'keep-alive',
         ["DNT"] =  '1',
         ["Cache-Control"] =  'max-age=0',

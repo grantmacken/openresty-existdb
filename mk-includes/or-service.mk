@@ -120,9 +120,10 @@ orLoggedErrors:
 
 orLoggedErrorFollow: $(OPENRESTY_HOME)/nginx/logs/error.log
 	@tail -f  $(OPENRESTY_HOME)/nginx/logs/error.log |\
- grep --line-buffered -oP '^.+\K\[\w+\].+$$' |\
+ grep --line-buffered -oP '^.+\K\[lua\].+$$' |\
  cut -d ',' -f1
 
+ # grep --line-buffered -oP '^.+\K\[\w+\].+$$' |\
 
 orSudoers:
 	@$(call assert-is-root)

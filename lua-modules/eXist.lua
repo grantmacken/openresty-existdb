@@ -464,7 +464,6 @@ end
 
 
 function _M.putXML( collection, resource , data )
-  local config = require('grantmacken.config')
   local http   = require "resty.http"
   local authorization = config.get('auth')
   local domain  = config.get('domain')
@@ -497,8 +496,8 @@ function _M.putXML( collection, resource , data )
     ngx.log(ngx.INFO, msg )
     return nil
   end
-  ngx.log(ngx.INFO, "PUT status: ", response.status)
-  ngx.log(ngx.INFO, "PUT reason: ", response.reason)
+  -- ngx.log(ngx.INFO, "PUT status: ", response.status)
+  -- ngx.log(ngx.INFO, "PUT reason: ", response.reason)
   return response.reason
 end
 

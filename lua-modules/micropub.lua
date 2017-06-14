@@ -307,14 +307,14 @@ function processPostArgs()
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
-      ngx.log(ngx.INFO,  ' - post args serialised as mf2' )
+      --ngx.log(ngx.INFO,  ' - post args serialised as mf2' )
       ngx.log(ngx.INFO,  ' - serialize jData as XML nodes and store in eXist db' )
       local uID = jData.properties.uid[1]
-      ngx.log(ngx.INFO,  ' - store resource "' .. uID .. '" into "posts" collection')
       -- tasks depends on type of post 
       local xmlEntry = createXmlEntry(jData)
       local uID = jData.properties.uid[1]
       local reason =  require('grantmacken.eXist').putXML( 'posts', uID, xmlEntry)
+      ngx.log(ngx.INFO,  ' - stored resource "' .. uID .. '" into "posts" collection' )
       if kindOfPost == 'reply' then
         ngx.log(ngx.INFO,  kindOfPost  ..  ' additional tasks ' )
         -- my page 

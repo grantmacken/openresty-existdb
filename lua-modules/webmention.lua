@@ -279,7 +279,7 @@ function getSource( source , target )
     -- ngx.log(ngx.INFO, " - initial check is to see if target string is in source body text" )
     ngx.log(ngx.INFO, "source document MUST have an exact match of the target URL")
     if findTargetInSource( body , target ) then
-      ngx.log(ngx.INFO, " - Oky Doky - found target body text in source body text" )
+      ngx.log(ngx.INFO, " - Okey Dokey - found target body text in source body text" )
       local concatTargSrc = source ..  target
       local resource = createResourceID( concatTargSrc )
       local collection = 'mentions'
@@ -296,7 +296,6 @@ function getSource( source , target )
         'bad request',
         msg )
     end
-    -- ngx.say( extractSource( ngx.encode_base64( body ) ))
   else
     if err then
       local msg =  'source URL not found - ' .. err .. ' - can not proccess ' .. contentTypeHeader

@@ -3,13 +3,6 @@ local _M = {}
 local util    = require('grantmacken.util')
 local config  = require('grantmacken.config')
 
-local cfg = {
-port = 8080,
-host = '127.0.0.1',
-auth = 'Basic ' .. os.getenv( "EXIST_AUTH" ),
-domain = ngx.var.domain
-}
-
 local reqargsOptions = {
   timeout          = 1000,
   chunk_size       = 4096,
@@ -56,57 +49,17 @@ local function contains(tab, val)
   return false
 end
 
-local function requestError( status, msg ,description)
-  ngx.status = status
-  ngx.header.content_type = 'application/json'
-  local json = cjson.encode({
-      error  = msg,
-      error_description = description
-    })
-  ngx.print(json)
-  ngx.exit(status)
-end
 
-local function acceptMethods(methods)
-  --  the methods this endpoint can handle
-  local method = ngx.req.get_method()
-  if not contains( methods, method )  then
-    return requestError(
-      ngx.HTTP_METHOD_NOT_IMPLEMENTED,
-      method .. ' method not implemented',
-      'endpoint only implements POST and GET methods') 
-  end
- return method  
-end
-
-function acceptContentTypes(contentTypes)
-  --  the content-types this endpoint can handle
-  local contentType = ngx.var.http_content_type
-  local from, to, err = ngx.re.find(contentType ,"(multipart/form-data)")
-  if from then
-    contentType =  'multipart/form-data'
-  end
-
-  if not contains(contentTypes,contentType)  then
-    local msg = 'endpoint does not accept' .. contentType
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      msg )
-  end
-  return contentType
-end
-
-function acceptFormFields(fields , field)
-  --  the multpart form fields  this endpoint can handle
-  if not contains( fields, field )  then
-    return requestError(
-      ngx.HTTP_NOT_ACCEPTABLE,
-      'not accepted',
-      'endpoint only doesnt accept' .. field )
-  end
- return method  
-end
+-- function acceptFormFields(fields , field)
+--   --  the multpart form fields  this endpoint can handle
+--   if not contains( fields, field )  then
+--     return requestError(
+--       ngx.HTTP_NOT_ACCEPTABLE,
+--       'not accepted',
+--       'endpoint only doesnt accept' .. field )
+--   end
+--  return method  
+-- end
 
 function getMimeType( filename )
   -- get file extension Only handle 
@@ -129,7 +82,6 @@ end
 function _M.processRequest()
   ngx.log(ngx.INFO, "Process Request" )
   local method =  util.acceptMethods({"POST","GET" , "DELETE"})
-
   ngx.log(ngx.INFO, "Accepted Method [ " .. method  .. ' ]')
   if ( method == "POST" ) then
     processPost()
@@ -163,11 +115,11 @@ function processGetDelete( method )
       if err then
         msg =  "error: " .. err
         ngx.log(ngx.WARN, msg)
-        requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+        util.requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
       end
       msg =  "error: not valid uid"
       ngx.log(ngx.WARN, msg)
-      requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
+     util.requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
     end
 
     -- if sID ~= '' then
@@ -191,7 +143,7 @@ end
 function processPost()
   -- ngx.log(ngx.INFO, "Process the content-types this endpoint can handle")
   -- mainly handle eXist rest endpoint
-  local contentType = acceptContentTypes({
+  local contentType = util.acceptContentTypes({
       'application/xquery',
       'application/xml',
       'application/json',
@@ -234,14 +186,14 @@ function processJsonBody()
 
   local http = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
+  local ok, err = httpc:connect(config:get('host'), config:get('port'))
   if not ok then 
     return requesterror(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -249,7 +201,7 @@ function processJsonBody()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = cfg.auth 
+          ["Authorization"] = config:get('auth') 
         },
         body =  data,
         ssl_verify = false
@@ -271,14 +223,14 @@ function processXqueryFile()
 
   local http = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
+  local ok, err = httpc:connect(config:get('host'), config:get('port'))
   if not ok then 
-    return requestError(
+    return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -286,7 +238,7 @@ function processXqueryFile()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = cfg.auth 
+          ["Authorization"] = config:get('auth') 
         },
         body =  data,
         ssl_verify = false
@@ -303,14 +255,14 @@ function processXqueryXML()
   local restPath =  '/exist/rest/db/apps/' ..  ngx.var.domain
   local http = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
+  local ok, err = httpc:connect(config:get('host'), config:get('port'))
   if not ok then 
-    return requestError(
+    return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -318,7 +270,7 @@ function processXqueryXML()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = cfg.auth 
+          ["Authorization"] = config:get('auth') 
         },
         body =  data,
         ssl_verify = false
@@ -414,7 +366,7 @@ function processMultiPartForm()
           ngx.log(ngx.INFO, 'temp: [ '  ..  properties.temp .. ' ]'   )
           ngx.log(ngx.INFO, 'location: [ '  ..  properties.location .. ' ]'   )
           if putAsset(properties) ~= 'Created' then
-            return requestError(
+            return util.requestError(
               ngx.HTTP_SERVICE_UNAVAILABLE,
               'HTTP service unavailable',
               'request failure')
@@ -429,21 +381,21 @@ function putAsset( properties )
   ngx.log(ngx.INFO, 'PUT APP ASSET')
   local http          = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(cfg.host, cfg.port)
+  local ok, err = httpc:connect( config:get('host'), config:get('port'))
   if not ok then 
-    return requestError(
+    return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
 
-  ngx.log(ngx.INFO, 'Connected to '  .. cfg.host ..  ' on port '  .. cfg.port)
+  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
   local res, err = httpc:request({
       version = 1.1,
       method = "PUT",
       path = properties.path,
       headers = {
-        ["Authorization"] =  cfg.auth,
+        ["Authorization"] =  config:get('auth'),
         ["Content-Type"] = properties.mime
       },
       body = read( properties.temp ),
@@ -451,7 +403,7 @@ function putAsset( properties )
     })
 
   if not res then
-    return requestError(
+    return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'request failure')

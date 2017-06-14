@@ -99,7 +99,7 @@ function extractDomain( url )
 end
 
 function extractToken()
-  ngx.log(ngx.INFO, "Extract Token")
+  --ngx.log(ngx.INFO, "Extract Token")
   --TODO! token in post args
   --access_token - the OAuth Bearer token authenticating the request
   --(the access token may be sent in an HTTP Authorization header or
@@ -122,7 +122,7 @@ function extractToken()
 end
 
 function _M.verifyToken()
-  ngx.log(ngx.INFO, "Verify Token")
+  --ngx.log(ngx.INFO, "Verify Token")
   local msg = ''
   local tokens = ngx.shared.dTokens
   local token = extractToken()
@@ -131,18 +131,18 @@ function _M.verifyToken()
   local jwtObj = jwt:load_jwt(token)
 
   if isTokenValid( jwtObj ) then
-    ngx.log(ngx.INFO, " Token is valid jwt object")
+    --ngx.log(ngx.INFO, " Token is valid jwt object")
     -- -- if a token has been verified the in will be stores in shared dic
      local thisDomain =  extractDomain( jwtObj.payload.me )
-     ngx.log(ngx.INFO, "who am I := " .. thisDomain )
+     --ngx.log(ngx.INFO, "who am I := " .. thisDomain )
      local clientDomain =  extractDomain( jwtObj.payload.client_id )
-     ngx.log(ngx.INFO, "Client Domain := " .. clientDomain )
+     --ngx.log(ngx.INFO, "Client Domain := " .. clientDomain )
      local domainHash = ngx.encode_base64( thisDomain .. clientDomain , true)
     local value, flags = tokens:get( domainHash )
     if not value then
-      ngx.log(ngx.INFO, 'Token has not been verified at token endpoint')
+      --ngx.log(ngx.INFO, 'Token has not been verified at token endpoint')
       if verifyAtTokenEndpoint( 'token' ) then
-        ngx.log(ngx.INFO, 'Token verified at token endpoint')
+        --ngx.log(ngx.INFO, 'Token verified at token endpoint')
         tokens:set(domainHash, true)
         return true
       else
@@ -150,13 +150,13 @@ function _M.verifyToken()
         return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
       end
     else
-      ngx.log(ngx.INFO, 'Token has already been verified at token endpoint ')
+      --ngx.log(ngx.INFO, 'Token has already been verified at token endpoint ')
       --TODO! for testing only
      --  tokens:set(domainHash, nil)
       return true
     end
   else 
-    ngx.log(ngx.Warn, 'Token not Veriified')
+    --ngx.log(ngx.Warn, 'Token not Veriified')
     -- oh NO! should not end up here
     msg = "failed to validate token "
     return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
@@ -164,11 +164,11 @@ function _M.verifyToken()
 end
 
 function isTokenValid( jwtObj )
-  ngx.log(ngx.INFO, "Check The Tokens Validity")
+  --ngx.log(ngx.INFO, "Check The Tokens Validity")
   if not jwtObj.valid then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'not a jwt token') 
   end
-  ngx.log(ngx.INFO, 'Yep!: looks like a JWT token ')
+  --ngx.log(ngx.INFO, 'Yep!: looks like a JWT token ')
   local me = jwtObj.payload.me
   if me == nil then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing me') 
@@ -178,40 +178,40 @@ function isTokenValid( jwtObj )
   if clientID == nil then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing client id') 
   end
-  ngx.log(ngx.INFO, 'Yep!: has a client id  [ ' .. clientID  .. ' ] ')
+  --ngx.log(ngx.INFO, 'Yep!: has a client id  [ ' .. clientID  .. ' ] ')
 
   local scope = jwtObj.payload.scope
   if scope == nil then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing scope') 
   end
-  ngx.log(ngx.INFO, 'Yep!: has a scope [ ' .. scope  .. ' ] ')
+  --ngx.log(ngx.INFO, 'Yep!: has a scope [ ' .. scope  .. ' ] ')
 
   local issuedAt = jwtObj.payload.issued_at
   if  issuedAt == nil then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued_at') 
   end
-  ngx.log(ngx.INFO, 'Yep!: has a issued at date [ ' .. issuedAt  .. ' ] ')
+  --ngx.log(ngx.INFO, 'Yep!: has a issued at date [ ' .. issuedAt  .. ' ] ')
 
   local issuedBy = jwtObj.payload.issued_by
   if  issuedBy == nil then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'missing issued by') 
   end
-  ngx.log(ngx.INFO, 'Yep!: has a issued by domain [ ' .. issuedBy  .. ' ] ')
+  --ngx.log(ngx.INFO, 'Yep!: has a issued by domain [ ' .. issuedBy  .. ' ] ')
 
   local thisDomain =  extractDomain( me )
   if ngx.var.domain  ~=  thisDomain  then
     return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
   end
-  ngx.log(ngx.INFO, 'Yep!: I am the one who authorized the use of this token')
+  --ngx.log(ngx.INFO, 'Yep!: I am the one who authorized the use of this token')
 
-  ngx.log(ngx.INFO, 'Check: I have the appropiate create update scope')
+  --ngx.log(ngx.INFO, 'Check: I have the appropiate create update scope')
   if scope ~= 'create update'  then
     return  requestError(
       ngx.HTTP_UNAUTHORIZED,
       'insufficient_scope',
       ' do not have the appropiate "create update" scope')
   end
-  ngx.log(ngx.INFO, 'Yep!: I have the appropiate post scope')
+  --ngx.log(ngx.INFO, 'Yep!: I have the appropiate post scope')
 
   -- I have the appropiate post scope
   -- TODO! scope is a list
@@ -228,7 +228,7 @@ function isTokenValid( jwtObj )
 end
 
  function verifyAtTokenEndpoint( )
-    ngx.log(ngx.INFO, "Verify At Token Endpoint... ")
+    --ngx.log(ngx.INFO, "Verify At Token Endpoint... ")
    local msg = ''
    local tokenEndpoint =  'https://tokens.indieauth.com'
    local host = 'tokens.indieauth.com'
@@ -242,7 +242,7 @@ end
      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
    end
 
-    ngx.log(ngx.INFO, 'Connected to '  .. host ..  ' on port '  .. port)
+    --ngx.log(ngx.INFO, 'Connected to '  .. host ..  ' on port '  .. port)
    -- 4 sslhandshake opts
    local reusedSession = nil -- defaults to nil
    local serverName = host    -- for SNI name resolution
@@ -256,7 +256,7 @@ end
      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
    end
 
-    ngx.log(ngx.INFO, "SSL Handshake Completed: "  ..type(shake))
+    --ngx.log(ngx.INFO, "SSL Handshake Completed: "  ..type(shake))
    --ngx.var.http_authorization
 
    httpc:set_timeout(2000)
@@ -275,8 +275,8 @@ end
      return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
    end
 
-   ngx.log(ngx.INFO, "Request Response Status: " .. response.status)
-   ngx.log(ngx.INFO, "Request Response Reason: " .. response.reason)
+   --ngx.log(ngx.INFO, "Request Response Status: " .. response.status)
+   --ngx.log(ngx.INFO, "Request Response Reason: " .. response.reason)
 
    if response.has_body then
      body, err = response:read_body()
@@ -284,26 +284,26 @@ end
        msg = "failed to read post args: " ..  err
        return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg )
      end
-     ngx.log(ngx.INFO, "verify body recieved: ")
+     --ngx.log(ngx.INFO, "verify body recieved: ")
      local args = ngx.decode_args(body, 0)
      if not args then
        msg = "failed to decode post args: " ..  err
        return requestError(ngx.HTTP_UNAUTHORIZED,'unauthorized', msg ) 
      end
-     ngx.log(ngx.INFO, "verify body decoded: OK")
+     --ngx.log(ngx.INFO, "verify body decoded: OK")
      local myDomain = extractDomain( args['me'] )
      -- local clientDomain = extractDomain( args['client_id'] )
-     ngx.log(ngx.INFO, "Am I the one who authorized the use of this token?")
+     --ngx.log(ngx.INFO, "Am I the one who authorized the use of this token?")
      if ngx.var.domain  ~=  myDomain  then
        return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', 'you are not me') 
      end
-     ngx.log(ngx.INFO, 'Yep! ' .. ngx.var.domain .. ' same domain as '  .. myDomain   )
+     --ngx.log(ngx.INFO, 'Yep! ' .. ngx.var.domain .. ' same domain as '  .. myDomain   )
 
-     ngx.log(ngx.INFO, "Do I have the appropiate post scope?")
+     --ngx.log(ngx.INFO, "Do I have the appropiate post scope?")
      if args['scope'] ~= 'post'  then
        return  requestError(ngx.HTTP_UNAUTHORIZED,'insufficient_scope', ' do not have the appropiate post scope') 
      end
-      ngx.log(ngx.INFO, "Yep! post scope  equals: " ..  args['scope'])
+      --ngx.log(ngx.INFO, "Yep! post scope  equals: " ..  args['scope'])
      return true
    else
      return false

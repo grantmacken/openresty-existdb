@@ -1,6 +1,6 @@
 local _M = {}
 
-local modUtil = require('grantmacken.util')
+local util = require('grantmacken.util')
 local cfg     = require('grantmacken.config')
 
 
@@ -203,7 +203,7 @@ end
 
 function _M.processRequest()
   ngx.log( ngx.INFO, 'Process Request for '  .. cfg.get('domain') )
-  local method =  modUtil.acceptMethods({"POST","GET"})
+  local method =  util.acceptMethods({"POST","GET"})
   ngx.log( ngx.INFO, 'Accept Method: ' .. method )
   if method == "POST" then
      processPost()
@@ -213,7 +213,7 @@ function _M.processRequest()
 end
 
 function processPost()
-  local contentType = modUtil.acceptContentTypes({
+  local contentType = util.acceptContentTypes({
       'application/json',
       'application/x-www-form-urlencoded',
       'multipart/form-data'
@@ -232,7 +232,9 @@ end
 
 
 function processPostArgs()
+  ngx.log(ngx.INFO, ' ======================' )
   ngx.log(ngx.INFO, ' process POST arguments ' )
+  ngx.log(ngx.INFO, ' ======================' )
   local msg = ''
   local args = {}
   ngx.req.read_body()
@@ -240,7 +242,7 @@ function processPostArgs()
   local get, post, files = reqargs(  )
   if not get then
     msg = "failed to get post args: " ..  err
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_NOT_ACCEPTABLE,
       'not accepted',
       msg)
@@ -257,36 +259,36 @@ function processPostArgs()
   end
 
   if  getItems > 0 then
-    ngx.log(ngx.INFO, ' - count post args ' .. getItems )
+    --ngx.log(ngx.INFO, ' - count post args ' .. getItems )
     args = get
   end
 
   if  postItems > 0 then
-    ngx.log(ngx.INFO, ' - count post args ' .. postItems )
+    --ngx.log(ngx.INFO, ' - count post args ' .. postItems )
     args = post
   end
 
-  ngx.log(ngx.INFO, 'args')
-  for key, val in pairs(args) do
-    if type(val) == "table" then
-      ngx.log(ngx.INFO,'key', ": ", key)
-      ngx.log(ngx.INFO, 'value type: ' ..  type(val))
-      for k, v in pairs( val ) do
-        ngx.log(ngx.INFO,'key', ": ", k)
-        ngx.log(ngx.INFO, 'value type: ' ..  v)
-      end
-    else
-      ngx.log(ngx.INFO,'key', ": ", key)
-    end
-  end
+  -- ngx.log(ngx.INFO, 'args')
+  -- for key, val in pairs(args) do
+  --   if type(val) == "table" then
+  --     ngx.log(ngx.INFO,'key', ": ", key)
+  --     ngx.log(ngx.INFO, 'value type: ' ..  type(val))
+  --     for k, v in pairs( val ) do
+  --       --ngx.log(ngx.INFO,'key', ": ", k)
+  --       --ngx.log(ngx.INFO, 'value type: ' ..  v)
+  --     end
+  --   else
+  --     ngx.log(ngx.INFO,'key', ": ", key)
+  --   end
+  -- end
 
   if args['h'] then
     local hType = args['h']
     if microformatObjectTypes[hType] then
-      ngx.log(ngx.INFO,  ' assume we are creating a post item'  )
+      ngx.log(ngx.INFO,  ' - assume we are creating a post item'  )
     else
       msg = 'can not handle microformat  object type": ' .. hType
-      return modUtil.requestError(
+      return util.requestError(
         ngx.HTTP_NOT_ACCEPTABLE,
         'not accepted',
         msg )
@@ -296,10 +298,10 @@ function processPostArgs()
     -- --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
     -- --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
     if hType == 'entry' then
-      ngx.log(ngx.INFO,  'Create Entry ' )
+      ngx.log(ngx.INFO, ' - create entry ' )
       ngx.log(ngx.INFO, ' - from the sent properties - discover the kind of post ')
       local kindOfPost = discoverPostType( post )
-      ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
+      -- ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
       local properties, kindOfPost = createMf2Properties( args )
       local jData = { 
         ['type']  =  'h-' ..  hType,
@@ -331,6 +333,8 @@ function processPostArgs()
       end
       -- Finally 
       if reason == 'Created' then
+        ngx.log(ngx.INFO, ' created entry: ' .. jData.properties.url[1] )
+        ngx.log(ngx.INFO, '# EXIT ...... # ' )
         ngx.header.location = jData.properties.url[1]
         ngx.exit(ngx.HTTP_CREATED)
       end
@@ -465,6 +469,7 @@ function createMf2Properties( post )
         if pKey then
           if postedEntryProperties[pKey] ~=  nil then
             if properties[ pKey ] ~= nil then
+              -- ngx.say('key', ": ", pKey)
               table.insert(properties[ pKey ],v)
             else
               properties[ pKey ] = { v }
@@ -536,6 +541,7 @@ function processGet()
     elseif q  == 'source' then
       ngx.log(ngx.INFO, '- source query' )
       -- TODO!
+      -- ngx.say('https://www.w3.org/TR/micropub/#h-source-content')
       if args['url'] then
         local url = args['url']
         ngx.log(ngx.INFO,  'has url: ' , url  )
@@ -561,6 +567,7 @@ function processGet()
   end
   ngx.status = ngx.HTTP_OK 
   -- TODO!
+  ngx.say('You may query the endpoint using q pararm')
 
   ngx.exit(ngx.OK)
 end

@@ -14,6 +14,7 @@ webmention.lua
 
 @see https://www.w3.org/TR/webmention/#receiving-webmentions
 
+
  - Receive POST Request
 
  - Request Verification
@@ -26,21 +27,23 @@ https://www.w3.org/TR/webmention/#h-webmention-verification
 
 --]]
 
-local modUtil = require('grantmacken.util')
+local util = require('grantmacken.util')
 
 function _M.processRequest()
-  ngx.log( ngx.INFO, 'Process Request' )
-  local method = modUtil.acceptMethods({
+  ngx.log( ngx.INFO, '============================' )
+  ngx.log( ngx.INFO, ' Process Webmention Request ' )
+  ngx.log( ngx.INFO, '============================' )
+  local method = util.acceptMethods({
       'POST'
     })
-  local contentType = modUtil.acceptContentTypes({
+  local contentType = util.acceptContentTypes({
       'application/x-www-form-urlencoded'
     })
   processPostArgs()
 end
 
 function processPostArgs()
-  ngx.log(ngx.INFO, ' process POST arguments ' )
+  ngx.log(ngx.INFO, ' - process POST arguments ' )
   local msg = ''
   local args = {}
   ngx.req.read_body()
@@ -48,7 +51,7 @@ function processPostArgs()
   local get, post, files = reqargs()
   if not get then
     msg = "failed to get post args: " ..  err
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
@@ -65,54 +68,56 @@ function processPostArgs()
   end
 
   if  getItems > 0 then
-    ngx.log(ngx.INFO, ' - count post args ' .. getItems )
+    -- ngx.log(ngx.INFO, ' - count post args ' .. getItems )
     args = get
   end
 
   if  postItems > 0 then
-    ngx.log(ngx.INFO, ' - count post args ' .. postItems )
+    -- ngx.log(ngx.INFO, ' - count post args ' .. postItems )
     args = post
   end
 
-  ngx.log(ngx.INFO, ' - should have 2 args target and source ' )
+  ngx.log(ngx.INFO, 'SHOULD have 2 args "target" and "source"' )
 
-  if modUtil.tablelength( args ) ~= 2 then
-    msg = " failure: webmention SHOULD have 2 POST args 'source' and 'target'"
+  if util.tablelength( args ) ~= 2 then
+    msg = "FAILURE: webmention SHOULD have 2 POST args 'source' and 'target'"
     ngx.log(ngx.INFO, msg )
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
   end
+
   ngx.log(ngx.INFO, 'receiver SHOULD verify the parameters' )
-  modUtil.acceptFormArgs( args , { 'source', 'target'})
-
+  util.acceptFormArgs( args , { 'source', 'target'})
+  ngx.log(ngx.INFO, 'YEP! got 2 args' )
+  ngx.log(ngx.INFO, 'source := ' .. args['source']   )
+  ngx.log(ngx.INFO, 'target := ' .. args['target']   )
   -- Request Verification
-
   ngx.log(ngx.INFO, 'receiver MUST check that source and target are valid URLs' )
   if not isURL( args['source'] ) then
     msg = 'source "' .. args['source']  .. '" MUST be a valid url'
     ngx.log(ngx.INFO, msg)
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
   end
-
   if not isURL( args['target'] ) then
     msg = 'target "' .. args['target']  .. '" MUST be a valid url'
     ngx.log(ngx.INFO, msg)
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
   end
+  ngx.log(ngx.INFO,  ' - YEP! "' .. args['source']  .. '" and "' ..  args['source'] .. '" look like a valid URLs'  )
 
   ngx.log(ngx.INFO,'receiver MUST reject the request if the source URL is the same as the target URL' )
   if  args['target']  ==  args['source'] then
     msg = 'the source URL is the same as the target URL'
     ngx.log(ngx.INFO, msg)
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
@@ -129,40 +134,13 @@ function processPostArgs()
   else
     msg = 'failure target is NOT a valid resource on my site'
     ngx.log(ngx.INFO, msg)
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request',
       msg)
   end
-  ngx.log(ngx.INFO,
-    'Webmention Verification' )
-  ngx.log(ngx.INFO,
-    '=======================' )
-
-  -- Webmention Verification
-  -- Webmention verification SHOULD be handled asynchronously to prevent DoS (Denial of Service) attacks
-  --  If the receiver is going to use the Webmention in some way ...
-  --  -  MUST perform an HTTP GET request on source
-  --  - SHOULD limit the number of redirects it follows
-  --  - receiver SHOULD include an HTTP Accept header 
-
-   local targRes    = getSource( args['source'], args['target']  )
-
-  -- if targRes.has_body then
-  --  local body, err = targRes:read_body()
-  --   if not body then
-  --     return modUtil.requestError(
-  --       ngx.HTTP_BAD_REQUEST,
-  --       'bad request',
-  --       'connection failure')
-  --   end
-
-  --   ngx.say( body )
-  -- end
-  -- local targStored = storeSource( targRes )
-
-  -- local concatTargSrc = args['source'] ..  args['target']
-  -- local resID = createResourceID( concatTargSrc )
+   webmentionVerification( args['source'], args['target']  )
+end
 
   -- ngx.say( resID )
 
@@ -174,80 +152,42 @@ function processPostArgs()
    -- then
    -- MAY publish content from the source page on the target page
 
-end
-
-function getSource( source , target )
-  local http = require "resty.http"
-  local httpc = http.new()
-  local msg = ''
-  local scheme, host, port, path = unpack(httpc:parse_uri(source))
-  local ok, err = httpc:connect( host, port )
-  if not ok then
-    msg = 'source URL not found - failed to connect'
-    return modUtil.requestError(
-      ngx.HTTP_BAD_REQUEST,
-      'HTTP bad request',
-      msg)
-  end
-
-  ngx.log(ngx.INFO, 'Connected to '  .. host ..  ' on port '  .. port)
-  if scheme == 'https' then 
-    -- 4 sslhandshake opts
-    local reusedSession = nil -- defaults to nil
-    local serverName = host    -- for SNI name resolution
-    local sslVerify = false  -- boolean if true make sure the directives set
-    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
-    local sendStatusReq = '' -- boolean OCSP status request
-    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
-    if not shake then
-      msg = "source URL not found - failed to do SSL handshake: ", err
-      return modUtil.requestError(
-        ngx.HTTP_BAD_REQUEST,
-        'HTTP bad request',
-        msg)
-    end
-    ngx.log(ngx.INFO, "SSL Handshake Completed: "  ..type(shake))
-  end
-
-  httpc:set_timeout(2000)
-  local response, err = httpc:request({
-      ['version'] = 1.1,
-      ['method'] = "GET",
-      ['path'] = path,
-      ['headers'] = {
-        ["Host"] =  host,
-        ["User-Agent"] =  'Mozilla/5.0' ,
-        ["Accept"] =  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        ["Connection"] =  'keep-alive',
-        ["DNT"] =  '1',
-        ["Cache-Control"] =  'max-age=0',
-        ["Upgrade-Insecure-Requests"] =  '1',
-      },
-      ['ssl_verify'] = sslVerify
-    })
+  -- Webmention Verification
+  -- Webmention verification SHOULD be handled asynchronously to prevent DoS (Denial of Service) attacks
+  --  If the receiver is going to use the Webmention in some way ...
+  --  -  MUST perform an HTTP GET request on source
+  --  - SHOULD limit the number of redirects it follows
+  --  - receiver SHOULD include an HTTP Accept header 
+function webmentionVerification( source , target )
+  ngx.log(ngx.INFO, ' Webmention Verification ' )
+  ngx.log(ngx.INFO, '==========================' )
+  ngx.log(ngx.INFO,'MUST perform an HTTP GET request on source' )
+  local response, err = util.fetch( source )
   if not response then
-    msg = "source URL not found - ailed to complete request: ", err
+    msg = "source URL not found - failed to complete request: ", err
     return requestError(ngx.HTTP_BAD_REQUEST,'bad request', msg ) 
   end
-  ngx.log(ngx.INFO, "Request Response Status: " .. response.status)
-  ngx.log(ngx.INFO, "Request Response Reason: " .. response.reason)
+  ngx.log(ngx.INFO, " - source response " .. response.reason)
+
   local body = ''
   if response.has_body then
     body, err = response:read_body()
     if not body then
       msg = "source URL not found - failed to read body: " ..  err
-      return modUtil.requestError(
+      return util.requestError(
         ngx.HTTP_BAD_REQUEST,
         'HTTP bad request',
         msg)
     end
   end
+  ngx.log(ngx.INFO, " - source body available and read ")
+
   -- detirmine content-type from response header
   if response.headers['Content-Type']  ~= nil then
     ngx.log(ngx.INFO, "Request Response Content-Type: " .. response.headers['Content-Type'] )
   else
     local msg =  'source URL not found - can not determine content type'
-    return modUtil.requestError(
+    return util.requestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request ' ,
       msg )
@@ -264,7 +204,7 @@ function getSource( source , target )
   local from, to, err = ngx.re.find(contentTypeHeader ,"(text/html|text/plain)")
   if from then
     local contentType =  string.sub( contentTypeHeader, from, to )
-    -- ngx.log(ngx.INFO, " - ok we can handle : " .. contentType)
+      ngx.log(ngx.INFO, " - ok we can handle : " .. contentType)
     -- ngx.log(ngx.INFO, " - check if source content mentions target" )
     -- ngx.log(ngx.INFO, " - i.e.  somewhere in 'source content'  there is a mention of a resource ( target ) on my site" )
     -- ngx.log(ngx.INFO, " - note: target has already validated as a resource on my site" )
@@ -279,19 +219,11 @@ function getSource( source , target )
     -- ngx.log(ngx.INFO, " - initial check is to see if target string is in source body text" )
     ngx.log(ngx.INFO, "source document MUST have an exact match of the target URL")
     if findTargetInSource( body , target ) then
-      ngx.log(ngx.INFO, " - Okey Dokey - found target body text in source body text" )
-      local concatTargSrc = source ..  target
-      local resource = createResourceID( concatTargSrc )
-      local collection = 'mentions'
-      local data =  extractSource( ngx.encode_base64( body ))
-      local reason = require('grantmacken.eXist').putXML( collection, resource , data )
-      if reason ~= nil then
-        ngx.log(ngx.INFO, "stored 'source' body text as XML into eXist" )
-        ngx.log(ngx.INFO, "stored 'source' will be in the 'docs/mentions' collection" )
-      end
+       ngx.log(ngx.INFO, " - found target body text in source body text" )
+       store(  source, target, body )
     else
       local msg =  'source URL does not contain a link to the target URL.'
-      return modUtil.requestError(
+      return util.requestError(
         ngx.HTTP_BAD_REQUEST,
         'bad request',
         msg )
@@ -299,13 +231,13 @@ function getSource( source , target )
   else
     if err then
       local msg =  'source URL not found - ' .. err .. ' - can not proccess ' .. contentTypeHeader
-      return modUtil.requestError(
+      return util.requestError(
         ngx.HTTP_BAD_REQUEST,
         'bad request',
         msg )
     end
     local msg =  'source URL not found - can not proccess ' .. contentTypeHeader
-    return modUtil.equestError(
+    return util.equestError(
       ngx.HTTP_BAD_REQUEST,
       'bad request ' ,
       msg )
@@ -313,33 +245,95 @@ function getSource( source , target )
   -- ngx.say( extractSource( ngx.encode_base64( body ) ))
 end
 
- function findTargetInSource( srcBody, target )
-   ngx.log(ngx.INFO, "In source text look for string [ " .. target  .. ' ] ' )
-   ngx.log(ngx.INFO, 'NOTE have not parsed source str' )
-   local isFound = false
-   local regEx = '(' .. target .. ')'
-   local from, to, err = ngx.re.find( srcBody ,regEx )
-   if from then
-     local link =  string.sub( srcBody, from, to )
-     ngx.log(ngx.INFO, ' - OK target link found: ' .. link )
-     isFound = true
-   else
-     if err then
-       ngx.log(ngx.INFO, "error: ", err)
-     end
-     ngx.log(ngx.INFO, "not matched!")
-   end
-   return isFound
- end
+function store( source, target, body )
+  local config = require('grantmacken.config')
+  local domain  = config.get('domain')
 
-function extractSource( binary )
+  ngx.log(ngx.INFO, "STORE source as a wellformed document" )
+  local srcID = createResourceID( source )
+  ngx.log(ngx.INFO, " - sourceID is hash of the source URL: " .. srcID )
+  local srcCol = 'pages'
+  ngx.log(ngx.INFO, " - source will be catched page in the collection: " ..srcCol )
+
+  local httpc = require('resty.http').new()
+  local scheme, host, port, path = unpack(httpc:parse_uri(source))
+  local base = scheme .. '://' .. host
+
+  ngx.log(ngx.INFO, " - source base : " .. base)
+  local data =  sanitizeStoreSource( ngx.encode_base64( body ), base , domain , srcCol, srcID )
+  ngx.log(ngx.INFO, " - stored source in pages collection")
+
+  local targetID = util.extractID( target )
+  if not targetID then
+    return false
+  end
+
+  ngx.log(ngx.INFO, " - targetID is the doc mentioned on my site: " .. targetID )
+  local insResponse = insertMention( source, srcID, targetID, domain )
+  ngx.log(ngx.INFO, " - mention insert done: " .. targetID )
+end
+
+function insertMention( source, srcID, targetID, myDomain )
+  local txt  =   [[
+  <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
+    <text>
+    <![CDATA[
+    xquery version "3.1";
+    import module namespace mf2="http://markup.nz/#mf2" at "xmldb:exist:///db/apps/]] .. myDomain .. [[/modules/lib/mf2.xqm";
+    let $source := "]] .. source .. [["
+    let $srcPath := "xmldb:exist:///db/data/]] .. myDomain  .. '/docs/pages/' ..  srcID .. [["
+    let $srcDoc := doc( $srcPath )
+    let $mf2Parsed := mf2:dispatch( $srcDoc/node())
+    let $mention := if ( $srcDoc instance of document-node() ) then (
+    <mention><source>{$source}</source>{$mf2Parsed}</mention>
+    )
+    else (
+    <mention><source>{$source}</source></mention> 
+    )
+    let $collection := "xmldb:exist:///db/data/]] .. myDomain  .. '/docs/mentions/' .. [["
+    let $resource := "]] .. targetID .. [["
+    let $targPath := concat( $collection , $resource )
+    return
+    try {
+     if ( doc-available( $targPath ) ) then (
+      if ( doc( $targPath )//source[ . = $source ] ) then (
+        'mention source already exists for this page',
+        xmldb:store( $collection, $resource, <mentions>{$mention}</mentions>, 'application/xml'  )
+      )
+      else (
+        update insert $mention into doc( $targPath )/*, 'new mention inserted'
+      )
+     ) else (
+       xmldb:store( $collection, $resource, <mentions>{$mention}</mentions>, 'application/xml'  )
+     )
+     }
+    catch *{()}
+     ]] ..']]>' .. [[
+    </text>
+  </query>
+]]
+  local responseBody =  require('grantmacken.eXist').restQuery( txt )
+  ngx.log(ngx.INFO, "body: ", responseBody)
+end
+
+-- return mf2:dispatch($sanDoc)
+
+function sanitizeStoreSource( srcBinary, srcBase, myDomain, srcCol, srcID )
   local restPath  = '/exist/rest/db'
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
     <text>
     <![CDATA[
     xquery version "3.1";
-    try { util:parse-html(util:base64-decode("]] .. binary.. [[")) }
+    import module namespace muSan="http://markup.nz/#muSan" at "xmldb:exist:///db/apps/]] .. myDomain .. [[/modules/lib/muSan.xqm";
+    try {
+    let $srcDoc := util:parse-html(util:base64-decode("]] .. srcBinary .. [["))
+    let $base := "]] .. srcBase .. [["
+    let $sanDoc := muSan:sanitizer( $srcDoc/* , $base )
+    let $collection := "xmldb:exist:///db/data/]] .. myDomain  .. '/docs/' .. srcCol .. [["
+    let $resource := "]] .. srcID .. [["
+    return xmldb:store( $collection, $resource, $sanDoc, 'application.xml' ) 
+    }
     catch *{()}
      ]] ..']]>' .. [[
     </text>
@@ -354,18 +348,44 @@ function extractSource( binary )
   return responseBody
 end
 
+
+
+
+
+
+
+function findTargetInSource( srcBody, target )
+  ngx.log(ngx.INFO, "In source text look for string [ " .. target  .. ' ] ' )
+  ngx.log(ngx.INFO, 'NOTE have not parsed source str' )
+  local isFound = false
+  local regEx = '(' .. target .. ')'
+  local from, to, err = ngx.re.find( srcBody ,regEx )
+  if from then
+    local link =  string.sub( srcBody, from, to )
+    ngx.log(ngx.INFO, ' - OK target link found: ' .. link )
+    isFound = true
+  else
+    if err then
+      ngx.log(ngx.INFO, "error: ", err)
+    end
+    ngx.log(ngx.INFO, "not matched!")
+  end
+  return isFound
+end
+
+
 function isValidResource( url )
   local config = require('grantmacken.config')
   local domain  = config.get('domain')
-  ngx.log(ngx.INFO, 'target URL: ' .. url )
+  -- ngx.log(ngx.INFO, 'target URL: ' .. url )
   local msg = ''
    -- lua-modules/util.lua
-  local dbID = modUtil.extractID( url )
-  ngx.log(ngx.INFO, type(dbID) )
+  local dbID = util.extractID( url )
+  -- ngx.log(ngx.INFO, type(dbID) )
   if not dbID then
     return false
   end
-  ngx.log(ngx.INFO, 'extracted ID: ' .. dbID )
+  -- ngx.log(ngx.INFO, 'extracted ID: ' .. dbID )
   -- ngx.log(ngx.INFO, url)
   local contentType = 'application/xml'
   local restPath  = '/exist/rest/db'
@@ -409,7 +429,7 @@ function createResourceID( str )
   --  ngx.log(ngx.INFO, 'constructed txt')
   --  ngx.say(txt)
   local responseBody =  require('grantmacken.eXist').restQuery( txt )
-  ngx.log(ngx.INFO, "body: ", responseBody)
+  -- ngx.log(ngx.INFO, "body: ", responseBody)
   --ngx.log(ngx.INFO, "body: ", type( responseBody))
   return responseBody
 end

@@ -1,4 +1,3 @@
-
 local _M = {}
 
 function _M.read(f)
@@ -39,6 +38,67 @@ end
 -- @returns  response table , err
 --]]--
 function _M.fetch( url )
+  ngx.log( ngx.INFO, " FETCH a simple GET " )
+  ngx.log( ngx.INFO, " - fetch: "  .. url )
+  local msg = ''
+  local httpc = require('resty.http').new()
+  local scheme, host, port, path = unpack(httpc:parse_uri(url))
+  ngx.log( ngx.INFO, " - scheme: "  .. scheme )
+  httpc:set_timeout(2000) -- 2 sec timeoutlog( ngx.INFO, " - fetch: "  .. url )
+  local ok, err = httpc:connect( host, port )
+  if not ok then
+    msg = "FAILED to connect to " .. host .. " on port "  .. port
+    ngx.log( ngx.INFO, msg )
+    return {}, msg
+  else
+    ngx.log( ngx.INFO, " - connected to " .. host .. " on port "  .. port )
+  end
+
+  if scheme == 'https' then
+    -- 4 sslhandshake opts
+    local reusedSession = nil   -- defaults to nil
+    local serverName = host     -- for SNI name resolution
+    local sslVerify = false     -- boolean if true make sure the directives set
+    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
+    local sendStatusReq = '' -- boolean OCSP status request
+    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
+    if not shake then
+      ngx.log(
+        ngx.INFO,
+        'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
+      return {}, msg
+    else
+      ngx.log( ngx.INFO, " - SSL Handshake Completed: "  .. type(shake))
+    end
+  end
+
+  -- local DEFAULT_PARAMS 
+  --   method = "GET",
+  --   path = "/",
+  --   version = 1.1,
+  --  also defaults to
+  --  headers["User-Agent"] = _M._USER_AGENT
+  --  if SSL headers["Host"] = self.host .. ":" .. self.port
+  --  else headers["Host"] = self.host
+  --  headers["Connection"] = "Keep-Alive"
+  --  if body will also add 
+  --  headers["Content-Length"] = #body
+
+   httpc:set_timeout(2000)
+   local response, err = httpc:request({
+        ["path"] = path
+     })
+
+   if not response then
+     msg = "failed to complete request: ", err
+     ngx.log( ngx.INFO, msg )
+     return {}, msg
+   end
+  return response, err
+end
+
+
+function _M.post( url, contentType, body )
   local msg = ''
   local httpc = require('resty.http').new()
   local scheme, host, port, path = unpack(httpc:parse_uri(url))
@@ -71,22 +131,14 @@ function _M.fetch( url )
         " - SSL Handshake Completed: "  .. type(shake))
     end
   end
-
-  -- local DEFAULT_PARAMS 
-  --   method = "GET",
-  --   path = "/",
-  --   version = 1.1,
-  --  also defaults to
-  --  headers["User-Agent"] = _M._USER_AGENT
-  --  if SSL headers["Host"] = self.host .. ":" .. self.port
-  --  else headers["Host"] = self.host
-  --  headers["Connection"] = "Keep-Alive"
-  --  if body will also add 
-  --  headers["Content-Length"] = #body
-
    httpc:set_timeout(6000)
    local response, err = httpc:request({
-        ["path"] = path
+      ['method'] = "POST",
+      ['path'] = path,
+      ['headers'] = {
+        ["Content-Type"] = contentType,
+      },
+      ['body'] = body
      })
 
    if not response then
@@ -94,37 +146,13 @@ function _M.fetch( url )
      ngx.log( ngx.INFO, msg )
      return {}, msg
    end
+   msg = " -  post request complete"
+   ngx.log( ngx.INFO, msg )
+   msg = response.reason
+   ngx.log( ngx.INFO, msg )
+   return response, err
+ end
 
-  return response, err
-    -- ngx.log(ngx.INFO, "Request Response Status: " .. response.status)
-    -- ngx.log(ngx.INFO, "Request Response Reason: " .. response.reason)
-
-   -- if response.has_body then
-    --  body, err = response:read_body()
-    --  if not body then
-    --    msg = "failed to read body : " ..  err
-    --    return {}, msg
-    --  end
-   -- end
-    --  ngx.log(ngx.INFO, " - response body received and read ")
-
-   -- httpc:set_timeout(6000)
-  -- return httpc:request({
-   --    ["path"] = path
-   --  })
-
-  -- if not response then
-  --   msg = "FAILED - to  get response: ", err
-  --   return {}, msg
-  -- end
-
-  -- if response.has_body then
-  --   body, err = response:read_body()
-  --   if not body then
-  --     msg = "WARN could nor read body " ..  err
-  --     return {}, msg
-  --   end
-end
 
 --
 --UTILITY TODO move to utility.lua

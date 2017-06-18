@@ -1,7 +1,7 @@
 local _M = {}
 
 local util = require('grantmacken.util')
-local cfg     = require('grantmacken.config')
+local cfg  = require('grantmacken.config')
 
 
 
@@ -1287,73 +1287,11 @@ function sendMicropubRequest( restPath, txt  )
 end
 
 function sendWebMention( endpoint, source, target )
-  ngx.log(ngx.INFO, 'Send Web Mention' )
-  local http = require "resty.http"
-  local httpc = http.new()
-  local scheme, host, port, path = unpack(httpc:parse_uri(endpoint))
-  local base = scheme .. '://' .. host
-  local http = require "resty.http"
-  local httpc = http.new()
-  local ok, err = httpc:connect( host ,port )
-  if not ok then
-    ngx.log(ngx.INFO, 'FAILED to to connect to endpoint:  '  .. host ..  ' on port '  .. port )
-    return nil
-  else
-    ngx.log(ngx.INFO, 'CONNECTED to endpoint:  '  .. host ..  ' on port '  .. port )
-  end
-
-  if scheme == 'https' then
-    -- 4 sslhandshake opts
-    local reusedSession = nil -- defaults to nil
-    local serverName = host    -- for SNI name resolution
-    local sslVerify = false  -- boolean if true make sure the directives set
-    -- for lua_ssl_trusted_certificate and lua_ssl_verify_depth 
-    local sendStatusReq = '' -- boolean OCSP status request
-    local shake, err = httpc:ssl_handshake( reusedSession, serverName, sslVerify)
-    if not shake then
-      ngx.log(ngx.INFO, 'FAILED SSL handshake with  '  .. serverName ..  ' on port '  .. port )
-      return nil
-    else
-      ngx.log(ngx.INFO, "SSL Handshake Completed: "  .. type(shake))
-    end
-  end
-
+  ngx.log(ngx.INFO, ' Send Web Mention ' )
+  ngx.log(ngx.INFO, '------------------' )
   local contentType = 'application/x-www-form-urlencoded'
-  local strBody = 'source=' .. source .. '&target=' .. target
-
-  httpc:set_timeout(2000)
-  local response, err = httpc:request({
-      ['version'] = 1.1,
-      ['method'] = "POST",
-      ['path'] = path,
-      ['headers'] = {
-        ["Host"] =  host,
-        ["Content-Type"] = contentType,
-      },
-      ['body'] = strBody,
-      ['ssl_verify'] = sslVerify
-    })
-
-  if not response then
-    ngx.log(ngx.INFO,  'FAILED to get webmention post reponse from "'  .. host .. '" with path ' .. path  )
-    return nil
-  else
-    ngx.log(ngx.INFO, 'GOT webmention post response from "' .. host .. '" with path ' .. path  )
-    ngx.log(ngx.INFO, "webmention post response status: ", response.status)
-    ngx.log(ngx.INFO, "webmention post response reason: ", response.reason)
-  end
-
-  if response.has_body then
-    body, err = response:read_body()
-    if not body then
-      ngx.log(ngx.INFO,  'FAILED to get response body' )
-      return nil
-    else
-      ngx.log(ngx.INFO,  'GOT response body ... '  )
-      ngx.log(ngx.INFO, response.body)
-    end
-  end
-  return response
+  local formBody = 'source=' .. source .. '&target=' .. target
+  return util.post( endpoint, contentType, formBody)
 end
 
 function putXML2( collection, props )

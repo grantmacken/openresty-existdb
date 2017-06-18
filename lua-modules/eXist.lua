@@ -150,13 +150,10 @@ function processPost()
       'application/x-www-form-urlencoded',
       'multipart/form-data'
     })
-
-
 --[[
 POST  If the remainder of the URI (the part after /exist/rest) i
  references an XQuery program stored in the database, it will be executed.
 ]]--
-
   ngx.log(ngx.INFO, "Accepted Content Type [ " .. contentType  .. ' ]')
   --  ngx.say( contentType )
   if contentType  == 'application/x-www-form-urlencoded' then
@@ -164,11 +161,11 @@ POST  If the remainder of the URI (the part after /exist/rest) i
   elseif contentType  == 'multipart/form-data' then
     processMultiPartForm()
   elseif contentType  == 'application/json' then
-         processJsonBody()
+    processJsonBody()
   elseif contentType  == 'application/xml' then
-         processXqueryXML()
+    processXqueryXML()
   elseif contentType  == 'application/xquery' then
-         processXqueryFile()
+    processXqueryFile()
   end
 end
 
@@ -186,14 +183,14 @@ function processJsonBody()
 
   local http = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(config:get('host'), config:get('port'))
+  local ok, err = httpc:connect(config.get('host'), config.get('port'))
   if not ok then 
     return requesterror(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
+  ngx.log(ngx.INFO, 'Connected to '  .. config.get('host') ..  ' on port '  .. config.get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -201,7 +198,7 @@ function processJsonBody()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = config:get('auth') 
+          ["Authorization"] = config.get('auth') 
         },
         body =  data,
         ssl_verify = false
@@ -223,14 +220,14 @@ function processXqueryFile()
 
   local http = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect(config:get('host'), config:get('port'))
+  local ok, err = httpc:connect(config.get('host'), config.get('port'))
   if not ok then 
     return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
+  ngx.log(ngx.INFO, 'Connected to '  .. config.get('host') ..  ' on port '  .. config.get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -238,7 +235,7 @@ function processXqueryFile()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = config:get('auth') 
+          ["Authorization"] = config.get('auth') 
         },
         body =  data,
         ssl_verify = false
@@ -247,22 +244,22 @@ function processXqueryFile()
 end
 
 function processXqueryXML()
-  ngx.log(ngx.INFO, "Process xQuery ")
+  ngx.log(ngx.INFO, " Process xQuery ")
+  ngx.log(ngx.INFO, "----------------")
   ngx.req.read_body()
   local data = ngx.req.get_body_data()
-  -- ngx.log(ngx.INFO, type(data))
-  -- ngx.log(ngx.INFO, data)
+   ngx.log(ngx.INFO, ' - got sent body data' ) 
+   ngx.log(ngx.INFO, data)
   local restPath =  '/exist/rest/db/apps/' ..  ngx.var.domain
-  local http = require "resty.http"
-  local httpc = http.new()
-  local ok, err = httpc:connect(config:get('host'), config:get('port'))
+  local httpc = require("resty.http").new()
+  local ok, err = httpc:connect(config.get('host'), config.get('port'))
   if not ok then 
     return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
       'connection failure')
   end
-  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
+  ngx.log(ngx.INFO, ' connected to '  .. config.get('host') ..  ' on port '  .. config.get('port'))
   httpc:set_timeout(2000)
   httpc:proxy_response( httpc:request({
         version = 1.1,
@@ -270,7 +267,7 @@ function processXqueryXML()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = config:get('auth') 
+          ["Authorization"] = config.get('auth')
         },
         body =  data,
         ssl_verify = false
@@ -381,7 +378,7 @@ function putAsset( properties )
   ngx.log(ngx.INFO, 'PUT APP ASSET')
   local http          = require "resty.http"
   local httpc = http.new()
-  local ok, err = httpc:connect( config:get('host'), config:get('port'))
+  local ok, err = httpc:connect( config.get('host'), config.get('port'))
   if not ok then 
     return util.requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
@@ -389,13 +386,13 @@ function putAsset( properties )
       'connection failure')
   end
 
-  ngx.log(ngx.INFO, 'Connected to '  .. config:get('host') ..  ' on port '  .. config:get('port'))
+  ngx.log(ngx.INFO, 'Connected to '  .. config.get('host') ..  ' on port '  .. config.get('port'))
   local res, err = httpc:request({
       version = 1.1,
       method = "PUT",
       path = properties.path,
       headers = {
-        ["Authorization"] =  config:get('auth'),
+        ["Authorization"] =  config.get('auth'),
         ["Content-Type"] = properties.mime
       },
       body = read( properties.temp ),
@@ -503,7 +500,7 @@ end
 
 function _M.restQuery( txt )
   local config = require('grantmacken.config')
-  local http   = require "resty.http"
+  local httpc   = require("resty.http").new()
   local authorization = config.get('auth')
   local domain  = config.get('domain')
   local host  = config.get('host')
@@ -512,7 +509,6 @@ function _M.restQuery( txt )
   local restPath = "/exist/rest/db"
   local msg = ''
   local body = nil
-  local httpc = http.new()
   local ok, err = httpc:connect(host, port)
   if not ok then 
     msg = "failed to connect to eXist"
@@ -549,5 +545,8 @@ function _M.restQuery( txt )
   -- note body may be empty | a string | nil
   return body
 end
+
+
+
 
 return _M

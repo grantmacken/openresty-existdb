@@ -1,8 +1,10 @@
-NAME=openresty-install
+NAME=openresty-existdbC
 OWNER=grantmacken
 SHELL=/bin/bash
 ACCESS_TOKEN_PATH=../.github-access-token
 SITE_TOKEN_PATH=../.site-access-token
+SITE_TOKEN_PATH=../.site-access-token
+TWITTER_CREDENTIALS=../.twitter.json
 SERVER=featon
 DOMAIN=gmack.nz
 DOMAINS=gmack.nz www.gmack.nz

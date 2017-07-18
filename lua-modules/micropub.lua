@@ -340,7 +340,11 @@ function processPostArgs()
         -- TODO! split on comma
         if ( elsewhere == 'https://twitter.com' ) then
           ngx.log(ngx.INFO, 'Syndicate Elsewhere ' .. elsewhere )
-          require('grantmacken.syndicate').syndicateToTwitter( jData )
+          ngx.log(ngx.INFO, ' content ' ..  args['content'] )
+          require('grantmacken.syndicate').syndicateToTwitter( args['content'] )
+          -- jData.properties['in-reply-to'][1]
+
+          -- require('grantmacken.syndicate').syndicateToTwitter( post[] )
           --local tweet = require('grantmacken.syndicate').syndicateToTwitter( jData )
         end
       end

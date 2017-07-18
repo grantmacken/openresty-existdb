@@ -89,3 +89,4 @@ scpAccessToken:
 	@echo '$(abspath  $(ACCESS_TOKEN_PATH))'
 	@scp $(abspath  $(ACCESS_TOKEN_PATH)) $(SERVER):~/$(GIT_USER)/
 	@scp $(abspath  $(SITE_TOKEN_PATH)) $(SERVER):~/$(GIT_USER)/
+	@scp $(abspath  $(TWITTER_CREDENTIALS)) $(SERVER):~/$(GIT_USER)/

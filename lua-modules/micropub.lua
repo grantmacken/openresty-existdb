@@ -331,6 +331,19 @@ function processPostArgs()
           ngx.log(ngx.INFO, 'could NOT discover endpoint' )
         end 
       end
+      --  POSSE Post Own Site Syndicate Elsewhere
+      --  mp-syndicate-to ( comma separated list)
+      --  this property is giving a command to the Micropub endpoint,
+      --  rather than just creating data, so it uses the mp-prefix
+      if ( args['mp-syndicate-to'] ~= nil  ) then
+        local elsewhere = args['mp-syndicate-to']
+        -- TODO! split on comma
+        if ( elsewhere == 'https://twitter.com' ) then
+          ngx.log(ngx.INFO, 'Syndicate Elsewhere ' .. elsewhere )
+          require('grantmacken.syndicate').syndicateToTwitter( jData )
+          --local tweet = require('grantmacken.syndicate').syndicateToTwitter( jData )
+        end
+      end
       -- Finally 
       if reason == 'Created' then
         ngx.log(ngx.INFO, ' created entry: ' .. jData.properties.url[1] )
@@ -450,7 +463,7 @@ function createMf2Properties( post )
               properties[ pKey ] = { val }
             end
           end
-        end 
+        end
       else
         if err then
           ngx.log(ngx.ERR, "error: ", err)
@@ -1291,8 +1304,9 @@ function sendWebMention( endpoint, source, target )
   ngx.log(ngx.INFO, '------------------' )
   local contentType = 'application/x-www-form-urlencoded'
   local formBody = 'source=' .. source .. '&target=' .. target
-  return util.post( endpoint, contentType, formBody)
+  return util.post( endpoint, contentType, formBody )
 end
+
 
 function putXML2( collection, props )
   ngx.log(ngx.INFO, 'do putXML' )
@@ -1394,7 +1408,7 @@ function putMedia( props )
   ngx.log(ngx.INFO, "status: ", response.status)
   ngx.log(ngx.INFO,"reason: ", response.reason)
   return response.reason
-end 
+end
 
 --[[
 function xprocessMultPartForm()

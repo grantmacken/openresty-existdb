@@ -16,6 +16,7 @@ worker_processes $(shell grep ^proces /proc/cpuinfo | wc -l );
 
 # Note: set env declaration to access backend db
 env EXIST_AUTH;
+env TWITTER_AUTH;
 env EXIST_HOME;
 env EXIST_DATA_DIR;
 

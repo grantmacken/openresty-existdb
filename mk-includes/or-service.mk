@@ -12,6 +12,7 @@ Environment="OPENRESTY_HOME=$(OPENRESTY_HOME)"
 Environment="EXIST_HOME=$(EXIST_HOME)"
 Environment="EXIST_DATA_DIR=$(EXIST_DATA_DIR)"
 Environment="EXIST_AUTH=$(shell echo -n "$(GIT_USER):$(ACCESS_TOKEN)" | base64 )"
+Environment='TWITTER_AUTH=$(shell jq -Mc '.' ../.twitter.json )'
 WorkingDirectory=$(OPENRESTY_HOME)
 PIDFile=$(OPENRESTY_HOME)/nginx/logs/nginx.pid
 ExecStartPre=$(OPENRESTY_HOME)/bin/openresty -t

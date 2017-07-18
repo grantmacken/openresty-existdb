@@ -40,14 +40,37 @@ function _M.syndicateToTwitter( note )
   ngx.log(ngx.INFO, ' Syndicate To Twitter ' )
   ngx.log(ngx.INFO, '----------------------' )
   local request = 'https://api.twitter.com/1.1/statuses/update.json'
+
+  ngx.log(ngx.INFO, ' - status: ' ..  note)
+  ngx.log(ngx.INFO, ' - request: ' .. request)
+
   local method = 'POST'
   local queryTbl = { 
      ['status'] = note
    }
-  ngx.log(ngx.INFO, ' - method: ' .. method)
-  ngx.log(ngx.INFO, ' - request: ' .. request)
-  ngx.log(ngx.INFO, ' - status: ' ..  note)
-  twitterRequest( method, request, queryTbl )
+  local httpc = require('resty.http').new()
+  local scheme, host, port, path = unpack(httpc:parse_uri( request ))
+  local resource = scheme .. '://' .. host .. path
+  local tbl = {
+    ['method']  =  method,
+    ['resource'] =  ngx.escape_uri( scheme .. '://' .. host .. path ),
+    ['oauth_consumer_key'] =  get( 'oauth_consumer_key' ),
+    ['oauth_consumer_secret'] =   get( 'oauth_consumer_secret' ),
+    ['oauth_token'] =  get( 'oauth_token' ),
+    ['oauth_token_secret'] =  get( 'oauth_token_secret' )
+  }
+  ngx.log(ngx.INFO, ' - method: ' ..  tbl.method)
+  ngx.log(ngx.INFO, ' - resource: ' ..  tbl.resource)
+  ngx.log(ngx.INFO, ' - oauth_consumer_key: ' ..  tbl.oauth_consumer_key)
+  ngx.log(ngx.INFO, ' - oauth_consumer_secret: ' ..  tbl.oauth_consumer_secret)
+  ngx.log(ngx.INFO, ' - oauth_token: ' ..  tbl.oauth_token)
+  ngx.log(ngx.INFO, ' - oauth_token_secret: ' ..  tbl.oauth_token_secret)
+  ngx.log(ngx.INFO, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' )
+  local authHeader = getTwitterAuthorizationHeader( tbl, queryTbl )
+  -- twitterRequest( method, request, queryTbl )
+  ngx.log(ngx.INFO, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' )
+  ngx.log(ngx.INFO, authHeader)
+  ngx.log(ngx.INFO, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' )
 end
 
 function twitterRequest( method, request, queryTbl )
@@ -110,7 +133,7 @@ function twitterRequest( method, request, queryTbl )
         ['method'] = tbl.method,
         ['path'] = path,
         ['headers'] = {
-          ["Authorization"] =  makeTwitterRequest( tbl, queryTbl ),
+          ["Authorization"] =  getTwitterAuthorizationHeader( tbl, queryTbl ),
         },
         ['query'] =  queryTbl
       }
@@ -132,8 +155,8 @@ function twitterRequest( method, request, queryTbl )
 end
 
 
-function makeTwitterRequest( tbl , qTbl )
-  ngx.log(ngx.INFO, ' Make Twitter Request ' )
+function getTwitterAuthorizationHeader( tbl , qTbl )
+  ngx.log(ngx.INFO, '  ' )
   ngx.log(ngx.INFO, '----------------------------------' )
   local domain  = ngx.var.domain
   ngx.log( ngx.INFO,  domain )
@@ -148,7 +171,7 @@ function makeTwitterRequest( tbl , qTbl )
     let $map := map ]] .. cjson.encode( tbl ) .. [[
     let $qMap := map ]] .. cjson.encode( qTbl ) .. [[
       return (
-        oAuth:makeRequest( $map, $qMap   )
+        oAuth:authorizationHeader( $map, $qMap   )
       )
     }
     catch *{()}

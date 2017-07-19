@@ -109,7 +109,7 @@ exServiceLog:
 	@$(call assert-is-root)
 	@journalctl -u eXist.service -o cat  -n 8
 
-exservicelogfollow:
+exServiceLogFollow:
 	@$(call assert-is-root)
 	@journalctl -f -u eXist.service -o cat
 

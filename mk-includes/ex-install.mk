@@ -91,7 +91,6 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo ' wait'  >> $(@)
 	@echo ' exit'  >> $(@)
 	@echo '}'  >> $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@chmod +x $(@)
 	@cat $(@)
 	@echo '---------------------------------------'

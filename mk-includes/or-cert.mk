@@ -1,6 +1,6 @@
 
 #########################################################
-# SSL CONFIGERATION note  
+# SSL CONFIGERATION note
 # can not be done on local dev server 
 #########################################################
 
@@ -51,9 +51,10 @@ $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 certInit: /etc/letsencrypt/dh-param.pem
 
 certRenew:
-	@echo "renew my certs"
+	@echo "Renew My Certs"
+	@echo "--------------"
 	@$(T)/certbot/certbot-auto certonly
-	@$(MAKE) ngReload:
+	@$(MAKE) ngReload
 
 certConfig: config
 	@rm /etc/letsencrypt/cli.ini

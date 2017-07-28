@@ -58,7 +58,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
  --trust-server-name  -nc  -nv \
  "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)"
 	@touch $@
-	@tail $@
+	@tail  -n 1 $@
 	@echo '----------------------------------------------------'
 
 #  for Travis needs later ver
@@ -66,9 +66,12 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@echo 'Create data dir'
-	@echo 'we have $(call cat,$(T)/eXist-latest.version)'
-	@echo 'creating expect file'
+	@echo ' - we have $(shell tail -n 1 $(T)/eXist-latest.version)'
+	@echo ' eXist home     [ $(EXIST_HOME) ]'
+	@echo ' eXist data dir [ $(EXIST_DATA_DIR) ]'
+	@echo ' password   [ $(P) ]'
+	@echo ' - we have $(shell tail -n 1 $(T)/eXist-latest.version)'
+	@echo ' ... creating expect file'
 	@echo '#!$(shell which expect) -f' > $(@)
 	$(if $(SUDO_USER),\
  echo 'spawn su -c "java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
@@ -89,6 +92,7 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo '}'  >> $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@chmod +x $(@)
+	@cat $(@)
 	@echo '---------------------------------------'
 
 $(T)/eXist-expect.log: $(T)/eXist.expect

@@ -65,18 +65,18 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@$(if $(wildcard $(T)/$(shell tail -n 1 $(T)/eXist-latest.version),\
-  echo ' - we have downloaded jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ] ',\ 
-  echo ' - we have failed to download jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ]'; false )
+	@$(if $(wildcard $(T)/$(shell cat $(T)/eXist-latest.version),\
+  echo ' - we have downloaded jar [ $(shell cat $(T)/eXist-latest.version) ] ',\ 
+  echo ' - we have failed to download jar [ $(shell cat $(T)/eXist-latest.version) ]'; false )
 	@echo ' eXist home     [ $(EXIST_HOME) ]'
 	@echo ' eXist data dir [ $(EXIST_DATA_DIR) ]'
 	@echo ' password   [ $(P) ]'
-	@echo ' - we have $(shell tail -n 1 $(T)/eXist-latest.version)'
+	@echo ' - we have $(shell cat $(T)/eXist-latest.version)'
 	@echo ' ... creating expect file'
 	@echo '#!$(shell which expect) -f' > $(@)
 	$(if $(SUDO_USER),\
- echo 'spawn su -c "java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
- echo 'spawn java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console' >> $(@))
+ echo 'spawn su -c "java -jar $(T)/$(shell cat $(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
+ echo 'spawn java -jar $(T)/$(shell cat $(T)/eXist-latest.version) -console' >> $(@))
 	@echo 'expect "Select target" { send "$(EXIST_HOME)\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)

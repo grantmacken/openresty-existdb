@@ -55,7 +55,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo "Latest eXist Version [ $(shell cat $<) ]"
 	echo '# because we use wget with no clobber, if we have source then just touch log'
 	@wget -o $@ -O "$(T)/$(shell cat $<) " \
- --trust-server-name  -nc  -nv \
+ --trust-server-name  -nc \
  "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)"
 	@touch $@
 	@echo '----------------------------------------------------'
@@ -65,7 +65,9 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@echo ' - we have downloaded jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ]'
+	@$(if $(wildcard $(T)/$(shell tail -n 1 $(T)/eXist-latest.version),\
+  echo ' - we have downloaded jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ] ',\ 
+  echo ' - we have failed to download jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ]'; false )
 	@echo ' eXist home     [ $(EXIST_HOME) ]'
 	@echo ' eXist data dir [ $(EXIST_DATA_DIR) ]'
 	@echo ' password   [ $(P) ]'

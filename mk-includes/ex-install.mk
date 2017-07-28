@@ -56,9 +56,8 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@$(if $(wildcard $(T)/$(call cat,$<)),\
  touch $@,\
  wget -o $@ -O "$(T)/$(call cat,$<)" \
- --trust-server-name  -nc \
+ --trust-server-name  -nc  -nv \
  "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
-	@cat $@
 	@echo '----------------------------------------------------'
 
 #  for Travis needs later ver

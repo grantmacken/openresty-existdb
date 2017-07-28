@@ -9,6 +9,8 @@ addons:
         - tidy
 before_install:
    - pwd
+   - which expect
+   - which prove
 install:
   - sudo make --jobs=1 build
   - sudo ./tmp/eXist-run.sh

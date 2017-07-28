@@ -58,7 +58,6 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
  --trust-server-name  -nc  -nv \
  "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)"
 	@touch $@
-	@tail  -n 1 $@
 	@echo '----------------------------------------------------'
 
 #  for Travis needs later ver
@@ -66,7 +65,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@echo ' - we have $(shell tail -n 1 $(T)/eXist-latest.version)'
+	@echo ' - we have downloaded jar [ $(shell tail -n 1 $(T)/eXist-latest.version) ]'
 	@echo ' eXist home     [ $(EXIST_HOME) ]'
 	@echo ' eXist data dir [ $(EXIST_DATA_DIR) ]'
 	@echo ' password   [ $(P) ]'
@@ -97,13 +96,9 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 
 $(T)/eXist-expect.log: $(T)/eXist.expect
 	@echo "## $(notdir $@) ##"
-	@echo "$(EXIST_HOME)"
-	@$(if $(shell curl -I -s -f 'http://localhost:8080/' ),\
- $(error detected eXist already running),)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(EXIST_HOME),)
 	@echo "Install eXist via expect script. Be Patient! this can take a few minutes"
-	@$(<) | tee $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
+	@$(<)
+	@cat $(@)
 	@echo '---------------------------------------'
 
 $(T)/eXist-run.sh: $(T)/eXist-expect.log
@@ -113,5 +108,6 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@echo '---------------------------------------'
+
+# $(if $(shell curl -I -s -f 'http://localhost:8080/' ), $(error detected eXist already running),)

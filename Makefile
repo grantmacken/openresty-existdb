@@ -22,11 +22,17 @@ WHOAMI    := $(shell whoami)
 INSTALLER := $(if $(SUDO_USER),$(SUDO_USER),$(WHOAMI))
 
 ifeq ($(SUDO_USER),)
-	GIT_USER :=  $(shell git config --get user.name )
+  GIT_USER :=  $(shell git config --get user.name )
   GIT_EMAIL := $(shell git config --get user.email)
 else
   GIT_USER=$(shell su -c "git config --get user.name" $(INSTALLER) )
   GIT_EMAIL := $(shell su -c "git config --get user.email" $(INSTALLER) )
+endif
+
+ifeq ($(INSTALLER),travis)
+ TRAVIS := $(INSTALLER)
+else
+ TRAVIS =
 endif
 
 comma := ,

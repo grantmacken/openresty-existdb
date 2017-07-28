@@ -1,4 +1,28 @@
 #MAIN TARGETS
+define helpOrInstall
+# eXist Install
+
+```
+make exInstallDownload
+make exInstall
+make exClean
+```
+
+ - exInstallDownload
+
+
+- exInstall :
+ automated fetch and install of latest eXist version
+
+- exClean : 
+ this will stop the eXist service then mv the existing install into the backup dir
+
+
+endef
+
+
+.PHONY: exInstall exClean exInstallDownload
+############################################
 
 exInstallDownload:
 	@rm $(T)/eXist-latest.version 2>/dev/null || echo 'latest versions gone'
@@ -19,9 +43,6 @@ exClean:
 	@mkdir /usr/local/backup
 	@if [ -e  $(EXIST_HOME) ];then cp -R $(EXIST_HOME) /usr/local/backup/;fi
 
-
-.PHONY: exInstall exClean exInstallDownload
-############################################
 # dependency chain
 
 $(T)/eXist-latest.version:
@@ -41,7 +62,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@$(if $(wildcard $(T)/$(call cat,$<)),\
  touch $@,\
  wget -o $@ -O "$(T)/$(call cat,$<)" \
- --trust-server-name  --progress=dot$(:)mega -nc \
+ --trust-server-name  -S --show-progress -nc \
  "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
 	@cat $@
 	@echo '----------------------------------------------------'
@@ -78,10 +99,6 @@ $(T)/eXist-expect.log: $(T)/eXist.expect
 	@echo "$(EXIST_HOME)"
 	@$(if $(shell curl -I -s -f 'http://localhost:8080/' ),\
  $(error detected eXist already running),)
-	@echo 'remove any exiting eXist instalation'
-	@if [ -d $(EXIST_HOME) ] ;then rm -R $(EXIST_HOME) ;fi
-	@echo 'make eXist dir and reset permissions back to user'
-	@mkdir -p $(EXIST_HOME)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(EXIST_HOME),)
 	@echo "Install eXist via expect script. Be Patient! this can take a few minutes"
 	@$(<) | tee $(@)
@@ -92,9 +109,9 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo "## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
-	@echo 'java -Djava.endorsed.dirs=lib/endorsed -Djava.net.preferIPv4Stack=true -jar start.jar jetty &' >> $(@)
+	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
+	@$(if $(TRAVIS),$(@),)
 	@echo '---------------------------------------'
-

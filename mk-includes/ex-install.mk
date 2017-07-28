@@ -26,7 +26,8 @@ exInstallDownload:
 exInstall: exInstallDownload
 exInstall:
 	@$(MAKE) --silent $(T)/eXist-run.sh
-	@$(MAKE) --silent exMimeTypes
+
+# @$(MAKE) --silent exMimeTypes
 
 exClean:
 	@echo 'stop eXist'
@@ -51,13 +52,13 @@ $(T)/eXist-latest.version:
 
 $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo "## $(notdir $@) ##"
-	@echo "$(call cat,$<)"
+	@echo "Latest eXist Version [ $(shell cat $<) ]"
 	echo '# because we use wget with no clobber, if we have source then just touch log'
-	@$(if $(wildcard $(T)/$(call cat,$<)),\
- touch $@,\
- wget -o $@ -O "$(T)/$(call cat,$<)" \
+	@wget -o $@ -O "$(T)/$(shell cat $<) " \
  --trust-server-name  -nc  -nv \
- "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
+ "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)" )
+	@touch $@
+	@tail $@
 	@echo '----------------------------------------------------'
 
 #  for Travis needs later ver

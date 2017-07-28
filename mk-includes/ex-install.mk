@@ -63,7 +63,6 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 #  for Travis needs later ver
 #   -S --show-progress
 
-
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
 	@echo 'Create data dir'

@@ -56,7 +56,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	echo '# because we use wget with no clobber, if we have source then just touch log'
 	@wget -o $@ -O "$(T)/$(shell cat $<) " \
  --trust-server-name  -nc  -nv \
- "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)" )
+ "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)"
 	@touch $@
 	@tail $@
 	@echo '----------------------------------------------------'

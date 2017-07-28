@@ -3,13 +3,9 @@ define helpOrInstall
 # eXist Install
 
 ```
-make exInstallDownload
 make exInstall
 make exClean
 ```
-
- - exInstallDownload
-
 
 - exInstall :
  automated fetch and install of latest eXist version
@@ -17,9 +13,7 @@ make exClean
 - exClean : 
  this will stop the eXist service then mv the existing install into the backup dir
 
-
 endef
-
 
 .PHONY: exInstall exClean exInstallDownload
 ############################################
@@ -113,5 +107,4 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
 	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
-	@$(if $(TRAVIS),$(@),)
 	@echo '---------------------------------------'

@@ -99,8 +99,7 @@ P := $(if $(ACCESS_TOKEN),$(ACCESS_TOKEN),admin)
 
 .SECONDARY:
 
-include mk-includes/ex-install.mk
-
+include mk-includes/*
 
 default: help
 

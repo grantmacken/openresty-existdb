@@ -13,7 +13,9 @@ make exClean
 - exClean : 
  this will stop the eXist service then mv the existing install into the backup dir
 
+
 endef
+
 
 .PHONY: exInstall exClean exInstallDownload
 ############################################
@@ -26,8 +28,7 @@ exInstallDownload:
 exInstall: exInstallDownload
 exInstall:
 	@$(MAKE) --silent $(T)/eXist-run.sh
-
-# @$(MAKE) --silent exMimeTypes
+	@$(MAKE) --silent exMimeTypes
 
 exClean:
 	@echo 'stop eXist'
@@ -52,31 +53,25 @@ $(T)/eXist-latest.version:
 
 $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@echo "## $(notdir $@) ##"
-	@echo "Latest eXist Version [ $(shell cat $<) ]"
+	@echo "$(call cat,$<)"
 	echo '# because we use wget with no clobber, if we have source then just touch log'
-	@wget -o $@ -O "$(T)/$(shell cat $<) " \
- --trust-server-name  -nc \
- "https://bintray.com/artifact/download/existdb/releases/$(shell cat $<)"
-	@touch $@
+	@$(if $(wildcard $(T)/$(call cat,$<)),\
+ touch $@,\
+ wget -o $@ -O "$(T)/$(call cat,$<)" \
+ --trust-server-name  -S --show-progress -nc \
+ "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
+	@cat $@
 	@echo '----------------------------------------------------'
-
-#  for Travis needs later ver
-#   -S --show-progress
 
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
-	@$(if $(wildcard $(T)/$(shell cat $(T)/eXist-latest.version),\
-  echo ' - we have downloaded jar [ $(shell cat $(T)/eXist-latest.version) ] ',\ 
-  echo ' - we have failed to download jar [ $(shell cat $(T)/eXist-latest.version) ]'; false )
-	@echo ' eXist home     [ $(EXIST_HOME) ]'
-	@echo ' eXist data dir [ $(EXIST_DATA_DIR) ]'
-	@echo ' password   [ $(P) ]'
-	@echo ' - we have $(shell cat $(T)/eXist-latest.version)'
-	@echo ' ... creating expect file'
+	@echo 'Create data dir'
+	@echo 'we have $(call cat,$(T)/eXist-latest.version)'
+	@echo 'creating expect file'
 	@echo '#!$(shell which expect) -f' > $(@)
 	$(if $(SUDO_USER),\
- echo 'spawn su -c "java -jar $(T)/$(shell cat $(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
- echo 'spawn java -jar $(T)/$(shell cat $(T)/eXist-latest.version) -console' >> $(@))
+ echo 'spawn su -c "java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
+ echo 'spawn java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console' >> $(@))
 	@echo 'expect "Select target" { send "$(EXIST_HOME)\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
@@ -91,15 +86,19 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo ' wait'  >> $(@)
 	@echo ' exit'  >> $(@)
 	@echo '}'  >> $(@)
+	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@chmod +x $(@)
-	@cat $(@)
 	@echo '---------------------------------------'
 
 $(T)/eXist-expect.log: $(T)/eXist.expect
 	@echo "## $(notdir $@) ##"
+	@echo "$(EXIST_HOME)"
+	@$(if $(shell curl -I -s -f 'http://localhost:8080/' ),\
+ $(error detected eXist already running),)
+	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(EXIST_HOME),)
 	@echo "Install eXist via expect script. Be Patient! this can take a few minutes"
-	@$(<)
-	@cat $(@)
+	@$(<) | tee $(@)
+	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@echo '---------------------------------------'
 
 $(T)/eXist-run.sh: $(T)/eXist-expect.log
@@ -109,6 +108,6 @@ $(T)/eXist-run.sh: $(T)/eXist-expect.log
 	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
+	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
+	@$(if $(TRAVIS),$(@),)
 	@echo '---------------------------------------'
-
-# $(if $(shell curl -I -s -f 'http://localhost:8080/' ), $(error detected eXist already running),)

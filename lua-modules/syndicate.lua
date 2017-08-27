@@ -125,7 +125,6 @@ function twitterRequest( method, request, queryTbl )
   end
 end
 
-
 function getTwitterAuthorizationHeader( tbl , qTbl )
   ngx.log(ngx.INFO, ' Twitter Authorization Header' )
   ngx.log(ngx.INFO, '------------------------------' )

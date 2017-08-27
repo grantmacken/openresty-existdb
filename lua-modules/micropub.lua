@@ -2,9 +2,6 @@ local _M = {}
 
 local util = require('grantmacken.util')
 local cfg  = require('grantmacken.config')
-
-
-
 --UTILITY TODO move to utility.lua
 -- function requestError( status, msg ,description)
 --   ngx.status = status
@@ -36,7 +33,7 @@ local cfg  = require('grantmacken.config')
 -- end
 
 -- function getMimeType( filename )
---   -- get file extension Only handle 
+--   -- get file extension Only handle
 --   local ext, err = ngx.re.match(filename, "[^.]+$")
 --   if ext then
 --    return ext[0], extensions[ext[0]]
@@ -52,7 +49,7 @@ local cfg  = require('grantmacken.config')
 -- function extractID( url )
 --   -- short urls https://gmack.nz/xxxxx
 --   local sID, err = require("ngx.re").split(url, "([na]{1}[0-9A-HJ-NP-Z_a-km-z]{4})")[2]
---   if err then 
+--   if err then
 --     return requestError(
 --       ngx.HTTP_SERVICE_UNAVAILABLE,
 --       'HTTP service unavailable',
@@ -62,7 +59,7 @@ local cfg  = require('grantmacken.config')
 -- end
 
 -- https://www.w3.org/TR/micropub/#h-reserved-properties
--- note reserved extension mp-* 
+-- note reserved extension mp-*
 
 -- local reservedPostPropertyNames = {
 --   access_token = true,
@@ -102,7 +99,7 @@ local microformatObjectTypes = {
   cite = false
 }
 
-postedEntryProperties= {
+local postedEntryProperties= {
   ['name'] = true,
   ['summary'] = true,
   ['category'] = true,
@@ -118,18 +115,6 @@ postedEntryProperties= {
   ['updated'] = false
 }
 
-local actionTypes = {
-   update = true,
-   delete = true,
-   undelete = true
-   }
-
-local updateTypes = {
-    add = true,
-    delete = true,
-    replace = true
-   }
-
 local shortKindOfPost = {
  note = 'n',
  reply = 'r',
@@ -137,15 +122,6 @@ local shortKindOfPost = {
  photo = 'p',
  media = 'm'
 }
-
-local longKindOfPost = {
- n = 'note',
- r = 'reply',
- a = 'article',
- p = 'photo',
- m = 'media'
-}
-
 
 local reqargsOptions = {
   timeout          = 1000,
@@ -156,12 +132,12 @@ local reqargsOptions = {
   max_file_uploads = 10
 }
 
-function getShortKindOfPost(kind)
+local function getShortKindOfPost(kind)
   return shortKindOfPost[kind]
 end
 
 
-function discoverPostType(props)
+local function discoverPostType(props)
   -- https://www.w3.org/TR/post-type-discovery/
   local kindOfPost = 'note'
   if props['in-reply-to'] ~= nil then
@@ -212,7 +188,7 @@ function _M.processRequest()
   end
 end
 
-function processPost()
+local function processPost()
   local contentType = util.acceptContentTypes({
       'application/json',
       'application/x-www-form-urlencoded',
@@ -228,8 +204,6 @@ function processPost()
     -- processJsonBody()
   end
 end
-
-
 
 function processPostArgs()
   ngx.log(ngx.INFO, ' ======================' )
@@ -293,7 +267,6 @@ function processPostArgs()
         'not accepted',
         msg )
     end
-
     -- ngx.log(ngx.INFO,  'Microformat Object Type: ' .. args['h'] )
     -- --  Post object ref: http://microformats.org/wiki/microformats-2#v2_vocabularies
     -- --  TODO if no type is specified, the default type [h-entry] SHOULD be used.
@@ -303,21 +276,21 @@ function processPostArgs()
       local kindOfPost = discoverPostType( post )
       -- ngx.log(ngx.INFO, 'kindOfPost: [ ' .. kindOfPost  .. ' ]')
       local properties, kindOfPost = createMf2Properties( args )
-      local jData = { 
+      local jData = {
         ['type']  =  'h-' ..  hType,
         ['properties'] = properties
       }
       --ngx.log(ngx.INFO,  ' - post args serialised as mf2' )
       ngx.log(ngx.INFO,  ' - serialize jData as XML nodes and store in eXist db' )
       local uID = jData.properties.uid[1]
-      -- tasks depends on type of post 
+      -- tasks depends on type of post
       local xmlEntry = createXmlEntry(jData)
       local uID = jData.properties.uid[1]
       local reason =  require('grantmacken.eXist').putXML( 'posts', uID, xmlEntry)
       ngx.log(ngx.INFO,  ' - stored resource "' .. uID .. '" into "posts" collection' )
       if kindOfPost == 'reply' then
         ngx.log(ngx.INFO,  kindOfPost  ..  ' additional tasks ' )
-        -- my page 
+        -- my page
         local source = jData.properties.url[1]
         -- TODO may have more than one in-reply-to
         local target = jData.properties['in-reply-to'][1]
@@ -329,7 +302,7 @@ function processPostArgs()
           local mention = sendWebMention( endpoint, source, target )
         else
           ngx.log(ngx.INFO, 'could NOT discover endpoint' )
-        end 
+        end
       end
       --  POSSE Post Own Site Syndicate Elsewhere
       --  mp-syndicate-to ( comma separated list)
@@ -348,7 +321,7 @@ function processPostArgs()
           --local tweet = require('grantmacken.syndicate').syndicateToTwitter( jData )
         end
       end
-      -- Finally 
+      -- Finally
       if reason == 'Created' then
         ngx.log(ngx.INFO, ' created entry: ' .. jData.properties.url[1] )
         ngx.log(ngx.INFO, '# EXIT ...... # ' )
@@ -427,7 +400,7 @@ function createMf2Properties( post )
         for k, v in pairs(post['content'][1]) do
           ngx.say('TODO!')
           --table.insert(data,1,{ xml = 'content',['type'] = k, v })
-        end 
+        end
       elseif type(post['content'][1]) == "string" then
         ngx.say('TODO!')
       elseif type(post['content']) == "string" then
@@ -536,7 +509,7 @@ end
 
 function processGet()
   ngx.log(ngx.INFO, 'process GET query to micropub endpoint' )
-  ngx.header.content_type = 'application/json' 
+  ngx.header.content_type = 'application/json'
   local response = {}
   local msg = ''
 
@@ -564,7 +537,7 @@ function processGet()
         ngx.log(ngx.INFO,  'has url: ' , url  )
         fetchPostsDoc( url )
 
-      else 
+      else
       msg = 'source must have associated url'
       return requestError(
         ngx.HTTP_NOT_ACCEPTABLE,
@@ -573,26 +546,21 @@ function processGet()
       end
       ngx.exit(ngx.OK)
     elseif q  == 'syndicate-to' then
-      ngx.status = ngx.HTTP_OK 
+      ngx.status = ngx.HTTP_OK
       -- https://github.com/bungle/lua-resty-libcjson
       -- https://github.com/bungle/lua-resty-libcjson/issues/1
-      --  ngx.print(cjson.encode(json.decode('{"syndicate-to":[]}'))) 
+      --  ngx.print(cjson.encode(json.decode('{"syndicate-to":[]}')))
      local json = '{"syndicate-to":[]}'
      ngx.print(json)
       ngx.exit(ngx.OK)
     end
   end
-  ngx.status = ngx.HTTP_OK 
+  ngx.status = ngx.HTTP_OK
   -- TODO!
   ngx.say('You may query the endpoint using q pararm')
 
   ngx.exit(ngx.OK)
 end
-
-
-
-
-
 
 --------------------------------
 --TODO
@@ -628,7 +596,7 @@ function createEntryFromJson( hType , props)
           return requestError(
             ngx.ngx.HTTP_BAD_REQUEST,
             'Bad Request',
-            'TODO! add unknown props') 
+            'TODO! add unknown props')
         end
       end
     else
@@ -636,7 +604,7 @@ function createEntryFromJson( hType , props)
     return requestError(
       ngx.ngx.HTTP_BAD_REQUEST,
       'Bad Request',
-      'properties should be in an array') 
+      'properties should be in an array')
     end
   end
 
@@ -653,7 +621,7 @@ function createEntryFromJson( hType , props)
   if type(props['content'][1]) == "table" then
     for k, v in pairs(props['content'][1]) do
       table.insert(data,1,{ xml = 'content',['type'] = k, v })
-    end 
+    end
   elseif type(props['content'][1]) == "string" then
 
     table.insert(data,1,{ xml = 'content',['type'] = 'text', props['content'][1]})
@@ -699,16 +667,16 @@ function acceptFormFields(fields , field)
       'not accepted',
       'endpoint only doesnt accept' .. field )
   end
- return method  
+ return method
 end
 
 function processJsonBody( )
   ngx.req.read_body()
   local args  = cjson.decode(ngx.req.get_body_data())
   -- either 'ACTION' to modify post or 'TYPE' to create type of post
-  if args['action'] then 
+  if args['action'] then
     -- ngx.say( 'action' )
-    processActions( 'json' , args) 
+    processActions( 'json' , args)
   elseif args['type'] then
     processJsonTypes(args)
   end
@@ -751,13 +719,13 @@ function processJsonTypes(args)
 end
 
 
--- ACTIONS 
+-- ACTIONS
 -- processing form actions
 -- processing json actions
 
 function processActions( postType, args )
   --[[
-  --postType form or json 
+  --postType form or json
     To update an entry, send "action": "update" and specify the URL of the entry that is being updated using the "url"
     property. The request MUST also include a replace, add or delete property (or any combination of these) containing
       the updates to make.
@@ -820,17 +788,17 @@ function processActions( postType, args )
       -- -- TODO! replace other properties
       -- --local n = #args['delete']
       for key, property in pairs(args['delete']) do
-        ngx.log(ngx.INFO, 'keyType:' .. type(key) ) 
-        ngx.log(ngx.INFO, 'propType:' .. type(property) ) 
+        ngx.log(ngx.INFO, 'keyType:' .. type(key) )
+        ngx.log(ngx.INFO, 'propType:' .. type(property) )
         if type(key) == 'number' then
-          -- ngx.log(ngx.INFO, 'keyType:' .. key ) 
-          -- ngx.log(ngx.INFO, 'property:' .. property ) 
+          -- ngx.log(ngx.INFO, 'keyType:' .. key )
+          -- ngx.log(ngx.INFO, 'property:' .. property )
           if type(property) == 'string' then
             local reason =  removeProperty( url, property)
           end
         elseif type(key) == 'string' then
           -- ngx.say(key)
-          --ngx.say( type(property) ) 
+          --ngx.say( type(property) )
           if type(property) == 'table' then
             for index, item in ipairs (property) do
               ngx.log(ngx.INFO, "url: " .. url)
@@ -857,15 +825,15 @@ function processActions( postType, args )
     -- ACTION UPDATE ADD
     if args['add'] then
       ngx.log(ngx.INFO, 'do action update ADD')
-     local reason = nil 
-     --  ngx.log(ngx.INFO, type(args['add']) ) 
+     local reason = nil
+     --  ngx.log(ngx.INFO, type(args['add']) )
       for key, property in pairs(args['add']) do
-        -- ngx.log(ngx.INFO, 'keyType: '  .. type(key) ) 
-        -- ngx.log(ngx.INFO, 'propType: ' .. type(property) ) 
+        -- ngx.log(ngx.INFO, 'keyType: '  .. type(key) )
+        -- ngx.log(ngx.INFO, 'propType: ' .. type(property) )
         if type(key) == 'number' then
-          ngx.log(ngx.INFO, 'TODO! key:' .. key ) 
+          ngx.log(ngx.INFO, 'TODO! key:' .. key )
         elseif type(key) == 'string' then
-          --  ngx.log(ngx.INFO, 'key: ' .. key ) 
+          --  ngx.log(ngx.INFO, 'key: ' .. key )
           if type(property) == 'table' then
             for index, item in ipairs (property) do
               ngx.log(ngx.INFO, "url: " .. url)
@@ -916,7 +884,7 @@ function processMultPartForm()
     ngx.log(ngx.WARN, msg)
     requestError( ngx.HTTP_BAD_REQUEST,'bad request' , msg )
   end
-  -- https://github.com/bungle/lua-resty-reqargs 
+  -- https://github.com/bungle/lua-resty-reqargs
   local split = require( "ngx.re" ).split
   local reqargs = require "resty.reqargs"
   local get, post, files = reqargs( reqargsOptions )
@@ -994,8 +962,8 @@ on windows
 
 function deletePost( uri )
   local contentType = 'application/xml'
-  local resource    = extractID( uri) 
-  local restPath  = '/exist/rest/db/apps/' .. cfg.domain 
+  local resource    = extractID( uri)
+  local restPath  = '/exist/rest/db/apps/' .. cfg.domain
   local sourceCollection = '/db/data/' .. cfg.domain .. '/docs/posts'
   local targetCollection = '/db/data/' .. cfg.domain .. '/docs/recycle'
   local txt  =   [[
@@ -1012,7 +980,7 @@ function deletePost( uri )
      xmldb:move( $sourceCollection, $targetCollection, $resource)
     )
     else ( )
-    ]] ..']]>' .. [[ 
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -1025,8 +993,8 @@ end
 
 function undeletePost( uri )
   local contentType = 'application/xml'
-  local resource    = extractID( uri) 
-  local restPath  = '/exist/rest/db/apps/' .. cfg.domain 
+  local resource    = extractID( uri)
+  local restPath  = '/exist/rest/db/apps/' .. cfg.domain
   local sourceCollection = '/db/data/' .. cfg.domain .. '/docs/recycle'
   local targetCollection = '/db/data/' .. cfg.domain .. '/docs/posts'
   local txt  =   [[
@@ -1070,7 +1038,7 @@ function addProperty( uri, property, item )
   local contentType = 'application/xml'
   -- TODO only allow certain properties
   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
-  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local restPath  = '/exist/rest/db/apps/' .. domain
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -1088,7 +1056,7 @@ function addProperty( uri, property, item )
       update insert $node into $document/entry
     )
 
-    ]] ..']]>' .. [[ 
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -1103,14 +1071,14 @@ function replaceProperty( uri, property, item )
   local resource    = extractID( uri)
   --local xml = require 'xml'
   local contentType = 'application/xml'
-  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local restPath  = '/exist/rest/db/apps/' .. domain
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local xmlNode = ''
   -- TODO only allow certain properties
   if property == 'content' then
     xmlNode = '<value>' .. item .. '</value>'
   else
-   -- xmlNode = { xml = property, item } 
+   -- xmlNode = { xml = property, item }
   end
 
   -- ngx.say(xml.dump(xmlNode))
@@ -1131,7 +1099,7 @@ function replaceProperty( uri, property, item )
       update insert $node into $document/entry
     )
 
-    ]] ..']]>' .. [[ 
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -1144,9 +1112,9 @@ end
 
 function removeProperty( uri, property)
   local domain      = cfg.domain
-  local resource    = extractID( uri) 
+  local resource    = extractID( uri)
   local contentType = 'application/xml'
-  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local restPath  = '/exist/rest/db/apps/' .. domain
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -1156,10 +1124,10 @@ function removeProperty( uri, property)
     let $path := "]] .. docPath .. [["
     let $document := doc($path)
     return
-    if ( exists($document//]] .. property .. [[ )) 
+    if ( exists($document//]] .. property .. [[ ))
       then ( update delete $document//]] .. property .. [[ )
     else ( )
-    ]] ..']]>' .. [[ 
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -1172,13 +1140,13 @@ end
 function removePropertyItem( uri, property, item )
   local contentType = 'application/xml'
   local domain      = cfg.domain
-  local resource    = extractID( uri) 
+  local resource    = extractID( uri)
   -- TODO only allow certain properties
   -- ngx.say( resource )
   -- ngx.say( property )
   -- ngx.say( item )
   local xmlNode =  '<' .. property .. '>' .. item .. '</' .. property .. '>'
-  local restPath  = '/exist/rest/db/apps/' .. domain 
+  local restPath  = '/exist/rest/db/apps/' .. domain
   local docPath   = '/db/data/' .. domain .. '/docs/posts/' .. resource
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -1193,7 +1161,7 @@ function removePropertyItem( uri, property, item )
     update delete  $document/entry/]] .. property .. '[ . = "' .. item .. '" ]' ..  [[
     )
     else ( )
-    ]] ..']]>' .. [[ 
+    ]] ..']]>' .. [[
     </text>
   </query>
 ]]
@@ -1217,7 +1185,7 @@ function fetchPostsDoc( uri )
   local http = require "resty.http"
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
+  if not ok then
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
@@ -1275,7 +1243,7 @@ function sendMicropubRequest( restPath, txt  )
 
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
+  if not ok then
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
@@ -1318,7 +1286,7 @@ function putXML2( collection, props )
   local http = require "resty.http"
   local authorization = cfg.auth
   local contentType = 'application/xml'
-  local domain   = cfg.domain 
+  local domain   = cfg.domain
   local resource =  props.id
   --local kindOfPost = xml.find(data, 'entry').kind
   local dataPath = "/exist/rest/db/data/" .. domain  .. '/docs'
@@ -1337,7 +1305,7 @@ function putXML2( collection, props )
 
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
+  if not ok then
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
@@ -1356,7 +1324,7 @@ function putXML2( collection, props )
       ssl_verify = false
     })
 
-  if not response then 
+  if not response then
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
@@ -1369,7 +1337,7 @@ end
 
 function putMedia( props )
   local http = require "resty.http"
-  local authorization = cfg.auth 
+  local authorization = cfg.auth
   local domain        = cfg.domain
   -- ngx.say( contentType )
   local dataPath = "/exist/rest/db/data/" .. domain
@@ -1377,7 +1345,7 @@ function putMedia( props )
   local putPath  = dataPath .. '/' .. colPath .. '/' .. props.name
   local httpc = http.new()
   local ok, err = httpc:connect(cfg.host, cfg.port)
-  if not ok then 
+  if not ok then
     return requestError(
       ngx.HTTP_SERVICE_UNAVAILABLE,
       'HTTP service unavailable',
@@ -1419,7 +1387,7 @@ function xprocessMultPartForm()
     --  grantmacken.parser is lua-resty-multipart-parser - Simple multipart data parser for OpenResty/Lua
   --  from agentzha TODO! check if avaible on OPM
   --  @see https://github.com/agentzh/lua-resty-multipart-parser
-  local parser = require "grantmacken.parser" 
+  local parser = require "grantmacken.parser"
   ngx.req.read_body()
   local body = ngx.req.get_body_data()
   local p, err = parser.new(body, ngx.var.http_content_type)
@@ -1455,8 +1423,8 @@ function xprocessMultPartForm()
 
     local ext, mimeType = getMimeType( filename )
     local sID = require('grantmacken.postID').getID( 'm' )
-    local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext 
-    local data = { 
+    local mediaFileName = ngx.re.sub(sID, "^m", "M") ..  '.' .. ext
+    local data = {
       xml = 'media'
     }
 
@@ -1505,10 +1473,10 @@ end
     --  ngx.say("md5:  [", md5, "]")
 
     -- top level entry
-    -- local data = { 
-    --   xml = 'entry', 
+    -- local data = {
+    --   xml = 'entry',
     --   type = 'photo'
-    -- } 
+    -- }
 
     -- top level entry
     -- http://microformats.org/wiki/hmedia
@@ -1517,8 +1485,8 @@ end
     --[[
   shoebox idea  - a collection of 'findable'  media items
 
-  accept publishing photos 
-   - photos -  images 
+  accept publishing photos
+   - photos -  images
 
    media-info like atomPub media-edit
 
@@ -1529,7 +1497,7 @@ end
 
   name        original file name
 
-  id         [m][DATE][i]  
+  id         [m][DATE][i]
            shortKindOfPost |  base60Date | incremented integer representing item published that day
   signature -- a md5 signiture to prevent storing\uploading of same photoi
                A file's unique identifier is the hash of its contents
@@ -1537,11 +1505,11 @@ end
   mime       resource stored as content-type & http response/request as ...
 
 
- after upload 
+ after upload
   you can add/edit/delete media entry properties
 
-  -- name      
-  -- summary    
+  -- name
+  -- summary
   -- category -- tags
 
   property values can be used in HTML templates
@@ -1560,7 +1528,7 @@ search for items in shoebox collection by
 --]]
 
   --[[
-  - all props is sent json should be a lua table 
+  - all props is sent json should be a lua table
   @see  https://www.w3.org/TR/micropub/#h-json-syntax
   When creating posts in JSON format, all values MUST be specified as arrays, even if there is only one value, identical
   to the Microformats 2 JSON format. This request is sent with a content type of application/json.
@@ -1580,7 +1548,7 @@ json content as html
 
  "content": [{ "html": "<b>Hello</b> <i>World</i>" } ]
 
-json content as text 
+json content as text
 
  "content": [{ "text": "hello world" } ]
 

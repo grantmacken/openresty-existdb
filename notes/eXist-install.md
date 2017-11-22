@@ -1,16 +1,33 @@
 # eXist Install Target
 
 ```
-make exInstall
+make exBuild
+make exInitRun
 make exClean
 ```
-- exInstall :
- automated fetch and install of latest eXist version
+- exBuild: clones git repo and builds eXist in directory $(EXIST_HOME)
+           When called again, this will pull changes from master and rebuild 
 
-- exClean : 
- this will stop the eXist service then mv the existing install into the backup dir
- 
+- exInitRun: start eXist and reset password
+
+- exClean:  this will stop the eXist service then mv the existing install into the backup dir
+
 ------------------------------------------------------------
+
+Notes: In the past I Izpack to install eXist which failed to install eXist.
+Besides the Izpack bin is rather large. I now think a git pull, is the way 
+to go.
+
+After the initial clone, it is most likely easy to automate, the pull and build.
+
+On the initial clone and build, the dba group account has 'admin' with the default user.
+The initial build also has a empty 'admin' password.
+
+`exInitRun` will start eXist and reset password to your 'github access token'
+
+Next Up [](notes/eXist-service.md)
+
+----------------------------------
 
 Where we are heading for our remote production server:
 
@@ -31,7 +48,5 @@ to eXist using Basic Auth, to access an eXist protected location or query the
 eXist server.
 
 ------------------------------------------------------------
-
-mk-includes/ex-install.mk
 
 

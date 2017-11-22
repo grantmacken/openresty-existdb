@@ -56,6 +56,11 @@ ngDev:
 	@test -d /etc/letsencrypt/live/$(DOMAIN)
 	@test -e /etc/letsencrypt/live/$(DOMAIN)/fullchain.pem
 	@test -e /etc/letsencrypt/live/$(DOMAIN)/privkey.pem
+	@echo '#  add certs.conf nginx that matches the common domain in the cert'
+	@echo 'ssl_certificate         /etc/letsencrypt/live/$(DOMAIN)/fullchain.pem;' > nginx-config/certs.conf
+	@echo 'ssl_certificate_key     /etc/letsencrypt/live/$(DOMAIN)/privkey.pem;' >> nginx-config/certs.conf
+	@echo 'ssl_trusted_certificate /etc/letsencrypt/live/$(DOMAIN)/chain.pem;' >> nginx-config/certs.conf
+	@$(call chownToUser,nginx-config/certs.conf)
 	@echo '#  make sure nginx conf includes in place  '
 	@echo '===================================================='
 	@$(MAKE) --silent ngInc
@@ -63,6 +68,7 @@ ngDev:
 	@echo '===================================================='
 	@echo "$${cnfDev}"
 	@echo "$${cnfDev}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
+	@$(call chownToUser,$(OPENRESTY_HOME)/nginx/conf/nginx.conf)
 	@echo '# test conf and reload'
 	@echo '===================================================='
 	@$(OPENRESTY_HOME)/bin/openresty -t
@@ -72,4 +78,4 @@ ngDev:
 	@prove -v - < t/dev.txt
 
 # #@$(MAKE) orServiceStop
-# @$(MAKE) orServiceStart
+# @$(MAKE) orServiceStarj

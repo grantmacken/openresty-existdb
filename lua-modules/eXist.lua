@@ -198,7 +198,7 @@ function processJsonBody()
         path = restPath,
         headers = {
           ["Content-Type"] =  ngx.header.content_type,
-          ["Authorization"] = config.get('auth') 
+          ["Authorization"] = config.get('auth')
         },
         body =  data,
         ssl_verify = false

@@ -1,7 +1,8 @@
 
 #########################################################
-# SSL CONFIGERATION note
-# can not be done on local dev server 
+# SSL CONFIG note
+# can not be done on local dev server
+# MYDOMAIN is read for config at root
 #########################################################
 
 define certbotConfig
@@ -18,8 +19,8 @@ domains = $(MY_DOMAINS)
 # use a text interface instead of ncurses
 text = true
 
-# use the webroot authenticator. 
-# set path to the default html dir 
+# use the webroot authenticator.
+# set path to the default html dir
 authenticator = webroot
 webroot-path = $(OPENRESTY_HOME)/nginx/html
 
@@ -54,7 +55,7 @@ certRenew:
 	@echo "Renew My Certs"
 	@echo "--------------"
 	@$(T)/certbot/certbot-auto certonly
-	@$(MAKE) ngReload
+	@$(MAKE) ngReload:
 
 certConfig: config
 	@rm /etc/letsencrypt/cli.ini
@@ -69,7 +70,6 @@ certConfig: config
 #       A distro upgrade will destroy /etc/letsencrypt
 #       on local dev use sudo to remake and set permissions for dir
 #       then secure copy certs from remote
-
 
 syncCerts:
 	@echo 'copy certs from remote'

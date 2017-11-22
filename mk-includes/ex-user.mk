@@ -8,7 +8,7 @@ eXist USER: changing user account
 
   requires a runnning instance of eXist
   main focus is to use the eXist client jar
-  to set up a user/group account based on 
+  to set up a user/group account based on
   - my git user name
   - my git user access token
 
@@ -21,6 +21,7 @@ endef
 ClIENT_REPL := $(EXIST_HOME)/bin/client.sh -u admin -P $(ACCESS_TOKEN) -s
 
 CLIENT := $(shell which java) -jar $(EXIST_HOME)/start.jar client -q -u admin -P $(ACCESS_TOKEN)
+
 
 exUserExists = $(shell cd $(EXIST_HOME) && $(CLIENT) -x 'sm:user-exists("$1")' |  tail -n -1  )
 
@@ -51,7 +52,6 @@ exClient:
 
 exClientTest:
 	@cd $(EXIST_HOME) && $(CLIENT)  -x 'util:uuid()' | tail -n -1
-	@echo $$( cd $(EXIST_HOME) && $(CLIENT)  -x 'string-join((sm:get-user-groups("admin")),", ")' | tail -n1 )
 
 exGitAdminCheck:
 	@echo "admin groups: $(call exGroups,admin)"
@@ -70,11 +70,6 @@ exGitUserRemove:
 	@$(if $(findstring true,$(call exGroupExists,$(GIT_USER))),$(call exRemoveGroup,$(GIT_USER)),)
 	@$(MAKE) --silent exGitAdminCheck
 
-# $(call exUserExists,$(GIT_USER))
-# $(call exRemoveAccount,$(GIT_USER))
-#$(call exRemoveGroup,$(GIT_USER))
-#
-#
 exGitUserAdd:
 	$(if $(ACCESS_TOKEN),true,false)
 	@echo $(ACCESS_TOKEN)
@@ -82,7 +77,7 @@ exGitUserAdd:
   cd $(EXIST_HOME) && $(CLIENT) -x 'sm:create-account("$(GIT_USER)","$(ACCESS_TOKEN)","dba")' ,\
  echo 'already user')
 	@$(MAKE) --silent exGitUserCheck
-	@$(MAKE) --silent exGitAdminCheck
+#@$(MAKE) --silent exGitAdminCheck
 
 exGitUserTest:
 	@echo 'check who belongs to dba group '
@@ -93,8 +88,3 @@ exGitUserTest:
 	@echo 'remove eXist user and group'
 	@$(MAKE) exGitUserRemove
 
-exLogger:
-	$(if $(ACCESS_TOKEN),true,false)
-	@$(if $(findstring true,$(call exUserExists,$(GIT_USER))), echo 'ok', echo 'xx')
-
-# @echo "$(call exLogOut, hi)"

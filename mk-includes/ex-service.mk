@@ -2,7 +2,6 @@
  # https://stegard.net/2016/08/gracefully-killing-a-java-process-managed-by-systemd/
 # using the method oulined below
 # the systemd active state will be failed rather that inactive
-
 JAVA := $(shell which java)
 
 START_JAR := $(JAVA) \
@@ -44,13 +43,9 @@ exService: $(SYSTEMD_PATH)/eXist.service
 	@systemctl is-active eXist.service ||  systemctl start eXist.service
 	@for i in $$(seq 1 60);\
  do journalctl -u eXist.service -o cat | tail -n -1  ;\
+  journalctl -u eXist.service -o cat | tail -n -1  | grep 'Jetty server started' &>/dev/null && break ;\
   sleep 1 ;\
-  journalctl -u eXist.service -o cat | tail -n -1  | grep 'Jetty server starting' &>/dev/null && break ;\
- done
-	@for i in $$(seq 1 60);\
- do journalctl -u eXist.service -o cat | tail -n -1  ;\
-  sleep 1 ;\
-  journalctl -u eXist.service -o cat | tail -n 8 | grep 'Server has started,' &>/dev/null && break ;\
+  journalctl -u eXist.service -o cat | tail -n -1  | grep '328' &>/dev/null && break ;\
  done
 	@$(MAKE) exServiceState
 
@@ -92,7 +87,8 @@ exServiceStop:
  systemctl stop eXist.service;\
  for i in $$(seq 1 60);\
  do journalctl -u eXist.service -o cat | tail -n -1  ;\
-  sleep 2 ;\
+  journalctl -u eXist.service -o cat | tail -n -1  | grep 'lifeCycleStopping' &>/dev/null && break ;\
+  sleep 1 ;\
   journalctl -u eXist.service -o cat | tail -n -1  | grep 'eXist.service failed' &>/dev/null && break ;\
  done;fi
 	@$(MAKE) exServiceState

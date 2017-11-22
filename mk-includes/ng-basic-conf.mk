@@ -29,10 +29,20 @@ http {
 }
 endef
 
+ngInit: export cnfBasic:=$(cnfBasic)
+ngInit:
+	@echo "$${cnfBasic}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
+	@sudo $(OPENRESTY_HOME)/bin/openresty -t
+	@sudo $(OPENRESTY_HOME)/bin/openresty
+	@w3m -dump http://localhost
+	@sudo $(OPENRESTY_HOME)/bin/openresty -s stop
+
+
+
 ngBasic: export cnfBasic:=$(cnfBasic)
 ngBasic:
 	@echo 'create basic nginx config'
-	@$(MAKE) orServiceStop
+	@sudo $(MAKE) orServiceStop
 	@echo "$${cnfBasic}" > $(OPENRESTY_HOME)/nginx/conf/nginx.conf
 	@$(MAKE) orServiceStart
 	@nmap $(DOMAIN)

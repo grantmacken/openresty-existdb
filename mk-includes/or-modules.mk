@@ -2,23 +2,19 @@ define orModulesHelp
 =========================================================
 MODULES : working with lua modules  - lua
 
-    < src modules
-     [ proccess ] compile check if the compile fails it will throw an error
-     [ build ]    move modules into  build dir
-     [ upload ]   store modules into eXist dev server
-     [ test ]     run unit tests
-     [ check ]    with prove run functional tests
-==========================================================
+```
+make opmGet
+make orModules
+make watch-orModules
+make orModules-help
+make orLoggedErrorFollow
+```
 
-`make orModules`
-`make watch-orModules`
-`make orModules-help`
-`make orLoggedErrorFollow`
-
- 1. orModules 
- 2. watch-orModules  ...  watch the directory
+opmGet 
+orModules
+watch-orModules  ...  watch the directory
   'make orModules' will now be triggered by changes in dir
- 3. orLoggedErrorFollow  ... follow the nginx log file
+orLoggedErrorFollow  ... follow the nginx log file
 
 endef
 
@@ -29,6 +25,12 @@ orModules-help:
 SRC_LUA := $(shell find lua-modules -name '*.lua' )
 LUA_MODULES  := $(patsubst lua-modules/%.lua,$(OPENRESTY_HOME)/site/lualib/$(GIT_USER)/%.lua,$(SRC_LUA))
 LUA_MODULE_LOGS := $(patsubst %.lua,$(T)/%.log,$(SRC_LUA))
+
+opmGet:
+	@echo "install opm packages"
+	@opm get pintsized/lua-resty-http
+	@opm get SkyLothar/lua-resty-jwt
+	@opm get bungle/lua-resty-reqargs
 
 orModules: $(T)/orModules.log
 
@@ -79,8 +81,3 @@ $(T)/orModules.log: $(LUA_MODULE_LOGS)
 	@prove -v - < t/dev.txt
 	@echo '------------------------------'
 
-opmGet:
-	@echo "install opm packages"
-	@opm get pintsized/lua-resty-http
-	@opm get SkyLothar/lua-resty-jwt
-	@opm get bungle/lua-resty-reqargs

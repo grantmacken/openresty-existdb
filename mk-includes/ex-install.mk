@@ -1,32 +1,65 @@
 #MAIN TARGETS
-define helpOrInstall
+define hEXist
 # eXist Install
 
-```
-make exInstall
-make exClean
-```
+Install eXist on
+OPERATING SYSTEM: $(OS_NAME)
+INSTALLER:  $(INSTALLER)
+SYSTEMD_PATH: $(SYSTEMD_PATH)
+EXIT_HOME: $(EXIST_HOME)
 
-- exInstall :
- automated fetch and install of latest eXist version
+make targets
 
-- exClean : 
- this will stop the eXist service then mv the existing install into the backup dir
-
+- exBuild: clones git repo and builds eXist in directory $(EXIST_HOME)
+- exInit:  starts eXist and resets admin password to my github-access-token
+- exPass   set new admin account based on git username and github-access-token
 
 endef
 
+exHelp: export hEXist:=$(hEXist)
+exHelp:
+	echo "$${hEXist}"
 
 .PHONY: exInstall exClean exInstallDownload
 ############################################
 
 exInstallDownload:
 	@rm $(T)/eXist-latest.version 2>/dev/null || echo 'latest versions gone'
+	@rm $(T)/eXist.expect 2>/dev/null || echo 'expect file gone'
 	@$(MAKE) --silent $(T)/eXist-latest.version
 	@cat $(T)/eXist-latest.version
 
 exInstall: exInstallDownload
 exInstall:
+	@$(MAKE) --silent $(T)/wget-eXist.log
+	@$(MAKE) --silent $(T)/wget-eXist.log
+
+#  this initializes the repo 
+$(EXIST_HOME)/.git/HEAD:
+	@echo "##  $@ ##"
+	@cd /usr/local && git clone git@github.com:eXist-db/exist.git eXist
+	@cd $(EXIST_HOME) && git checkout master
+
+# after repo cloned build
+# this will generate VERSION.txt
+$(EXIST_HOME)/VERSION.txt: $(EXIST_HOME)/build.sh $(EXIST_HOME)/.git/HEAD
+	@echo '# $(notdir $@) #'
+	@chmod +x $<
+	@cd $(EXIST_HOME) && ls -al $(notdir $<)
+	@cd $(EXIST_HOME) &&  ./$(notdir $<)
+	@touch $(EXIST_HOME)/build.sh
+
+# if the pull touches VERSION.txt
+exBuild: $(EXIST_HOME)/VERSION.txt
+	@echo '# $(notdir $@) #'
+	@cd $(EXIST_HOME) && git pull
+	@$(MAKE) exMimeTypes
+
+
+exExpect:
+	@$(MAKE) --silent $(T)/eXist-expect.log
+
+xxx:
 	@$(MAKE) --silent $(T)/eXist-run.sh
 	@$(MAKE) --silent exMimeTypes
 
@@ -66,13 +99,12 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
 	@echo 'Create data dir'
-	@echo 'we have $(call cat,$(T)/eXist-latest.version)'
+	@echo 'we have $(shell cat tmp/eXist-latest.version)'
 	@echo 'creating expect file'
 	@echo '#!$(shell which expect) -f' > $(@)
-	$(if $(SUDO_USER),\
- echo 'spawn su -c "java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console" -s /bin/sh $(INSTALLER)' >> $(@),\
- echo 'spawn java -jar $(T)/$(call cat,$(T)/eXist-latest.version) -console' >> $(@))
-	@echo 'expect "Select target" { send "$(EXIST_HOME)\n" }'  >> $(@)
+	@echo exit
+	echo 'spawn java -jar $(T)/$(shell cat tmp/eXist-latest.version) -console' >> $(@)
+	@echo 'expect "Select target path" { send "$(EXIST_HOME)\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
 	@echo 'expect "Data dir" { send "$(EXIST_DATA_DIR)\n" }' >> $(@)
@@ -86,7 +118,6 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo ' wait'  >> $(@)
 	@echo ' exit'  >> $(@)
 	@echo '}'  >> $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@chmod +x $(@)
 	@echo '---------------------------------------'
 
@@ -95,19 +126,33 @@ $(T)/eXist-expect.log: $(T)/eXist.expect
 	@echo "$(EXIST_HOME)"
 	@$(if $(shell curl -I -s -f 'http://localhost:8080/' ),\
  $(error detected eXist already running),)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(EXIST_HOME),)
 	@echo "Install eXist via expect script. Be Patient! this can take a few minutes"
 	@$(<) | tee $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
 	@echo '---------------------------------------'
 
-$(T)/eXist-run.sh: $(T)/eXist-expect.log
+
+exInitRun: $(T)/eXist-run.sh
+	@echo "## $(notdir $@) ##"
+	@if [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(<) ; fi
+	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then \
+  cd $(EXIST_HOME) && $(shell which java) \
+  -jar $(EXIST_HOME)/start.jar client \
+  -q \
+  -u admin \
+  -P '' \
+  -x 'sm:passwd("admin","$(ACCESS_TOKEN)")'  |  tail -n -1 ; \
+ fi
+
+exPass: $(T)/eXist-run.sh
+	@echo "## $(notdir $@) ##"
+	@if [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(<) ; fi
+	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(MAKE) exGitUserAdd; fi
+
+$(T)/eXist-run.sh:
 	@echo "## $(notdir $@) ##"
 	@echo '#!/usr/bin/env bash' > $(@)
 	@echo 'cd $(EXIST_HOME)' >> $(@)
 	@echo 'java -Djava.endorsed.dirs=lib/endorsed -jar start.jar jetty &' >> $(@)
 	@echo 'while [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; do sleep 10 ; done' >> $(@)
 	@chmod +x $(@)
-	@$(if $(SUDO_USER),chown $(SUDO_USER)$(:)$(SUDO_USER) $(@),)
-	@$(if $(TRAVIS),$(@),)
 	@echo '---------------------------------------'

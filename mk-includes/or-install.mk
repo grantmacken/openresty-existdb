@@ -3,7 +3,8 @@ define helpOrInstall
 # OpenResty Install
 
 ```
- sudo make orInstall
+ make orConfigure
+ make orInstall
 ```
 Automates the OpenResty install 
 
@@ -131,9 +132,8 @@ orConfigure:
  --without-http_scgi_module
 
 orInstall:
-	@$(call assert-is-root)
 	@cd $(T)/$(shell cat $(T)/openresty-latest.version);\
- && gmake -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && gmake install
+ make -j$(shell grep ^proces /proc/cpuinfo | wc -l ) && make install
 
 orCheck:
 	@ls $(OPENRESTY_HOME)/bin
@@ -148,8 +148,8 @@ orCheckConfigureOptions:
 orClean:
 	@$(call assert-is-root)
 	@sudo $(MAKE) orServiceStop
-	@mkdir /usr/local/orBackup
-	@sudo mv $(OPENRESTY_HOME) --target-directory=/usr/local/orBackup
+	@mkdir -p /usr/local/orBackup/$$(date --iso) 
+	@sudo mv $(OPENRESTY_HOME) --target-directory=/usr/local/orBackup/$$(date --iso)
 
 orDestroy:
 	@sudo rm -R $(OPENRESTY_HOME)

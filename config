@@ -1,11 +1,14 @@
-NAME=openresty-existdbC
+NAME=openresty-existdb
 OWNER=grantmacken
 SHELL=/bin/bash
+OPENRESTY_HOME=/usr/local/openresty
+EXIST_HOME=/usr/local/eXist
+EXIST_DATA_DIR=webapp/WEB-INF/data
+EXIST_LOGS_DIR=webapp/WEB-INF/logs
 ACCESS_TOKEN_PATH=../.github-access-token
-SITE_TOKEN_PATH=../.site-access-token
 SITE_TOKEN_PATH=../.site-access-token
 TWITTER_CREDENTIALS=../.twitter.json
 SERVER=featon
 DOMAIN=gmack.nz
-DOMAINS=gmack.nz www.gmack.nz
+DOMAINS=gmack.nz www.gmack.nz zie.nz markup.nz
 DEPLOY=grantmacken/gmack.nz

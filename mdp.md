@@ -80,3 +80,19 @@ eXist in order to access an eXist protected location or query the eXist server.
 
 -------------------------------------------------
 
+
+Updating An OpenResty Install
+
+
+make orServiceStop
+make orConfigure
+make orInstall
+make orServiceStart
+make ngClean
+make ngDev
+
+-------------------------------------------------
+
+A new OpenResty install
+
+-------------------------------------------------

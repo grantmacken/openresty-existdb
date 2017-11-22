@@ -32,8 +32,7 @@ endef
 /etc/letsencrypt/cli.ini:
 	@[ -d  $(dir $@) ] || mkdir $(dir $@)
 	@echo "create cli config file"
-	@echo "$${certbotConfig}"
-	@echo "$${certbotConfig}" >  $@
+	@echo "$${certbotConfig}" | tee  $@
 
 $(T)/certbot/certbot-auto: /etc/letsencrypt/cli.ini
 	@[ -d  $(dir $@) ] || mkdir $(dir $@)

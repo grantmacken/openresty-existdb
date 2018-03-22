@@ -418,13 +418,14 @@ end
 
 --[[
 --  only log failures
---
+--https://stackoverflow.com/questions/3237882/get-week-of-year-from-day-of-year
+--ngx.var.domain
 --]]--
 
 function _M.proxyGetDelete( collection, resource )
   local http   = require "resty.http"
   local authorization = config.get('auth')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   local host  = config.get('host')
   local port  = config.get('port')
   local contentType = 'application/xml'
@@ -463,7 +464,7 @@ end
 function _M.putXML( collection, resource , data )
   local http   = require "resty.http"
   local authorization = config.get('auth')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   local host  = config.get('host')
   local port  = config.get('port')
   local contentType = 'application/xml'
@@ -502,7 +503,7 @@ function _M.restQuery( txt )
   local config = require('grantmacken.config')
   local httpc   = require("resty.http").new()
   local authorization = config.get('auth')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   local host  = config.get('host')
   local port  = config.get('port')
   local contentType = 'application/xml'

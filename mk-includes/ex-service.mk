@@ -89,6 +89,8 @@ exServiceStop:
  do journalctl -u eXist.service -o cat | tail -n -1  ;\
   journalctl -u eXist.service -o cat | tail -n -1  | grep 'lifeCycleStopping' &>/dev/null && break ;\
   sleep 1 ;\
+  journalctl -u eXist.service -o cat | tail -n -1  | grep 'Stopped' &>/dev/null && break ;\
+  sleep 1 ;\
   journalctl -u eXist.service -o cat | tail -n -1  | grep 'eXist.service failed' &>/dev/null && break ;\
  done;fi
 	@$(MAKE) exServiceState

@@ -6,9 +6,9 @@ plan tests 4
 
 note "test plan for eXist install"
 
-ok "$( [ -n ${EXIST_HOME} ] )"  "eXist home set: ${EXIST_HOME}"
+ok $([ -n "${EXIST_HOME}" ])  "eXist home set: ${EXIST_HOME}"
 
-ok "$( [[ -n "$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] )"  'eXist is reachable'
+ok $( [[ -n "$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] )  'eXist is reachable'
 
 is "$(curl -Is http://127.0.0.1:8080/ |\
  grep -oP 'Jetty')" 'Jetty'  'Jetty serves on port 8080' 

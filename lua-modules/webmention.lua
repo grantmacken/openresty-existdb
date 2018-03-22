@@ -247,7 +247,7 @@ end
 
 function store( source, target, body )
   local config = require('grantmacken.config')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
 
   ngx.log(ngx.INFO, "STORE source as a wellformed document" )
   local srcID = createResourceID( source )
@@ -348,12 +348,6 @@ function sanitizeStoreSource( srcBinary, srcBase, myDomain, srcCol, srcID )
   return responseBody
 end
 
-
-
-
-
-
-
 function findTargetInSource( srcBody, target )
   ngx.log(ngx.INFO, "In source text look for string [ " .. target  .. ' ] ' )
   ngx.log(ngx.INFO, 'NOTE have not parsed source str' )
@@ -376,7 +370,7 @@ end
 
 function isValidResource( url )
   local config = require('grantmacken.config')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   -- ngx.log(ngx.INFO, 'target URL: ' .. url )
   local msg = ''
    -- lua-modules/util.lua
@@ -412,7 +406,7 @@ end
 
 function createResourceID( str )
   local config = require('grantmacken.config')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   local restPath  = '/exist/rest/db'
   local txt  =   [[
   <query xmlns="http://exist.sourceforge.net/NS/exist" wrap="no">
@@ -437,7 +431,7 @@ end
 function isURL( url )
   ngx.log(ngx.INFO, url)
   local config = require('grantmacken.config')
-  local domain  = config.get('domain')
+  local domain  = ngx.var.domain
   local contentType = 'application/xml'
   local restPath  = '/exist/rest/db'
   local txt  =   [[

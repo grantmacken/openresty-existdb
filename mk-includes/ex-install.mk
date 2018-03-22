@@ -10,6 +10,16 @@ EXIT_HOME: $(EXIST_HOME)
 
 make targets
 
+ installing with headless console using expect
+ - mv old version to backup dir
+ - stop eXist
+ - if new version download eXist jar
+ - install via expect
+ - start then set new username and password as ```git username and password as 'github access token'
+ - replace eXist mimetypes
+ - start service
+
+
 - exBuild: clones git repo and builds eXist in directory $(EXIST_HOME)
 - exInit:  starts eXist and resets admin password to my github-access-token
 - exPass   set new admin account based on git username and github-access-token
@@ -24,6 +34,7 @@ exHelp:
 ############################################
 
 exInstallDownload:
+	@echo "##  $@ ##"
 	@rm $(T)/eXist-latest.version 2>/dev/null || echo 'latest versions gone'
 	@rm $(T)/eXist.expect 2>/dev/null || echo 'expect file gone'
 	@$(MAKE) --silent $(T)/eXist-latest.version
@@ -31,10 +42,14 @@ exInstallDownload:
 
 exInstall: exInstallDownload
 exInstall:
+	@echo "##  $@ ##"
 	@$(MAKE) --silent $(T)/wget-eXist.log
-	@$(MAKE) --silent $(T)/wget-eXist.log
+	@$(MAKE) --silent $(T)/eXist-expect.log
+	@$(MAKE) --silent $(T)/eXist-run.sh
+	@$(MAKE) --silent exMimeTypes
 
-#  this initializes the repo 
+# ALTERNATE INSTALL:  this initializes the repo 
+# =============================================
 $(EXIST_HOME)/.git/HEAD:
 	@echo "##  $@ ##"
 	@cd /usr/local && git clone git@github.com:eXist-db/exist.git eXist
@@ -42,12 +57,10 @@ $(EXIST_HOME)/.git/HEAD:
 
 # after repo cloned build
 # this will generate VERSION.txt
-$(EXIST_HOME)/VERSION.txt: $(EXIST_HOME)/build.sh $(EXIST_HOME)/.git/HEAD
+$(EXIST_HOME)/VERSION.txt:  $(EXIST_HOME)/.git/HEAD
 	@echo '# $(notdir $@) #'
-	@chmod +x $<
-	@cd $(EXIST_HOME) && ls -al $(notdir $<)
-	@cd $(EXIST_HOME) &&  ./$(notdir $<)
-	@touch $(EXIST_HOME)/build.sh
+	@chmod +x $(EXIST_HOME)/build.sh
+	@cd $(EXIST_HOME) &&  $(EXIST_HOME)/build.sh
 
 # if the pull touches VERSION.txt
 exBuild: $(EXIST_HOME)/VERSION.txt
@@ -55,13 +68,9 @@ exBuild: $(EXIST_HOME)/VERSION.txt
 	@cd $(EXIST_HOME) && git pull
 	@$(MAKE) exMimeTypes
 
+# end ALTERNATE INSTALL:  this initializes the repo 
+# =================================================
 
-exExpect:
-	@$(MAKE) --silent $(T)/eXist-expect.log
-
-xxx:
-	@$(MAKE) --silent $(T)/eXist-run.sh
-	@$(MAKE) --silent exMimeTypes
 
 exClean:
 	@echo 'stop eXist'
@@ -69,8 +78,8 @@ exClean:
  $(MAKE) exServiceStop,\
  sudo $(MAKE) exServiceStop)
 	@echo 'removing eXist dir'
-	@mkdir /usr/local/backup
-	@if [ -e  $(EXIST_HOME) ];then cp -R $(EXIST_HOME) /usr/local/backup/;fi
+	@mkdir -p /usr/local/backup/$$(date --iso)
+	@if [ -e $(EXIST_HOME) ];then mv -v -t /usr/local/backup/$$(date --iso) $(EXIST_HOME);fi
 
 # dependency chain
 
@@ -96,6 +105,9 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@cat $@
 	@echo '----------------------------------------------------'
 
+tJar:
+	@java -jar $(T)/$(shell cat tmp/eXist-latest.version) -console
+
 $(T)/eXist.expect: $(T)/wget-eXist.log
 	@echo "## $(notdir $@) ##"
 	@echo 'Create data dir'
@@ -106,8 +118,8 @@ $(T)/eXist.expect: $(T)/wget-eXist.log
 	echo 'spawn java -jar $(T)/$(shell cat tmp/eXist-latest.version) -console' >> $(@)
 	@echo 'expect "Select target path" { send "$(EXIST_HOME)\n" }'  >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
-	@echo 'expect "*ress 1" { send "1\n" }'  >> $(@)
-	@echo 'expect "Data dir" { send "$(EXIST_DATA_DIR)\n" }' >> $(@)
+	@echo 'expect "Set Data Directory" { send "$(EXIST_DATA_DIR)\n" }' >> $(@)
+	@echo 'expect "*ress 1" { send "1\n" }' >> $(@)
 	@echo 'expect "*ress 1" { send "1\n" }' >> $(@)
 	@echo 'expect "Enter password" { send "$(P)\n" }' >> $(@)
 	@echo 'expect "Enter password" { send "$(P)\n" }' >> $(@)
@@ -130,23 +142,22 @@ $(T)/eXist-expect.log: $(T)/eXist.expect
 	@$(<) | tee $(@)
 	@echo '---------------------------------------'
 
-
 exInitRun: $(T)/eXist-run.sh
 	@echo "## $(notdir $@) ##"
-	@if [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(<) ; fi
-	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then \
-  cd $(EXIST_HOME) && $(shell which java) \
-  -jar $(EXIST_HOME)/start.jar client \
-  -q \
-  -u admin \
-  -P '' \
-  -x 'sm:passwd("admin","$(ACCESS_TOKEN)")'  |  tail -n -1 ; \
+	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; \
+ then cd $(EXIST_HOME) && \
+ $(shell which java) -jar start.jar shutdown -p $(P); \
  fi
+
 
 exPass: $(T)/eXist-run.sh
 	@echo "## $(notdir $@) ##"
 	@if [[ -z "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(<) ; fi
 	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; then $(MAKE) exGitUserAdd; fi
+	@if [[ -n "$$(curl -I -s -f 'http://127.0.0.1:8080/')" ]] ; \
+ then cd $(EXIST_HOME) && \
+ $(shell which java) -jar start.jar shutdown -p $(P); \
+ fi
 
 $(T)/eXist-run.sh:
 	@echo "## $(notdir $@) ##"

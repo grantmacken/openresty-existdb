@@ -2,13 +2,13 @@
 
 ```
 make exBuild
-make exInitRun
+make exPass
 make exClean
 ```
 - exBuild: clones git repo and builds eXist in directory $(EXIST_HOME)
            When called again, this will pull changes from master and rebuild 
 
-- exInitRun: start eXist and reset password
+- exPass:  start eXist and set new username and password 
 
 - exClean:  this will stop the eXist service then mv the existing install into the backup dir
 

@@ -54,7 +54,15 @@ certRenew:
 	@echo "Renew My Certs"
 	@echo "--------------"
 	@$(T)/certbot/certbot-auto certonly
-	@$(MAKE) ngReload:
+	@$(MAKE) ngReload
+	@$(T)/certbot/certbot-auto certificates
+
+certExpand:
+	@echo "Expand My Certs"
+	@echo "--------------"
+	@$(T)/certbot/certbot-auto certonly --expand
+	@$(MAKE) ngReload
+	@$(T)/certbot/certbot-auto certificates
 
 certConfig: config
 	@rm /etc/letsencrypt/cli.ini
@@ -74,6 +82,8 @@ syncCerts:
 	@echo 'copy certs from remote'
 	@scp -r $(SERVER):/etc/letsencrypt/live /etc/letsencrypt
 	@scp  $(SERVER):/etc/letsencrypt/dh-param.pem /etc/letsencrypt/
+	@sudo $(MAKE) orServiceStop
+	@sudo $(MAKE) orServiceStart
 
 syncCertsPerm:
 	@echo 'copy certs from remote'

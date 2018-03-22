@@ -28,8 +28,8 @@ else
   GIT_EMAIL := $(shell su -c "git config --get user.email" $(INSTALLER) )
 endif
 
-$(info $(GIT_USER) )
-$(info $(GIT_EMAIL) )
+# $(info $(GIT_USER) )
+# $(info $(GIT_EMAIL) )
 
 ifeq ($(INSTALLER),travis)
  TRAVIS := $(INSTALLER)

@@ -62,7 +62,7 @@ ifeq ($(wildcard $(T)),)
 endif
 
 # Make sure we have the following apps installed:
-APP_LIST := wget curl nmap
+APP_LIST := wget curl
 assert-command-present = $(if $(shell which $1),,$(error '$1' missing and needed for this build))
 
 $(foreach src,$(APP_LIST),$(call assert-command-present,$(src)))

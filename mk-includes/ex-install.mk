@@ -100,7 +100,7 @@ $(T)/wget-eXist.log:  $(T)/eXist-latest.version
 	@$(if $(wildcard $(T)/$(call cat,$<)),\
  touch $@,\
  wget -o $@ -O "$(T)/$(call cat,$<)" \
- --trust-server-name  -S --show-progress -nc \
+ --trust-server-name -S  -nc \
  "https://bintray.com/artifact/download/existdb/releases/$(call cat,$<)" )
 	@cat $@
 	@echo '----------------------------------------------------'

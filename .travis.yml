@@ -14,3 +14,5 @@ before_install:
 install:
   - sudo make --jobs=1 build
   - sudo ./tmp/eXist-run.sh
+script:
+  - prove -v - < t/travis.txt

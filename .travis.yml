@@ -1,17 +1,24 @@
 sudo: required
 dist: trusty
-language: java
+os: linux
+language: c
 addons:
     apt:
-        packages:
+      packages:
+        - oracle-java8-installer
+        - cpanminus
         - expect
-        - nmap
-        - tidy
+env:
+  global:
+    - JOBS=2
 before_install:
-   - pwd
-   - which expect
-   - which prove
+  - pwd
+  - which expect
+  - which prove
+  - export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 install:
+  - sudo apt-get install -y cpanminus
+  - sudo cpanm --notest Test::Base
   - sudo make --jobs=1 build
   - sudo ./tmp/eXist-run.sh
 script:

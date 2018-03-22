@@ -8,6 +8,7 @@ addons:
         - oracle-java8-installer
         - cpanminus
         - expect
+        - tidy
 env:
   global:
     - JOBS=2
